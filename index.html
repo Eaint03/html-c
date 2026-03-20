@@ -139,19 +139,19 @@ let stream = null;
 
 // NAVIGATION
 function goToAdd() {
-    home.classList.add("hidden");
-    addPage.classList.remove("hidden");
+    document.getElementById("home").classList.add("hidden");
+    document.getElementById("addPage").classList.remove("hidden");
 }
 
 function goToTake() {
-    home.classList.add("hidden");
-    takePage.classList.remove("hidden");
+    document.getElementById("home").classList.add("hidden");
+    document.getElementById("takePage").classList.remove("hidden");
 }
 
 function goHome() {
-    home.classList.remove("hidden");
-    addPage.classList.add("hidden");
-    takePage.classList.add("hidden");
+    document.getElementById("home").classList.remove("hidden");
+    document.getElementById("addPage").classList.add("hidden");
+    document.getElementById("takePage").classList.add("hidden");
 }
 
 // CAMERA
@@ -160,7 +160,7 @@ async function openCamera() {
 
     try {
         stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "environment" }
+            video: { facingMode: { ideal: "environment" } }
         });
     } catch {
         stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -215,21 +215,34 @@ function processImage(canvas) {
             );
 
             let result = await response.json();
+            console.log("FULL RESPONSE:", result);
 
-            console.log("OCR RESULT:", result);
-
-            let text = "";
-
-            if (result.responses[0].fullTextAnnotation) {
-                text = result.responses[0].fullTextAnnotation.text;
-            } else if (result.responses[0].textAnnotations) {
-                text = result.responses[0].textAnnotations[0].description;
-            } else {
-                alert("❌ No text detected");
+            if (!result.responses) {
+                alert("❌ No response from API");
                 return;
             }
 
-            console.log("TEXT:", text);
+            if (result.responses[0].error) {
+                alert("❌ API Error: " + result.responses[0].error.message);
+                return;
+            }
+
+            // 🔥 FIXED TEXT EXTRACTION
+            let text = "";
+
+            if (result.responses[0].fullTextAnnotation?.text) {
+                text = result.responses[0].fullTextAnnotation.text;
+            } 
+            else if (result.responses[0].textAnnotations?.length > 0) {
+                text = result.responses[0].textAnnotations[0].description;
+            } 
+            else {
+                alert("❌ No readable text found");
+                console.log(result);
+                return;
+            }
+
+            console.log("DETECTED TEXT:", text);
 
             let lines = text.split("\n").map(l => l.trim()).filter(l => l);
 
@@ -237,28 +250,20 @@ function processImage(canvas) {
             let quantity = "";
 
             lines.forEach(line => {
-
                 let upper = line.toUpperCase();
 
-                // MFG P/N
-                if (
-                    upper.includes("MFG") ||
-                    upper.includes("P/N") ||
-                    upper.includes("MPN")
-                ) {
+                if (upper.includes("MFG") || upper.includes("P/N") || upper.includes("MPN")) {
                     let match = line.match(/[A-Z0-9\-]{4,}/);
                     if (match) partNumber = match[0];
                 }
 
-                // QTY
                 if (upper.includes("QTY")) {
                     let match = line.match(/\d+/);
                     if (match) quantity = match[0];
                 }
-
             });
 
-            // FALLBACK
+            // fallback
             if (!quantity) {
                 let nums = text.match(/\d{2,5}/g);
                 if (nums) quantity = nums.sort((a,b)=>b-a)[0];
@@ -285,6 +290,7 @@ function processImage(canvas) {
             });
 
             alert(`✅ Saved!\nP/N: ${partNumber}\nQTY: ${quantity}`);
+
         };
 
         reader.readAsDataURL(blob);
