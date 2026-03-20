@@ -43,14 +43,19 @@
         .hidden {
             display: none;
         }
+
+        video {
+            width: 100%;
+            border-radius: 10px;
+        }
     </style>
 </head>
 
 <body>
 
-<!-- ✅ FIXED TITLE -->
-<h1 id="title">Welcome to Smart Inventory System</h1>
+<h1>Welcome to smart Inventory System</h1>
 
+<!-- HOME PAGE (UNCHANGED) -->
 <div class="container" id="home">
     <h3>Select Action</h3>
 
@@ -58,33 +63,22 @@
     <button onclick="goToTake()">📤 Take Inventory</button>
 </div>
 
+<!-- ADD PAGE (UPGRADED ONLY) -->
 <div class="container hidden" id="addPage">
-    <!-- ✅ CLEAN TITLE -->
-    <h3>Adding Inventory</h3>
+    <h3>➕ Add Inventory</h3>
 
-    <input type="file" id="imageInput">
+    <video id="camera" autoplay></video>
 
-    <button onclick="processImage()">🔍 Detect</button>
+    <button onclick="startCamera()">Start Camera</button>
+    <button onclick="takePhoto()">Capture & Save</button>
 
-    <input type="text" id="component" placeholder="Component">
-    <input type="number" id="quantity" placeholder="Quantity">
-    <input type="text" id="location" placeholder="Location">
-
-    <button onclick="saveData()">💾 Save</button>
-
-    <!-- ✅ CLEAN BACK BUTTON (NO ARROW, NO SPACE) -->
     <button onclick="goHome()">Back</button>
 </div>
 
+<!-- TAKE PAGE -->
 <div class="container hidden" id="takePage">
-    <h3>Taking Inventory</h3>
+    <h3>📤 Take Inventory</h3>
 
-    <input type="text" placeholder="Component">
-    <input type="number" placeholder="Quantity">
-
-    <button onclick="alert('Function coming soon')">Take</button>
-
-    <!-- ✅ CLEAN BACK BUTTON -->
     <button onclick="goHome()">Back</button>
 </div>
 
@@ -93,66 +87,85 @@
 function goToAdd() {
     document.getElementById("home").classList.add("hidden");
     document.getElementById("addPage").classList.remove("hidden");
-
-    // ✅ Change top title dynamically
-    document.getElementById("title").innerText = "Adding Inventory";
 }
 
 function goToTake() {
     document.getElementById("home").classList.add("hidden");
     document.getElementById("takePage").classList.remove("hidden");
-
-    document.getElementById("title").innerText = "Taking Inventory";
 }
 
 function goHome() {
     document.getElementById("home").classList.remove("hidden");
     document.getElementById("addPage").classList.add("hidden");
     document.getElementById("takePage").classList.add("hidden");
-
-    // ✅ Restore home title
-    document.getElementById("title").innerText = "Welcome to Smart Inventory System";
 }
 
-async function processImage() {
-    let file = document.getElementById("imageInput").files[0];
+let video = document.getElementById("camera");
 
-    if (!file) {
-        alert("Please upload an image");
-        return;
-    }
-
-    let formData = new FormData();
-    formData.append("file", file);
-    formData.append("apikey", "helloworld");
-
-    let response = await fetch("https://api.ocr.space/parse/image", {
-        method: "POST",
-        body: formData
-    });
-
-    let result = await response.json();
-
-    let text = result.ParsedResults[0].ParsedText;
-
-    alert("Detected:\n" + text);
-
-    document.getElementById("component").value = text.split("\n")[0];
+async function startCamera() {
+    let stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    video.srcObject = stream;
 }
 
-async function saveData() {
-    let data = {
-        component: document.getElementById("component").value,
-        quantity: document.getElementById("quantity").value,
-        location: document.getElementById("location").value
-    };
+function takePhoto() {
+    let canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
 
-    await fetch("https://script.google.com/macros/s/AKfycbzsX55cEf1cHBXWPgBz-ypLiLz8rZ06IgKZp7edJBsyvwpAzY0riHamRz-ay8S1whV15w/exec", {
-        method: "POST",
-        body: JSON.stringify(data)
-    });
+    let ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0);
 
-    alert("✅ Saved to inventory!");
+    canvas.toBlob(async function(blob) {
+
+        let reader = new FileReader();
+
+        reader.onload = async function() {
+
+            let base64 = reader.result.split(',')[1];
+
+            let response = await fetch(
+                "https://vision.googleapis.com/v1/images:annotate?key=YOUR_API_KEY",
+                {
+                    method: "POST",
+                    body: JSON.stringify({
+                        requests: [
+                            {
+                                image: { content: base64 },
+                                features: [{ type: "TEXT_DETECTION" }]
+                            }
+                        ]
+                    })
+                }
+            );
+
+            let result = await response.json();
+
+            let text = result.responses[0].fullTextAnnotation.text;
+
+            let component = "";
+            let quantity = 1;
+
+            let descMatch = text.match(/Desc[:\s]*(.*)/i);
+            if (descMatch) component = descMatch[1];
+
+            let qtyMatch = text.match(/Quantity[:\s]*(\d+)/i);
+            if (qtyMatch) quantity = parseInt(qtyMatch[1]);
+
+            await fetch("https://script.google.com/macros/s/AKfycbzsX55cEf1cHBXWPgBz-ypLiLz8rZ06IgKZp7edJBsyvwpAzY0riHamRz-ay8S1whV15w/exec", {
+                method: "POST",
+                body: JSON.stringify({
+                    component: component,
+                    quantity: quantity,
+                    location: ""
+                })
+            });
+
+            alert("Saved!\n" + component + "\nQty: " + quantity);
+        };
+
+        reader.readAsDataURL(blob);
+
+    }, "image/jpeg");
 }
 
 </script>
