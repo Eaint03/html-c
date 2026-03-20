@@ -20,34 +20,37 @@
             box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
         }
 
-        button {
+        input, button {
             width: 100%;
             padding: 12px;
             margin: 10px 0;
             border-radius: 8px;
-            border: none;
+            border: 1px solid #ccc;
+        }
+
+        button {
             background: #4CAF50;
             color: white;
             font-size: 16px;
+            border: none;
             cursor: pointer;
+        }
+
+        button:hover {
+            background: #45a049;
         }
 
         .hidden {
             display: none;
-        }
-
-        video {
-            width: 100%;
-            border-radius: 10px;
         }
     </style>
 </head>
 
 <body>
 
-<h1>Welcome to Smart Inventory System</h1>
+<!-- ✅ FIXED TITLE -->
+<h1 id="title">Welcome to Smart Inventory System</h1>
 
-<!-- HOME -->
 <div class="container" id="home">
     <h3>Select Action</h3>
 
@@ -55,21 +58,33 @@
     <button onclick="goToTake()">📤 Take Inventory</button>
 </div>
 
-<!-- ADD PAGE -->
 <div class="container hidden" id="addPage">
+    <!-- ✅ CLEAN TITLE -->
     <h3>Adding Inventory</h3>
 
-    <video id="camera" autoplay></video>
+    <input type="file" id="imageInput">
 
-    <button onclick="startCamera()">📸 Start Camera</button>
-    <button onclick="takePhoto()">📷 Capture & Save</button>
+    <button onclick="processImage()">🔍 Detect</button>
 
+    <input type="text" id="component" placeholder="Component">
+    <input type="number" id="quantity" placeholder="Quantity">
+    <input type="text" id="location" placeholder="Location">
+
+    <button onclick="saveData()">💾 Save</button>
+
+    <!-- ✅ CLEAN BACK BUTTON (NO ARROW, NO SPACE) -->
     <button onclick="goHome()">Back</button>
 </div>
 
-<!-- TAKE PAGE -->
 <div class="container hidden" id="takePage">
-    <h3>Take Inventory</h3>
+    <h3>Taking Inventory</h3>
+
+    <input type="text" placeholder="Component">
+    <input type="number" placeholder="Quantity">
+
+    <button onclick="alert('Function coming soon')">Take</button>
+
+    <!-- ✅ CLEAN BACK BUTTON -->
     <button onclick="goHome()">Back</button>
 </div>
 
@@ -78,88 +93,66 @@
 function goToAdd() {
     document.getElementById("home").classList.add("hidden");
     document.getElementById("addPage").classList.remove("hidden");
+
+    // ✅ Change top title dynamically
+    document.getElementById("title").innerText = "Adding Inventory";
 }
 
 function goToTake() {
     document.getElementById("home").classList.add("hidden");
     document.getElementById("takePage").classList.remove("hidden");
+
+    document.getElementById("title").innerText = "Taking Inventory";
 }
 
 function goHome() {
     document.getElementById("home").classList.remove("hidden");
     document.getElementById("addPage").classList.add("hidden");
     document.getElementById("takePage").classList.add("hidden");
+
+    // ✅ Restore home title
+    document.getElementById("title").innerText = "Welcome to Smart Inventory System";
 }
 
-let video = document.getElementById("camera");
+async function processImage() {
+    let file = document.getElementById("imageInput").files[0];
 
-async function startCamera() {
-    let stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    video.srcObject = stream;
+    if (!file) {
+        alert("Please upload an image");
+        return;
+    }
+
+    let formData = new FormData();
+    formData.append("file", file);
+    formData.append("apikey", "helloworld");
+
+    let response = await fetch("https://api.ocr.space/parse/image", {
+        method: "POST",
+        body: formData
+    });
+
+    let result = await response.json();
+
+    let text = result.ParsedResults[0].ParsedText;
+
+    alert("Detected:\n" + text);
+
+    document.getElementById("component").value = text.split("\n")[0];
 }
 
-function takePhoto() {
-    let canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+async function saveData() {
+    let data = {
+        component: document.getElementById("component").value,
+        quantity: document.getElementById("quantity").value,
+        location: document.getElementById("location").value
+    };
 
-    let ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0);
+    await fetch("https://script.google.com/macros/s/AKfycbzsX55cEf1cHBXWPgBz-ypLiLz8rZ06IgKZp7edJBsyvwpAzY0riHamRz-ay8S1whV15w/exec", {
+        method: "POST",
+        body: JSON.stringify(data)
+    });
 
-    canvas.toBlob(async function(blob) {
-
-        let reader = new FileReader();
-
-        reader.onload = async function() {
-
-            let base64 = reader.result.split(',')[1];
-
-            let response = await fetch(
-                "https://vision.googleapis.com/v1/images:annotate?key=YOUR_API_KEY",
-                {
-                    method: "POST",
-                    body: JSON.stringify({
-                        requests: [
-                            {
-                                image: { content: base64 },
-                                features: [{ type: "TEXT_DETECTION" }]
-                            }
-                        ]
-                    })
-                }
-            );
-
-            let result = await response.json();
-            console.log(result);
-
-            let text = result.responses[0].fullTextAnnotation.text;
-
-            // Extract
-            let component = "";
-            let quantity = 1;
-
-            let descMatch = text.match(/Desc[:\s]*(.*)/i);
-            if (descMatch) component = descMatch[1];
-
-            let qtyMatch = text.match(/Quantity[:\s]*(\d+)/i);
-            if (qtyMatch) quantity = parseInt(qtyMatch[1]);
-
-            // Save
-            await fetch("https://script.google.com/macros/s/AKfycbzsX55cEf1cHBXWPgBz-ypLiLz8rZ06IgKZp7edJBsyvwpAzY0riHamRz-ay8S1whV15w/exec", {
-                method: "POST",
-                body: JSON.stringify({
-                    component: component,
-                    quantity: quantity,
-                    location: ""
-                })
-            });
-
-            alert("Saved!\n" + component + "\nQty: " + quantity);
-        };
-
-        reader.readAsDataURL(blob);
-
-    }, "image/jpeg");
+    alert("✅ Saved to inventory!");
 }
 
 </script>
