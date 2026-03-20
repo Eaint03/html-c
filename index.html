@@ -20,20 +20,15 @@
             box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
         }
 
-        input, button {
+        button {
             width: 100%;
             padding: 12px;
             margin: 10px 0;
             border-radius: 8px;
-            border: 1px solid #ccc;
-        }
-
-        button {
+            border: none;
             background: #4CAF50;
             color: white;
             font-size: 16px;
-            border: none;
-            cursor: pointer;
         }
 
         .hidden {
@@ -65,11 +60,14 @@
 
     <video id="camera" autoplay></video>
 
-    <button onclick="takePhoto()">📷 Capture & Save</button>
+    <!-- EXACT FLOW YOU WANT -->
+    <button onclick="startCamera()">📸 Start Camera</button>
+    <button onclick="takePhoto()">📷 Capture Photo</button>
+
     <button onclick="goHome()">Back</button>
 </div>
 
-<!-- TAKE PAGE -->
+<!-- TAKE -->
 <div class="container hidden" id="takePage">
     <h3>📤 Take Inventory</h3>
     <button onclick="goHome()">Back</button>
@@ -84,7 +82,6 @@ let stream = null;
 function goToAdd() {
     document.getElementById("home").classList.add("hidden");
     document.getElementById("addPage").classList.remove("hidden");
-    startCamera(); // auto start camera
 }
 
 function goToTake() {
@@ -97,7 +94,7 @@ function goHome() {
     document.getElementById("addPage").classList.add("hidden");
     document.getElementById("takePage").classList.add("hidden");
 
-    // stop camera when leaving
+    // stop camera
     if (stream) {
         stream.getTracks().forEach(track => track.stop());
     }
@@ -115,11 +112,11 @@ async function startCamera() {
     }
 }
 
-// TAKE PHOTO + OCR + SAVE
+// CAPTURE PHOTO (LIKE PHONE)
 function takePhoto() {
 
     if (!stream) {
-        alert("Camera not started");
+        alert("Please start camera first");
         return;
     }
 
@@ -132,67 +129,62 @@ function takePhoto() {
 
     canvas.toBlob(async function(blob) {
 
-        try {
-            let reader = new FileReader();
+        let reader = new FileReader();
 
-            reader.onload = async function() {
+        reader.onload = async function() {
 
-                let base64 = reader.result.split(',')[1];
+            let base64 = reader.result.split(',')[1];
 
-                let response = await fetch(
-                    "https://vision.googleapis.com/v1/images:annotate?key=YOUR_API_KEY",
-                    {
-                        method: "POST",
-                        body: JSON.stringify({
-                            requests: [
-                                {
-                                    image: { content: base64 },
-                                    features: [{ type: "TEXT_DETECTION" }]
-                                }
-                            ]
-                        })
-                    }
-                );
-
-                let result = await response.json();
-
-                console.log(result);
-
-                if (!result.responses || !result.responses[0].fullTextAnnotation) {
-                    alert("❌ No text detected");
-                    return;
-                }
-
-                let text = result.responses[0].fullTextAnnotation.text;
-
-                // EXTRACT
-                let component = "";
-                let quantity = 1;
-
-                let descMatch = text.match(/Desc[:\s]*(.*)/i);
-                if (descMatch) component = descMatch[1];
-
-                let qtyMatch = text.match(/Quantity[:\s]*(\d+)/i);
-                if (qtyMatch) quantity = parseInt(qtyMatch[1]);
-
-                // SAVE TO SHEET
-                await fetch("https://script.google.com/macros/s/AKfycbzsX55cEf1cHBXWPgBz-ypLiLz8rZ06IgKZp7edJBsyvwpAzY0riHamRz-ay8S1whV15w/exec", {
+            let response = await fetch(
+                "https://vision.googleapis.com/v1/images:annotate?key=YOUR_API_KEY",
+                {
                     method: "POST",
                     body: JSON.stringify({
-                        component: component,
-                        quantity: quantity,
-                        location: ""
+                        requests: [
+                            {
+                                image: { content: base64 },
+                                features: [{ type: "TEXT_DETECTION" }]
+                            }
+                        ]
                     })
-                });
+                }
+            );
 
-                alert("✅ Saved!\n" + component + "\nQty: " + quantity);
-            };
+            let result = await response.json();
 
-            reader.readAsDataURL(blob);
+            if (!result.responses || !result.responses[0].fullTextAnnotation) {
+                alert("❌ No text detected");
+                return;
+            }
 
-        } catch (error) {
-            alert("Error: " + error.message);
-        }
+            let text = result.responses[0].fullTextAnnotation.text;
+
+            console.log(text);
+
+            // EXTRACT
+            let component = "";
+            let quantity = 1;
+
+            let descMatch = text.match(/Desc[:\s]*(.*)/i);
+            if (descMatch) component = descMatch[1];
+
+            let qtyMatch = text.match(/Quantity[:\s]*(\d+)/i);
+            if (qtyMatch) quantity = parseInt(qtyMatch[1]);
+
+            // SAVE
+            await fetch("https://script.google.com/macros/s/AKfycbzsX55cEf1cHBXWPgBz-ypLiLz8rZ06IgKZp7edJBsyvwpAzY0riHamRz-ay8S1whV15w/exec", {
+                method: "POST",
+                body: JSON.stringify({
+                    component: component,
+                    quantity: quantity,
+                    location: ""
+                })
+            });
+
+            alert("✅ Saved!\n" + component + "\nQty: " + quantity);
+        };
+
+        reader.readAsDataURL(blob);
 
     }, "image/jpeg");
 }
