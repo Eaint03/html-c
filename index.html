@@ -2,7 +2,6 @@
 <html>
 <head>
     <title>Smart Inventory System</title>
-
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <style>
@@ -38,6 +37,7 @@
             display: none;
         }
 
+        /* CAMERA PAGE */
         #cameraPage {
             position: fixed;
             top: 0;
@@ -50,8 +50,6 @@
 
         video {
             position: absolute;
-            top: 0;
-            left: 0;
             width: 100%;
             height: 100%;
             object-fit: cover;
@@ -94,7 +92,6 @@
 
         .top-bar button {
             width: auto;
-            padding: 10px 15px;
             background: rgba(0,0,0,0.6);
         }
     </style>
@@ -118,7 +115,7 @@
     <button onclick="goHome()">Back</button>
 </div>
 
-<!-- CAMERA -->
+<!-- CAMERA PAGE -->
 <div id="cameraPage" class="hidden">
     <video id="camera" autoplay playsinline></video>
 
@@ -193,7 +190,7 @@ function takePhoto() {
     processImage(canvas);
 }
 
-// OCR + SMART EXTRACTION
+// OCR + DETECTION
 function processImage(canvas) {
 
     canvas.toBlob(async function(blob) {
@@ -219,46 +216,61 @@ function processImage(canvas) {
 
             let result = await response.json();
 
-            if (!result.responses || !result.responses[0].fullTextAnnotation) {
+            console.log("OCR RESULT:", result);
+
+            let text = "";
+
+            if (result.responses[0].fullTextAnnotation) {
+                text = result.responses[0].fullTextAnnotation.text;
+            } else if (result.responses[0].textAnnotations) {
+                text = result.responses[0].textAnnotations[0].description;
+            } else {
                 alert("❌ No text detected");
                 return;
             }
 
-            let text = result.responses[0].fullTextAnnotation.text;
-            console.log(text);
+            console.log("TEXT:", text);
 
-            let lines = text.split("\n");
+            let lines = text.split("\n").map(l => l.trim()).filter(l => l);
 
-            let component = "";
+            let partNumber = "";
             let quantity = "";
-            let location = "";
 
             lines.forEach(line => {
 
                 let upper = line.toUpperCase();
 
-                // COMPONENT
-                if (upper.includes("WIRE") || upper.includes("RESISTOR") || upper.includes("CAPACITOR") || upper.includes("IC")) {
-                    component = line.trim();
+                // MFG P/N
+                if (
+                    upper.includes("MFG") ||
+                    upper.includes("P/N") ||
+                    upper.includes("MPN")
+                ) {
+                    let match = line.match(/[A-Z0-9\-]{4,}/);
+                    if (match) partNumber = match[0];
                 }
 
-                // QUANTITY
-                let qtyMatch = line.match(/\b\d{2,5}\b/);
-                if (qtyMatch && !quantity) {
-                    quantity = qtyMatch[0];
-                }
-
-                // LOCATION (PB51-09 type)
-                let locMatch = line.match(/[A-Z]{2,3}\d{2}[-]?\d{2}/);
-                if (locMatch) {
-                    location = locMatch[0];
+                // QTY
+                if (upper.includes("QTY")) {
+                    let match = line.match(/\d+/);
+                    if (match) quantity = match[0];
                 }
 
             });
 
-            // VALIDATION
-            if (!component || !quantity) {
-                alert("⚠️ Detection not accurate. Please retake photo.");
+            // FALLBACK
+            if (!quantity) {
+                let nums = text.match(/\d{2,5}/g);
+                if (nums) quantity = nums.sort((a,b)=>b-a)[0];
+            }
+
+            if (!partNumber) {
+                let matches = text.match(/[A-Z0-9\-]{5,}/g);
+                if (matches) partNumber = matches[0];
+            }
+
+            if (!partNumber || !quantity) {
+                alert("⚠️ Detection failed. Move closer & retake.");
                 return;
             }
 
@@ -266,13 +278,13 @@ function processImage(canvas) {
             await fetch("https://script.google.com/macros/s/AKfycbzsX55cEf1cHBXWPgBz-ypLiLz8rZ06IgKZp7edJBsyvwpAzY0riHamRz-ay8S1whV15w/exec", {
                 method: "POST",
                 body: JSON.stringify({
-                    component: component,
+                    component: partNumber,
                     quantity: quantity,
-                    location: location
+                    location: ""
                 })
             });
 
-            alert(`✅ Saved!\nComponent: ${component}\nQty: ${quantity}\nLocation: ${location}`);
+            alert(`✅ Saved!\nP/N: ${partNumber}\nQTY: ${quantity}`);
         };
 
         reader.readAsDataURL(blob);
