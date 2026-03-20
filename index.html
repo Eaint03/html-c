@@ -2,157 +2,76 @@
 <html>
 <head>
     <title>Smart Inventory System</title>
-
-    <style>
-        body {
-            font-family: Arial;
-            text-align: center;
-            background: #f5f5f5;
-            margin-top: 50px;
-        }
-
-        .container {
-            background: white;
-            padding: 30px;
-            border-radius: 12px;
-            width: 350px;
-            margin: auto;
-            box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
-        }
-
-        input, button {
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-        }
-
-        button {
-            background: #4CAF50;
-            color: white;
-            font-size: 16px;
-            border: none;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background: #45a049;
-        }
-
-        .hidden {
-            display: none;
-        }
-    </style>
 </head>
 
 <body>
 
-<!-- ✅ FIXED TITLE -->
-<h1 id="title">Welcome to Smart Inventory System</h1>
+<h2>Smart Inventory System</h2>
 
-<div class="container" id="home">
-    <h3>Select Action</h3>
-
-    <button onclick="goToAdd()">➕ Add Inventory</button>
-    <button onclick="goToTake()">📤 Take Inventory</button>
-</div>
-
-<div class="container hidden" id="addPage">
-    <!-- ✅ CLEAN TITLE -->
-    <h3>Adding Inventory</h3>
-
-    <input type="file" id="imageInput">
-
-    <button onclick="processImage()">🔍 Detect</button>
-
-    <input type="text" id="component" placeholder="Component">
-    <input type="number" id="quantity" placeholder="Quantity">
-    <input type="text" id="location" placeholder="Location">
-
-    <button onclick="saveData()">💾 Save</button>
-
-    <!-- ✅ CLEAN BACK BUTTON (NO ARROW, NO SPACE) -->
-    <button onclick="goHome()">Back</button>
-</div>
-
-<div class="container hidden" id="takePage">
-    <h3>Taking Inventory</h3>
-
-    <input type="text" placeholder="Component">
-    <input type="number" placeholder="Quantity">
-
-    <button onclick="alert('Function coming soon')">Take</button>
-
-    <!-- ✅ CLEAN BACK BUTTON -->
-    <button onclick="goHome()">Back</button>
-</div>
+<input type="file" id="imageInput">
+<button onclick="processImage()">Scan & Save</button>
 
 <script>
-
-function goToAdd() {
-    document.getElementById("home").classList.add("hidden");
-    document.getElementById("addPage").classList.remove("hidden");
-
-    // ✅ Change top title dynamically
-    document.getElementById("title").innerText = "Adding Inventory";
-}
-
-function goToTake() {
-    document.getElementById("home").classList.add("hidden");
-    document.getElementById("takePage").classList.remove("hidden");
-
-    document.getElementById("title").innerText = "Taking Inventory";
-}
-
-function goHome() {
-    document.getElementById("home").classList.remove("hidden");
-    document.getElementById("addPage").classList.add("hidden");
-    document.getElementById("takePage").classList.add("hidden");
-
-    // ✅ Restore home title
-    document.getElementById("title").innerText = "Welcome to Smart Inventory System";
-}
 
 async function processImage() {
     let file = document.getElementById("imageInput").files[0];
 
     if (!file) {
-        alert("Please upload an image");
+        alert("Upload image first");
         return;
     }
 
-    let formData = new FormData();
-    formData.append("file", file);
-    formData.append("apikey", "helloworld");
+    let reader = new FileReader();
 
-    let response = await fetch("https://api.ocr.space/parse/image", {
-        method: "POST",
-        body: formData
-    });
+    reader.onload = async function() {
 
-    let result = await response.json();
+        let base64 = reader.result.split(',')[1];
 
-    let text = result.ParsedResults[0].ParsedText;
+        let response = await fetch(
+            "https://vision.googleapis.com/v1/images:annotate?key=AIzaSyD_IJCoucQxNSnuC8zckz8cnq8emjYc_oM",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    requests: [
+                        {
+                            image: { content: base64 },
+                            features: [{ type: "TEXT_DETECTION" }]
+                        }
+                    ]
+                })
+            }
+        );
 
-    alert("Detected:\n" + text);
+        let result = await response.json();
 
-    document.getElementById("component").value = text.split("\n")[0];
-}
+        let text = result.responses[0].fullTextAnnotation.text;
 
-async function saveData() {
-    let data = {
-        component: document.getElementById("component").value,
-        quantity: document.getElementById("quantity").value,
-        location: document.getElementById("location").value
+        console.log(text);
+
+        // 🔍 Extract
+        let component = "";
+        let quantity = 1;
+
+        let descMatch = text.match(/Desc[:\s]*(.*)/i);
+        if (descMatch) component = descMatch[1];
+
+        let qtyMatch = text.match(/Quantity[:\s]*(\d+)/i);
+        if (qtyMatch) quantity = parseInt(qtyMatch[1]);
+
+        // 💾 Save to Google Sheet
+        await fetch("https://script.google.com/macros/s/AKfycbzsX55cEf1cHBXWPgBz-ypLiLz8rZ06IgKZp7edJBsyvwpAzY0riHamRz-ay8S1whV15w/exec", {
+            method: "POST",
+            body: JSON.stringify({
+                component: component,
+                quantity: quantity,
+                location: ""
+            })
+        });
+
+        alert("Saved!\n" + component + "\nQty: " + quantity);
     };
 
-    await fetch("https://script.google.com/macros/s/AKfycbzsX55cEf1cHBXWPgBz-ypLiLz8rZ06IgKZp7edJBsyvwpAzY0riHamRz-ay8S1whV15w/exec", {
-        method: "POST",
-        body: JSON.stringify(data)
-    });
-
-    alert("✅ Saved to inventory!");
+    reader.readAsDataURL(file);
 }
 
 </script>
