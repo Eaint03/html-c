@@ -55,16 +55,30 @@
             object-fit: cover;
         }
 
+        /* 🔥 FIXED CAPTURE BUTTON */
         .capture-btn {
-            position: absolute;
-            bottom: 30px;
+            position: fixed;
+            bottom: 40px;
             left: 50%;
             transform: translateX(-50%);
+            
             width: 80px;
             height: 80px;
             border-radius: 50%;
             background: white;
-            border: 5px solid #ccc;
+            border: 6px solid #ccc;
+            z-index: 9999;
+        }
+
+        .capture-btn::after {
+            content: '';
+            width: 60px;
+            height: 60px;
+            background: #4CAF50;
+            display: block;
+            border-radius: 50%;
+            margin: auto;
+            margin-top: 5px;
         }
 
         .top-bar {
@@ -95,20 +109,18 @@
     <button onclick="goToTake()">📤 Take Inventory</button>
 </div>
 
-<!-- ADD PAGE (UNCHANGED STYLE, JUST BUTTONS) -->
+<!-- ADD PAGE (UNCHANGED STYLE) -->
 <div class="container hidden" id="addPage">
     <h3>➕ Add Inventory</h3>
 
     <button onclick="openCamera()">📷 Take Photo</button>
 
-    <input type="file" id="uploadInput">
-    <button onclick="uploadImage()">📁 Upload Image</button>
-
     <button onclick="goHome()">Back</button>
 </div>
 
-<!-- CAMERA PAGE (SEPARATE) -->
+<!-- CAMERA PAGE -->
 <div id="cameraPage" class="hidden">
+
     <video id="camera" autoplay></video>
 
     <div class="top-bar">
@@ -116,6 +128,7 @@
     </div>
 
     <button class="capture-btn" onclick="takePhoto()"></button>
+
 </div>
 
 <!-- TAKE PAGE -->
@@ -146,15 +159,19 @@ function goHome() {
     document.getElementById("takePage").classList.add("hidden");
 }
 
-// OPEN CAMERA (ONLY WHEN BUTTON CLICKED)
+// OPEN CAMERA
 async function openCamera() {
     document.getElementById("cameraPage").classList.remove("hidden");
 
-    stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" }
-    });
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "environment" }
+        });
 
-    video.srcObject = stream;
+        video.srcObject = stream;
+    } catch (err) {
+        alert("Camera error: " + err.message);
+    }
 }
 
 // CLOSE CAMERA
@@ -168,6 +185,12 @@ function closeCamera() {
 
 // TAKE PHOTO
 function takePhoto() {
+
+    if (!stream) {
+        alert("Start camera first");
+        return;
+    }
+
     let canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -176,35 +199,6 @@ function takePhoto() {
     ctx.drawImage(video, 0, 0);
 
     processImage(canvas);
-}
-
-// UPLOAD IMAGE
-function uploadImage() {
-    let file = document.getElementById("uploadInput").files[0];
-
-    if (!file) {
-        alert("Upload image first");
-        return;
-    }
-
-    let reader = new FileReader();
-
-    reader.onload = function() {
-        let img = new Image();
-        img.onload = function() {
-            let canvas = document.createElement("canvas");
-            canvas.width = img.width;
-            canvas.height = img.height;
-
-            let ctx = canvas.getContext("2d");
-            ctx.drawImage(img, 0, 0);
-
-            processImage(canvas);
-        };
-        img.src = reader.result;
-    };
-
-    reader.readAsDataURL(file);
 }
 
 // OCR + SAVE
@@ -236,11 +230,13 @@ function processImage(canvas) {
             let result = await response.json();
 
             if (!result.responses || !result.responses[0].fullTextAnnotation) {
-                alert("No text detected");
+                alert("❌ No text detected");
                 return;
             }
 
             let text = result.responses[0].fullTextAnnotation.text;
+
+            console.log(text);
 
             let component = "";
             let quantity = 1;
@@ -260,7 +256,7 @@ function processImage(canvas) {
                 })
             });
 
-            alert("Saved!\n" + component + "\nQty: " + quantity);
+            alert("✅ Saved!\n" + component + "\nQty: " + quantity);
         };
 
         reader.readAsDataURL(blob);
