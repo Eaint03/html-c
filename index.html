@@ -220,13 +220,31 @@ function processImage(canvas) {
                 }
             );
 
-            let result = await response.json();
-            console.log(result);
+        let result = await response.json();
+console.log("FULL RESULT:", result);
 
-            if (!result.responses || result.responses[0].error) {
-                alert("❌ OCR failed");
-                return;
-            }
+// 🔥 Check API error
+if (result.error) {
+    alert("❌ API Error: " + result.error.message);
+    return;
+}
+
+// 🔥 Get text properly
+let text = "";
+
+if (result.responses?.[0]?.fullTextAnnotation?.text) {
+    text = result.responses[0].fullTextAnnotation.text;
+}
+else if (result.responses?.[0]?.textAnnotations?.length > 0) {
+    text = result.responses[0].textAnnotations[0].description;
+}
+else {
+    console.log(result);
+    alert("❌ No text detected. Try clearer image.");
+    return;
+}
+
+console.log("DETECTED TEXT:", text);
 
             let text = "";
 
