@@ -8,7 +8,7 @@
             font-family: Arial;
             text-align: center;
             background: #f5f5f5;
-            margin-top: 50px;
+            margin: 0;
         }
 
         .container {
@@ -17,6 +17,7 @@
             border-radius: 12px;
             width: 350px;
             margin: auto;
+            margin-top: 50px;
             box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
         }
 
@@ -35,16 +36,67 @@
             display: none;
         }
 
-        video {
+        /* CAMERA FULL SCREEN */
+        #addPage {
+            position: relative;
             width: 100%;
-            border-radius: 10px;
+            height: 100vh;
+            background: black;
+        }
+
+        #camera {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* CAPTURE BUTTON */
+        .capture-container {
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .capture-btn {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: white;
+            border: 5px solid #ccc;
+        }
+
+        .capture-btn::after {
+            content: '';
+            width: 60px;
+            height: 60px;
+            background: #4CAF50;
+            display: block;
+            border-radius: 50%;
+            margin: auto;
+        }
+
+        /* TOP BUTTONS */
+        .top-buttons {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+        }
+
+        .top-buttons button {
+            width: auto;
+            padding: 10px 15px;
+            background: rgba(0,0,0,0.6);
         }
     </style>
 </head>
 
 <body>
 
-<h1>Welcome to smart Inventory System</h1>
+<h1 id="homeTitle">Welcome to smart Inventory System</h1>
 
 <!-- HOME -->
 <div class="container" id="home">
@@ -55,19 +107,24 @@
 </div>
 
 <!-- ADD PAGE -->
-<div class="container hidden" id="addPage">
-    <h3>➕ Add Inventory</h3>
+<div class="hidden" id="addPage">
 
     <video id="camera" autoplay></video>
 
-    <!-- EXACT FLOW YOU WANT -->
-    <button onclick="startCamera()">📸 Start Camera</button>
-    <button onclick="takePhoto()">📷 Capture Photo</button>
+    <!-- TOP BUTTONS -->
+    <div class="top-buttons">
+        <button onclick="startCamera()">Start</button>
+        <button onclick="goHome()">Back</button>
+    </div>
 
-    <button onclick="goHome()">Back</button>
+    <!-- CAPTURE BUTTON -->
+    <div class="capture-container">
+        <button class="capture-btn" onclick="takePhoto()"></button>
+    </div>
+
 </div>
 
-<!-- TAKE -->
+<!-- TAKE PAGE -->
 <div class="container hidden" id="takePage">
     <h3>📤 Take Inventory</h3>
     <button onclick="goHome()">Back</button>
@@ -81,20 +138,22 @@ let stream = null;
 // NAVIGATION
 function goToAdd() {
     document.getElementById("home").classList.add("hidden");
+    document.getElementById("homeTitle").classList.add("hidden");
     document.getElementById("addPage").classList.remove("hidden");
 }
 
 function goToTake() {
     document.getElementById("home").classList.add("hidden");
+    document.getElementById("homeTitle").classList.add("hidden");
     document.getElementById("takePage").classList.remove("hidden");
 }
 
 function goHome() {
     document.getElementById("home").classList.remove("hidden");
+    document.getElementById("homeTitle").classList.remove("hidden");
     document.getElementById("addPage").classList.add("hidden");
     document.getElementById("takePage").classList.add("hidden");
 
-    // stop camera
     if (stream) {
         stream.getTracks().forEach(track => track.stop());
     }
@@ -112,11 +171,11 @@ async function startCamera() {
     }
 }
 
-// CAPTURE PHOTO (LIKE PHONE)
+// TAKE PHOTO
 function takePhoto() {
 
     if (!stream) {
-        alert("Please start camera first");
+        alert("Start camera first");
         return;
     }
 
