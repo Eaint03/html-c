@@ -48,15 +48,15 @@
             z-index: 10;
         }
 
-       video {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    object-fit: cover;
-    background: black;
-}
+        video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            background: black;
+        }
 
         .capture-btn {
             position: fixed;
@@ -117,15 +117,15 @@
     <button onclick="goHome()">Back</button>
 </div>
 
-<!-- CAMERA PAGE -->
+<!-- CAMERA -->
 <div id="cameraPage" class="hidden">
-    <video id="camera" autoplay playsinline></video>
+    <video id="camera" autoplay playsinline muted></video>
 
     <div class="top-bar">
         <button onclick="closeCamera()">Back</button>
     </div>
 
-    <button class="capture-btn" onclick="takePhoto()" type="button"></button>
+    <button class="capture-btn" onclick="takePhoto()"></button>
 </div>
 
 <!-- TAKE PAGE -->
@@ -169,6 +169,10 @@ async function openCamera() {
     }
 
     video.srcObject = stream;
+
+    video.onloadedmetadata = () => {
+        video.play();
+    };
 }
 
 function closeCamera() {
@@ -183,8 +187,8 @@ function closeCamera() {
 function takePhoto() {
 
     let canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    canvas.width = video.clientWidth;
+    canvas.height = video.clientHeight;
 
     let ctx = canvas.getContext("2d");
     ctx.drawImage(video, 0, 0);
@@ -192,7 +196,7 @@ function takePhoto() {
     processImage(canvas);
 }
 
-// OCR + DETECTION
+// OCR
 function processImage(canvas) {
 
     canvas.toBlob(async function(blob) {
@@ -217,19 +221,13 @@ function processImage(canvas) {
             );
 
             let result = await response.json();
-            console.log("FULL RESPONSE:", result);
+            console.log(result);
 
-            if (!result.responses) {
-                alert("❌ No response from API");
+            if (!result.responses || result.responses[0].error) {
+                alert("❌ OCR failed");
                 return;
             }
 
-            if (result.responses[0].error) {
-                alert("❌ API Error: " + result.responses[0].error.message);
-                return;
-            }
-
-            // 🔥 FIXED TEXT EXTRACTION
             let text = "";
 
             if (result.responses[0].fullTextAnnotation?.text) {
@@ -239,49 +237,23 @@ function processImage(canvas) {
                 text = result.responses[0].textAnnotations[0].description;
             } 
             else {
-                alert("❌ No readable text found");
-                console.log(result);
+                alert("❌ No text detected");
                 return;
             }
 
-            console.log("DETECTED TEXT:", text);
+            console.log("TEXT:", text);
 
-            let lines = text.split("\n").map(l => l.trim()).filter(l => l);
+            let part = text.match(/(MFG|P\/N|MPN).*?([A-Z0-9\-]{4,})/i);
+            let qty = text.match(/QTY[:\s]*(\d+)/i);
 
-            let partNumber = "";
-            let quantity = "";
-
-            lines.forEach(line => {
-                let upper = line.toUpperCase();
-
-                if (upper.includes("MFG") || upper.includes("P/N") || upper.includes("MPN")) {
-                    let match = line.match(/[A-Z0-9\-]{4,}/);
-                    if (match) partNumber = match[0];
-                }
-
-                if (upper.includes("QTY")) {
-                    let match = line.match(/\d+/);
-                    if (match) quantity = match[0];
-                }
-            });
-
-            // fallback
-            if (!quantity) {
-                let nums = text.match(/\d{2,5}/g);
-                if (nums) quantity = nums.sort((a,b)=>b-a)[0];
-            }
-
-            if (!partNumber) {
-                let matches = text.match(/[A-Z0-9\-]{5,}/g);
-                if (matches) partNumber = matches[0];
-            }
+            let partNumber = part ? part[2] : "";
+            let quantity = qty ? qty[1] : "";
 
             if (!partNumber || !quantity) {
-                alert("⚠️ Detection failed. Move closer & retake.");
+                alert("⚠️ Detection failed. Try closer photo.");
                 return;
             }
 
-            // SAVE
             await fetch("https://script.google.com/macros/s/AKfycbzsX55cEf1cHBXWPgBz-ypLiLz8rZ06IgKZp7edJBsyvwpAzY0riHamRz-ay8S1whV15w/exec", {
                 method: "POST",
                 body: JSON.stringify({
@@ -291,8 +263,7 @@ function processImage(canvas) {
                 })
             });
 
-            alert(`✅ Saved!\nP/N: ${partNumber}\nQTY: ${quantity}`);
-
+            alert("✅ Saved!\nP/N: " + partNumber + "\nQTY: " + quantity);
         };
 
         reader.readAsDataURL(blob);
