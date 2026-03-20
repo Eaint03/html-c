@@ -33,19 +33,13 @@
             color: white;
             font-size: 16px;
             border: none;
-            cursor: pointer;
         }
 
         .hidden {
             display: none;
         }
 
-        video {
-            width: 100%;
-            border-radius: 10px;
-        }
-
-        /* CAMERA SCREEN */
+        /* CAMERA PAGE */
         #cameraPage {
             position: fixed;
             top: 0;
@@ -55,7 +49,7 @@
             background: black;
         }
 
-        #camera {
+        video {
             width: 100%;
             height: 100%;
             object-fit: cover;
@@ -86,7 +80,6 @@
             width: auto;
             background: rgba(0,0,0,0.6);
         }
-
     </style>
 </head>
 
@@ -102,20 +95,20 @@
     <button onclick="goToTake()">📤 Take Inventory</button>
 </div>
 
-<!-- ADD PAGE (3 BUTTONS) -->
+<!-- ADD PAGE (UNCHANGED STYLE, JUST BUTTONS) -->
 <div class="container hidden" id="addPage">
     <h3>➕ Add Inventory</h3>
 
     <button onclick="openCamera()">📷 Take Photo</button>
+
     <input type="file" id="uploadInput">
     <button onclick="uploadImage()">📁 Upload Image</button>
 
     <button onclick="goHome()">Back</button>
 </div>
 
-<!-- CAMERA PAGE -->
+<!-- CAMERA PAGE (SEPARATE) -->
 <div id="cameraPage" class="hidden">
-
     <video id="camera" autoplay></video>
 
     <div class="top-bar">
@@ -123,7 +116,6 @@
     </div>
 
     <button class="capture-btn" onclick="takePhoto()"></button>
-
 </div>
 
 <!-- TAKE PAGE -->
@@ -154,7 +146,7 @@ function goHome() {
     document.getElementById("takePage").classList.add("hidden");
 }
 
-// CAMERA FLOW
+// OPEN CAMERA (ONLY WHEN BUTTON CLICKED)
 async function openCamera() {
     document.getElementById("cameraPage").classList.remove("hidden");
 
@@ -165,6 +157,7 @@ async function openCamera() {
     video.srcObject = stream;
 }
 
+// CLOSE CAMERA
 function closeCamera() {
     document.getElementById("cameraPage").classList.add("hidden");
 
@@ -175,7 +168,6 @@ function closeCamera() {
 
 // TAKE PHOTO
 function takePhoto() {
-
     let canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -186,7 +178,7 @@ function takePhoto() {
     processImage(canvas);
 }
 
-// UPLOAD FLOW
+// UPLOAD IMAGE
 function uploadImage() {
     let file = document.getElementById("uploadInput").files[0];
 
@@ -249,8 +241,6 @@ function processImage(canvas) {
             }
 
             let text = result.responses[0].fullTextAnnotation.text;
-
-            console.log(text);
 
             let component = "";
             let quantity = 1;
