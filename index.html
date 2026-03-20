@@ -8,7 +8,7 @@
             font-family: Arial;
             text-align: center;
             background: #f5f5f5;
-            margin: 0;
+            margin-top: 50px;
         }
 
         .container {
@@ -17,30 +17,41 @@
             border-radius: 12px;
             width: 350px;
             margin: auto;
-            margin-top: 50px;
             box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
         }
 
-        button {
+        input, button {
             width: 100%;
             padding: 12px;
             margin: 10px 0;
             border-radius: 8px;
-            border: none;
+            border: 1px solid #ccc;
+        }
+
+        button {
             background: #4CAF50;
             color: white;
             font-size: 16px;
+            border: none;
+            cursor: pointer;
         }
 
         .hidden {
             display: none;
         }
 
-        /* CAMERA FULL SCREEN */
-        #addPage {
-            position: relative;
+        video {
             width: 100%;
-            height: 100vh;
+            border-radius: 10px;
+        }
+
+        /* CAMERA SCREEN */
+        #cameraPage {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background: black;
         }
 
@@ -50,15 +61,11 @@
             object-fit: cover;
         }
 
-        /* CAPTURE BUTTON */
-        .capture-container {
+        .capture-btn {
             position: absolute;
             bottom: 30px;
-            width: 100%;
-            text-align: center;
-        }
-
-        .capture-btn {
+            left: 50%;
+            transform: translateX(-50%);
             width: 80px;
             height: 80px;
             border-radius: 50%;
@@ -66,18 +73,7 @@
             border: 5px solid #ccc;
         }
 
-        .capture-btn::after {
-            content: '';
-            width: 60px;
-            height: 60px;
-            background: #4CAF50;
-            display: block;
-            border-radius: 50%;
-            margin: auto;
-        }
-
-        /* TOP BUTTONS */
-        .top-buttons {
+        .top-bar {
             position: absolute;
             top: 10px;
             width: 100%;
@@ -86,17 +82,17 @@
             padding: 10px;
         }
 
-        .top-buttons button {
+        .top-bar button {
             width: auto;
-            padding: 10px 15px;
             background: rgba(0,0,0,0.6);
         }
+
     </style>
 </head>
 
 <body>
 
-<h1 id="homeTitle">Welcome to smart Inventory System</h1>
+<h1>Welcome to smart Inventory System</h1>
 
 <!-- HOME -->
 <div class="container" id="home">
@@ -106,21 +102,27 @@
     <button onclick="goToTake()">📤 Take Inventory</button>
 </div>
 
-<!-- ADD PAGE -->
-<div class="hidden" id="addPage">
+<!-- ADD PAGE (3 BUTTONS) -->
+<div class="container hidden" id="addPage">
+    <h3>➕ Add Inventory</h3>
+
+    <button onclick="openCamera()">📷 Take Photo</button>
+    <input type="file" id="uploadInput">
+    <button onclick="uploadImage()">📁 Upload Image</button>
+
+    <button onclick="goHome()">Back</button>
+</div>
+
+<!-- CAMERA PAGE -->
+<div id="cameraPage" class="hidden">
 
     <video id="camera" autoplay></video>
 
-    <!-- TOP BUTTONS -->
-    <div class="top-buttons">
-        <button onclick="startCamera()">Start</button>
-        <button onclick="goHome()">Back</button>
+    <div class="top-bar">
+        <button onclick="closeCamera()">Back</button>
     </div>
 
-    <!-- CAPTURE BUTTON -->
-    <div class="capture-container">
-        <button class="capture-btn" onclick="takePhoto()"></button>
-    </div>
+    <button class="capture-btn" onclick="takePhoto()"></button>
 
 </div>
 
@@ -138,46 +140,41 @@ let stream = null;
 // NAVIGATION
 function goToAdd() {
     document.getElementById("home").classList.add("hidden");
-    document.getElementById("homeTitle").classList.add("hidden");
     document.getElementById("addPage").classList.remove("hidden");
 }
 
 function goToTake() {
     document.getElementById("home").classList.add("hidden");
-    document.getElementById("homeTitle").classList.add("hidden");
     document.getElementById("takePage").classList.remove("hidden");
 }
 
 function goHome() {
     document.getElementById("home").classList.remove("hidden");
-    document.getElementById("homeTitle").classList.remove("hidden");
     document.getElementById("addPage").classList.add("hidden");
     document.getElementById("takePage").classList.add("hidden");
+}
+
+// CAMERA FLOW
+async function openCamera() {
+    document.getElementById("cameraPage").classList.remove("hidden");
+
+    stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment" }
+    });
+
+    video.srcObject = stream;
+}
+
+function closeCamera() {
+    document.getElementById("cameraPage").classList.add("hidden");
 
     if (stream) {
         stream.getTracks().forEach(track => track.stop());
     }
 }
 
-// START CAMERA (BACK CAMERA)
-async function startCamera() {
-    try {
-        stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "environment" }
-        });
-        video.srcObject = stream;
-    } catch (err) {
-        alert("Camera error: " + err.message);
-    }
-}
-
 // TAKE PHOTO
 function takePhoto() {
-
-    if (!stream) {
-        alert("Start camera first");
-        return;
-    }
 
     let canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
@@ -185,6 +182,41 @@ function takePhoto() {
 
     let ctx = canvas.getContext("2d");
     ctx.drawImage(video, 0, 0);
+
+    processImage(canvas);
+}
+
+// UPLOAD FLOW
+function uploadImage() {
+    let file = document.getElementById("uploadInput").files[0];
+
+    if (!file) {
+        alert("Upload image first");
+        return;
+    }
+
+    let reader = new FileReader();
+
+    reader.onload = function() {
+        let img = new Image();
+        img.onload = function() {
+            let canvas = document.createElement("canvas");
+            canvas.width = img.width;
+            canvas.height = img.height;
+
+            let ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0);
+
+            processImage(canvas);
+        };
+        img.src = reader.result;
+    };
+
+    reader.readAsDataURL(file);
+}
+
+// OCR + SAVE
+function processImage(canvas) {
 
     canvas.toBlob(async function(blob) {
 
@@ -212,7 +244,7 @@ function takePhoto() {
             let result = await response.json();
 
             if (!result.responses || !result.responses[0].fullTextAnnotation) {
-                alert("❌ No text detected");
+                alert("No text detected");
                 return;
             }
 
@@ -220,7 +252,6 @@ function takePhoto() {
 
             console.log(text);
 
-            // EXTRACT
             let component = "";
             let quantity = 1;
 
@@ -230,7 +261,6 @@ function takePhoto() {
             let qtyMatch = text.match(/Quantity[:\s]*(\d+)/i);
             if (qtyMatch) quantity = parseInt(qtyMatch[1]);
 
-            // SAVE
             await fetch("https://script.google.com/macros/s/AKfycbzsX55cEf1cHBXWPgBz-ypLiLz8rZ06IgKZp7edJBsyvwpAzY0riHamRz-ay8S1whV15w/exec", {
                 method: "POST",
                 body: JSON.stringify({
@@ -240,7 +270,7 @@ function takePhoto() {
                 })
             });
 
-            alert("✅ Saved!\n" + component + "\nQty: " + quantity);
+            alert("Saved!\n" + component + "\nQty: " + quantity);
         };
 
         reader.readAsDataURL(blob);
