@@ -38,7 +38,6 @@
             display: none;
         }
 
-        /* CAMERA PAGE */
         #cameraPage {
             position: fixed;
             top: 0;
@@ -56,22 +55,19 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
-            z-index: 1; /* BEHIND BUTTON */
+            z-index: 1;
         }
 
-        /* CAPTURE BUTTON */
         .capture-btn {
             position: fixed;
             bottom: 40px;
             left: 50%;
             transform: translateX(-50%);
-
             width: 90px;
             height: 90px;
             border-radius: 50%;
             background: white;
             border: 6px solid #ccc;
-
             z-index: 9999;
         }
 
@@ -86,7 +82,6 @@
             margin-top: 6px;
         }
 
-        /* TOP BAR */
         .top-bar {
             position: absolute;
             top: 10px;
@@ -102,7 +97,6 @@
             padding: 10px 15px;
             background: rgba(0,0,0,0.6);
         }
-
     </style>
 </head>
 
@@ -113,7 +107,6 @@
 <!-- HOME -->
 <div class="container" id="home">
     <h3>Select Action</h3>
-
     <button onclick="goToAdd()">➕ Add Inventory</button>
     <button onclick="goToTake()">📤 Take Inventory</button>
 </div>
@@ -121,15 +114,12 @@
 <!-- ADD PAGE -->
 <div class="container hidden" id="addPage">
     <h3>➕ Add Inventory</h3>
-
     <button onclick="openCamera()">📷 Take Photo</button>
-
     <button onclick="goHome()">Back</button>
 </div>
 
-<!-- CAMERA PAGE -->
+<!-- CAMERA -->
 <div id="cameraPage" class="hidden">
-
     <video id="camera" autoplay playsinline></video>
 
     <div class="top-bar">
@@ -137,7 +127,6 @@
     </div>
 
     <button class="capture-btn" onclick="takePhoto()" type="button"></button>
-
 </div>
 
 <!-- TAKE PAGE -->
@@ -153,40 +142,36 @@ let stream = null;
 
 // NAVIGATION
 function goToAdd() {
-    document.getElementById("home").classList.add("hidden");
-    document.getElementById("addPage").classList.remove("hidden");
+    home.classList.add("hidden");
+    addPage.classList.remove("hidden");
 }
 
 function goToTake() {
-    document.getElementById("home").classList.add("hidden");
-    document.getElementById("takePage").classList.remove("hidden");
+    home.classList.add("hidden");
+    takePage.classList.remove("hidden");
 }
 
 function goHome() {
-    document.getElementById("home").classList.remove("hidden");
-    document.getElementById("addPage").classList.add("hidden");
-    document.getElementById("takePage").classList.add("hidden");
+    home.classList.remove("hidden");
+    addPage.classList.add("hidden");
+    takePage.classList.add("hidden");
 }
 
-// OPEN CAMERA
+// CAMERA
 async function openCamera() {
     document.getElementById("cameraPage").classList.remove("hidden");
 
     try {
         stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { exact: "environment" } }
+            video: { facingMode: "environment" }
         });
     } catch {
-        // fallback if exact fails
-        stream = await navigator.mediaDevices.getUserMedia({
-            video: true
-        });
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
     }
 
     video.srcObject = stream;
 }
 
-// CLOSE CAMERA
 function closeCamera() {
     document.getElementById("cameraPage").classList.add("hidden");
 
@@ -198,11 +183,6 @@ function closeCamera() {
 // TAKE PHOTO
 function takePhoto() {
 
-    if (!stream) {
-        alert("Camera not started");
-        return;
-    }
-
     let canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -213,7 +193,7 @@ function takePhoto() {
     processImage(canvas);
 }
 
-// OCR + SAVE
+// OCR + SMART EXTRACTION
 function processImage(canvas) {
 
     canvas.toBlob(async function(blob) {
@@ -225,16 +205,14 @@ function processImage(canvas) {
             let base64 = reader.result.split(',')[1];
 
             let response = await fetch(
-                "https://vision.googleapis.com/v1/images:annotate?key=YOUR_API_KEY",
+                "https://vision.googleapis.com/v1/images:annotate?key=AIzaSyD_IJCoucQxNSnuC8zckz8cnq8emjYc_oM",
                 {
                     method: "POST",
                     body: JSON.stringify({
-                        requests: [
-                            {
-                                image: { content: base64 },
-                                features: [{ type: "TEXT_DETECTION" }]
-                            }
-                        ]
+                        requests: [{
+                            image: { content: base64 },
+                            features: [{ type: "DOCUMENT_TEXT_DETECTION" }]
+                        }]
                     })
                 }
             );
@@ -247,28 +225,54 @@ function processImage(canvas) {
             }
 
             let text = result.responses[0].fullTextAnnotation.text;
-
             console.log(text);
 
+            let lines = text.split("\n");
+
             let component = "";
-            let quantity = 1;
+            let quantity = "";
+            let location = "";
 
-            let descMatch = text.match(/Desc[:\s]*(.*)/i);
-            if (descMatch) component = descMatch[1];
+            lines.forEach(line => {
 
-            let qtyMatch = text.match(/Quantity[:\s]*(\d+)/i);
-            if (qtyMatch) quantity = parseInt(qtyMatch[1]);
+                let upper = line.toUpperCase();
 
+                // COMPONENT
+                if (upper.includes("WIRE") || upper.includes("RESISTOR") || upper.includes("CAPACITOR") || upper.includes("IC")) {
+                    component = line.trim();
+                }
+
+                // QUANTITY
+                let qtyMatch = line.match(/\b\d{2,5}\b/);
+                if (qtyMatch && !quantity) {
+                    quantity = qtyMatch[0];
+                }
+
+                // LOCATION (PB51-09 type)
+                let locMatch = line.match(/[A-Z]{2,3}\d{2}[-]?\d{2}/);
+                if (locMatch) {
+                    location = locMatch[0];
+                }
+
+            });
+
+            // VALIDATION
+            if (!component || !quantity) {
+                alert("⚠️ Detection not accurate. Please retake photo.");
+                return;
+            }
+
+            // SAVE
             await fetch("https://script.google.com/macros/s/AKfycbzsX55cEf1cHBXWPgBz-ypLiLz8rZ06IgKZp7edJBsyvwpAzY0riHamRz-ay8S1whV15w/exec", {
                 method: "POST",
                 body: JSON.stringify({
                     component: component,
                     quantity: quantity,
-                    location: ""
+                    location: location
                 })
             });
 
-            alert("✅ Saved!\n" + component + "\nQty: " + quantity);
+            alert(`✅ Saved!\nComponent: ${component}\nQty: ${quantity}\nLocation: ${location}`);
         };
 
         reader.readAsDataURL(blob);
