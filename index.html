@@ -48,7 +48,8 @@
 
 <body>
 
-<h1>Welcome to smart Inventory System</h1>
+<!-- ✅ FIXED TITLE -->
+<h1 id="title">Welcome to Smart Inventory System</h1>
 
 <div class="container" id="home">
     <h3>Select Action</h3>
@@ -58,7 +59,8 @@
 </div>
 
 <div class="container hidden" id="addPage">
-    <h3>➕ Add Inventory</h3>
+    <!-- ✅ CLEAN TITLE -->
+    <h3>Adding Inventory</h3>
 
     <input type="file" id="imageInput">
 
@@ -69,17 +71,21 @@
     <input type="text" id="location" placeholder="Location">
 
     <button onclick="saveData()">💾 Save</button>
+
+    <!-- ✅ CLEAN BACK BUTTON (NO ARROW, NO SPACE) -->
     <button onclick="goHome()">Back</button>
 </div>
 
 <div class="container hidden" id="takePage">
-    <h3>📤 Take Inventory</h3>
+    <h3>Taking Inventory</h3>
 
     <input type="text" placeholder="Component">
     <input type="number" placeholder="Quantity">
 
     <button onclick="alert('Function coming soon')">Take</button>
-    <button onclick="goHome()"> Back</button>
+
+    <!-- ✅ CLEAN BACK BUTTON -->
+    <button onclick="goHome()">Back</button>
 </div>
 
 <script>
@@ -87,17 +93,25 @@
 function goToAdd() {
     document.getElementById("home").classList.add("hidden");
     document.getElementById("addPage").classList.remove("hidden");
+
+    // ✅ Change top title dynamically
+    document.getElementById("title").innerText = "Adding Inventory";
 }
 
 function goToTake() {
     document.getElementById("home").classList.add("hidden");
     document.getElementById("takePage").classList.remove("hidden");
+
+    document.getElementById("title").innerText = "Taking Inventory";
 }
 
 function goHome() {
     document.getElementById("home").classList.remove("hidden");
     document.getElementById("addPage").classList.add("hidden");
     document.getElementById("takePage").classList.add("hidden");
+
+    // ✅ Restore home title
+    document.getElementById("title").innerText = "Welcome to Smart Inventory System";
 }
 
 async function processImage() {
@@ -123,7 +137,6 @@ async function processImage() {
 
     alert("Detected:\n" + text);
 
-    // Simple auto-fill
     document.getElementById("component").value = text.split("\n")[0];
 }
 
