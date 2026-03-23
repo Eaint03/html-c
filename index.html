@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>📦 Manual P/N Scanner</title>
+    <title>📦 Super-Scanner P/N</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         body { font-family: sans-serif; text-align: center; padding: 20px; background: #1a1a1a; color: white; margin: 0; }
@@ -12,21 +12,26 @@
         .btn-main { background: #007bff; color: white; }
         .hidden { display: none; }
         
-        /* Scanner Box */
         #scanner-wrapper { 
-            width: 100%; height: 300px; margin: 15px 0; background: #000; 
-            border: 3px solid #444; border-radius: 20px; overflow: hidden;
-            position: relative;
+            width: 100%; height: 380px; margin: 15px 0; background: #000; 
+            border: 3px solid #444; border-radius: 20px; overflow: hidden; position: relative;
         }
 
-        /* SHUTTER BUTTON */
-        .shutter-btn { 
-            background: white; border: 6px solid #555; 
-            width: 80px; height: 80px; border-radius: 50%; 
-            margin: 20px auto; cursor: pointer;
+        /* Target Overlays */
+        .laser { position: absolute; top: 50%; left: 10%; width: 80%; height: 2px; background: red; box-shadow: 0 0 8px red; z-index: 10; }
+        .overlay-dim {
+            position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 5;
+            clip-path: polygon(0% 0%, 0% 100%, 10% 100%, 10% 40%, 90% 40%, 90% 60%, 10% 60%, 10% 100%, 100% 100%, 100% 0%);
         }
+
+        /* Controls Area */
+        .controls { display: flex; justify-content: space-around; padding: 10px; background: #222; border-radius: 15px; margin-bottom: 10px; }
+        .ctrl-btn { width: 45% !important; padding: 10px !important; font-size: 14px !important; background: #444; color: white; }
+        
+        .shutter-btn { background: white; border: 6px solid #555; width: 80px; height: 80px; border-radius: 50%; margin: 10px auto; cursor: pointer; }
         .shutter-btn:active { background: #007bff; }
-
+        
+        #hint { font-size: 14px; font-weight: bold; margin: 10px; color: #aaa; }
         .item-card { border: 1px solid #333; padding: 15px; margin-top: 10px; background: #222; border-radius: 12px; text-align: left; }
     </style>
 </head>
@@ -41,15 +46,21 @@
     </div>
 
     <div id="scanPage" class="hidden">
-        <h3 id="modeText">Align Barcode</h3>
-        <p id="hint">Hold phone 15cm away and steady</p>
+        <div id="hint">Align Barcode to Red Line</div>
         
         <div id="scanner-wrapper">
+            <div class="overlay-dim"></div>
+            <div class="laser"></div>
             <div id="reader" style="width: 100%;"></div>
+        </div>
+
+        <div class="controls">
+            <button class="ctrl-btn" id="torch-btn" onclick="toggleFlash()">🔦 FLASH: OFF</button>
+            <button class="ctrl-btn" id="zoom-btn" onclick="toggleZoom()">🔍 ZOOM: 1x</button>
         </div>
         
         <div class="shutter-btn" onclick="manualCapture()"></div>
-        <p>TAP TO SCAN</p>
+        <p><b>TAP TO CAPTURE</b></p>
         
         <button onclick="location.reload()" style="background:none; color:#777; border:none; text-decoration:underline;">Cancel</button>
     </div>
@@ -61,6 +72,9 @@
 let mode = "";
 let inventory = JSON.parse(localStorage.getItem("full_inv")) || {};
 let html5QrCode;
+let track = null;
+let zoomLevel = 1;
+let flashOn = false;
 
 function openScanner(m) {
     mode = m;
@@ -69,30 +83,47 @@ function openScanner(m) {
     
     html5QrCode = new Html5Qrcode("reader");
     const config = { 
-        fps: 10, 
-        qrbox: { width: 300, height: 150 },
+        fps: 20, 
+        qrbox: { width: 300, height: 100 },
         videoConstraints: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }
     };
     
-    // Start camera but don't do anything automatically
-    html5QrCode.start({ facingMode: "environment" }, config, () => {}).catch(err => alert(err));
+    html5QrCode.start({ facingMode: "environment" }, config, () => {})
+    .then(() => {
+        const video = document.querySelector('#reader video');
+        track = video.srcObject.getVideoTracks()[0];
+    })
+    .catch(err => alert("Camera Error: Check HTTPS."));
 }
 
-// 🔥 THE SNAPSHOT SCANNER
+function toggleZoom() {
+    if (!track) return;
+    zoomLevel = (zoomLevel >= 3) ? 1 : zoomLevel + 1;
+    track.applyConstraints({ advanced: [{ zoom: zoomLevel }] }).catch(e => console.log(e));
+    document.getElementById("zoom-btn").innerText = `🔍 ZOOM: ${zoomLevel}x`;
+}
+
+function toggleFlash() {
+    if (!track) return;
+    flashOn = !flashOn;
+    track.applyConstraints({ advanced: [{ torch: flashOn }] }).catch(e => console.log(e));
+    document.getElementById("torch-btn").innerText = `🔦 FLASH: ${flashOn ? 'ON' : 'OFF'}`;
+}
+
 async function manualCapture() {
-    document.getElementById("hint").innerText = "⌛ Processing... Please wait";
-    document.getElementById("hint").style.color = "yellow";
+    const hint = document.getElementById("hint");
+    hint.innerText = "⌛ Decoding...";
+    hint.style.color = "yellow";
 
     try {
-        // This captures the current frame and tries to decode it
         const imageFile = await html5QrCode.takePhoto(); 
         const result = await html5QrCode.scanFile(imageFile, true);
         
         if (navigator.vibrate) navigator.vibrate(100);
         processData(result);
     } catch (err) {
-        document.getElementById("hint").innerText = "❌ FAILED. Try moving further back.";
-        document.getElementById("hint").style.color = "red";
+        hint.innerText = "❌ No barcode found. Zoom in or move back.";
+        hint.style.color = "#ff4444";
     }
 }
 
