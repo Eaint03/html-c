@@ -5,28 +5,33 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>📦 Smart Inventory</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
-
     <style>
         body { font-family: Arial, sans-serif; text-align: center; padding: 20px; background: #f4f4f9; margin: 0; }
         .container { max-width: 500px; margin: auto; }
-        button { padding: 15px; margin: 10px; font-size: 16px; cursor: pointer; border-radius: 8px; border: 1px solid #ddd; width: 80%; }
+        button { padding: 15px; margin: 10px; font-size: 16px; cursor: pointer; border-radius: 8px; border: 1px solid #ddd; width: 85%; transition: 0.2s; }
+        button:active { transform: scale(0.98); }
         .hidden { display: none; }
         
-        /* Scanner Viewport */
-        #scanner { 
+        /* The Scanner Window */
+        #scanner-container { 
             width: 100%; 
             max-width: 400px; 
             height: 300px; 
-            margin: auto; 
-            background: #000; 
-            border: 4px solid #333; 
+            margin: 20px auto; 
+            background: #222; 
+            border: 5px solid #333; 
             border-radius: 12px;
             overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
         }
 
         .box { border: 1px solid #ccc; padding: 15px; margin-top: 10px; background: white; border-radius: 8px; text-align: left; }
         input { padding: 12px; margin: 5px; width: 85%; border: 1px solid #ccc; border-radius: 5px; }
-        h2 { color: #333; }
+        .scan-btn { background: #4caf50; color: white; font-weight: bold; border: none; }
+        .back-btn { background: #eee; color: #333; }
     </style>
 </head>
 
@@ -36,30 +41,38 @@
     <h2>📦 Smart Inventory</h2>
 
     <div id="homePage">
-        <button onclick="goTo('addPage')" style="background: #e1f5fe;">➕ Add Inventory</button>
-        <button onclick="goTo('takePage')" style="background: #fff3e0;">➖ Take Inventory</button>
-        <button onclick="showInventory()">📋 View Inventory List</button>
+        <button onclick="goTo('addPage')" style="background: #e3f2fd;">➕ Add Stock</button>
+        <button onclick="goTo('takePage')" style="background: #fff3e0;">➖ Take Stock</button>
+        <button onclick="showInventory()" style="background: #f5f5f5;">📋 View Inventory</button>
     </div>
 
     <div id="addPage" class="hidden">
-        <h3>Scanning to ADD...</h3>
-        <button onclick="goHome()" style="background: #ffcdd2;">⬅ Cancel / Back</button>
-        <div id="scanner"></div>
-        <p id="statusAdd">Point camera at P/N barcode</p>
+        <h3>Add to Inventory</h3>
+        <button class="back-btn" onclick="goHome()">⬅ Back to Home</button>
+        
+        <button id="addScanBtn" class="scan-btn" onclick="startScanner('add')">📷 CLICK TO SCAN BARCODE</button>
+        
+        <div id="scanner-container">
+            <div id="scanner">Camera is Off</div>
+        </div>
 
         <div id="formBox" class="hidden">
             <input id="name" placeholder="Component Name"><br>
             <input id="qty" type="number" placeholder="Initial Quantity" value="1"><br>
             <input id="location" placeholder="Bin Location"><br>
-            <button onclick="saveNewItem()" style="background: #4caf50; color: white;">💾 Save New Part</button>
+            <button onclick="saveNewItem()" style="background: #2196f3; color: white;">💾 Save New Part</button>
         </div>
     </div>
 
     <div id="takePage" class="hidden">
-        <h3>Scanning to TAKE...</h3>
-        <button onclick="goHome()" style="background: #ffcdd2;">⬅ Cancel / Back</button>
-        <div id="scanner-take" style="width:100%; max-width:400px; margin:auto; border:4px solid #333; border-radius:12px;"></div>
-        <p id="statusTake">Point camera at P/N barcode</p>
+        <h3>Take from Inventory</h3>
+        <button class="back-btn" onclick="goHome()">⬅ Back to Home</button>
+        
+        <button id="takeScanBtn" class="scan-btn" onclick="startScanner('take')">📷 CLICK TO SCAN BARCODE</button>
+        
+        <div id="scanner-container">
+            <div id="scanner-take">Camera is Off</div>
+        </div>
     </div>
 
     <div id="inventoryBox"></div>
@@ -75,21 +88,18 @@ function saveData() {
     localStorage.setItem("inventory", JSON.stringify(inventory));
 }
 
-// Navigation Logic
 function goTo(page) {
     document.getElementById("homePage").classList.add("hidden");
     document.getElementById("addPage").classList.add("hidden");
     document.getElementById("takePage").classList.add("hidden");
     document.getElementById(page).classList.remove("hidden");
-    
-    if(page === 'addPage') startScanner('add', "scanner");
-    if(page === 'takePage') startScanner('take', "scanner-take");
+    document.getElementById("inventoryBox").innerHTML = "";
 }
 
 function goHome() {
     if (html5QrCode) {
         html5QrCode.stop().then(() => {
-            location.reload(); // Hard reset ensures camera release
+            location.reload();
         }).catch(() => {
             location.reload();
         });
@@ -98,7 +108,6 @@ function goHome() {
     }
 }
 
-// Strips '1P' or 'P' from Mouser/DigiKey barcodes
 function cleanPartNumber(rawCode) {
     let clean = rawCode.trim();
     if (clean.startsWith("1P")) return clean.substring(2);
@@ -107,14 +116,21 @@ function cleanPartNumber(rawCode) {
     return clean;
 }
 
-// 🔥 INSTANT SCANNER ENGINE
-function startScanner(m, elementId) {
+// 🔥 THIS RUNS ONLY WHEN YOU CLICK THE BUTTON
+function startScanner(m) {
     mode = m;
+    const elementId = (mode === 'add') ? "scanner" : "scanner-take";
+    const btnId = (mode === 'add') ? "addScanBtn" : "takeScanBtn";
+    
+    // Disable button while scanning
+    document.getElementById(btnId).innerText = "Scanning... Hold Steady";
+    document.getElementById(btnId).style.background = "#ffa000";
+
     html5QrCode = new Html5Qrcode(elementId);
 
     const config = { 
-        fps: 30, // Fast processing
-        qrbox: { width: 320, height: 150 }, // Narrow for P/N barcodes
+        fps: 25, 
+        qrbox: { width: 300, height: 120 },
         aspectRatio: 1.0
     };
 
@@ -122,10 +138,8 @@ function startScanner(m, elementId) {
         { facingMode: "environment" }, 
         config,
         (decodedText) => {
-            // SUCCESS: Triggers the moment it sees the barcode
             const finalPN = cleanPartNumber(decodedText);
             
-            // Haptic feedback (vibrate)
             if (navigator.vibrate) navigator.vibrate(100);
 
             html5QrCode.stop().then(() => {
@@ -134,19 +148,17 @@ function startScanner(m, elementId) {
             });
         }
     ).catch(err => {
-        alert("Camera Error: Please ensure you are using HTTPS on GitHub Pages.");
+        alert("Camera Error: Ensure you are using HTTPS.");
+        location.reload();
     });
 }
 
 function handleScan(code) {
     if (inventory[code]) {
         let item = inventory[code];
-        let promptMsg = (mode === 'add' ? "Add to " : "Take from ") + item.name + "\nStock: " + item.qty;
-        let change = prompt(promptMsg, "1");
-        
-        if (change && !isNaN(change)) {
-            let val = parseInt(change);
-            inventory[code].qty += (mode === 'add' ? val : -val);
+        let val = prompt("Found: " + item.name + "\nStock: " + item.qty + "\n\nEnter amount to " + mode + ":", "1");
+        if (val && !isNaN(val)) {
+            inventory[code].qty += (mode === 'add' ? parseInt(val) : -parseInt(val));
             saveData();
             alert("Inventory Updated!");
             location.reload();
@@ -157,7 +169,7 @@ function handleScan(code) {
             document.getElementById("name").value = code;
             alert("New P/N Detected: " + code);
         } else {
-            alert("Part Number '" + code + "' not found in inventory.");
+            alert("Part Number '" + code + "' not found.");
             location.reload();
         }
     }
@@ -166,21 +178,19 @@ function handleScan(code) {
 function saveNewItem() {
     let name = document.getElementById("name").value;
     let qty = parseInt(document.getElementById("qty").value);
-    let location = document.getElementById("location").value;
-
+    let loc = document.getElementById("location").value;
     if (name) {
-        inventory[currentCode] = { name, qty, location };
+        inventory[currentCode] = { name: name, qty: qty, location: loc };
         saveData();
-        alert("New Part Saved!");
-        window.location.reload();
+        alert("Saved!");
+        location.reload();
     }
 }
 
 function showInventory() {
-    let html = "<h3>📦 Inventory List</h3>";
+    let html = "<h3>📋 Current Stock</h3>";
     let keys = Object.keys(inventory);
-    if (keys.length === 0) html += "<p>No items found.</p>";
-    
+    if (keys.length === 0) html += "<p>Empty</p>";
     keys.forEach(code => {
         let item = inventory[code];
         html += `<div class="box"><b>${item.name}</b><br><small>PN: ${code}</small><br>Qty: ${item.qty}</div>`;
@@ -188,6 +198,5 @@ function showInventory() {
     document.getElementById("inventoryBox").innerHTML = html;
 }
 </script>
-
 </body>
 </html>
