@@ -3,29 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>📦 Direct P/N Scanner</title>
+    <title>📦 Ultra-Sharp P/N Scanner</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         body { font-family: sans-serif; text-align: center; padding: 20px; background: #121212; color: white; margin: 0; }
         .container { max-width: 450px; margin: auto; }
         button { padding: 18px; margin: 10px 0; font-size: 16px; cursor: pointer; border-radius: 12px; width: 90%; border: none; font-weight: bold; }
         .btn-main { background: #007bff; color: white; }
-        .btn-take { background: #fd7e14; color: white; }
         .hidden { display: none; }
         
         #scanner-wrapper { 
-            width: 100%; height: 350px; margin: 15px 0; background: #000; 
-            border: 3px solid #444; border-radius: 20px; overflow: hidden; position: relative;
+            width: 100%; height: 300px; margin: 15px 0; background: #000; 
+            border: 3px solid #007bff; border-radius: 20px; overflow: hidden; position: relative;
         }
 
         /* SHUTTER BUTTON */
         .shutter-btn { 
-            background: white; border: 6px solid #555; 
+            background: white; border: 6px solid #444; 
             width: 80px; height: 80px; border-radius: 50%; 
-            margin: 10px auto; cursor: pointer;
+            margin: 10px auto; cursor: pointer; box-shadow: 0 0 15px rgba(0,123,255,0.5);
         }
         .shutter-btn:active { background: #007bff; transform: scale(0.9); }
 
+        .zoom-container { margin: 10px 0; }
+        input[type=range] { width: 80%; }
+        
+        #status { font-weight: bold; margin: 10px; height: 20px; }
         .item-card { border: 1px solid #333; padding: 15px; margin-top: 10px; background: #1e1e1e; border-radius: 12px; text-align: left; }
     </style>
 </head>
@@ -34,23 +37,28 @@
 <div class="container">
     <div id="homePage">
         <h2>📦 Smart Inventory</h2>
-        <button class="btn-main" onclick="openScanner('add')">➕ ADD STOCK</button>
-        <button class="btn-main" onclick="openScanner('take')" style="background:#fd7e14;">➖ TAKE STOCK</button>
+        <button class="btn-main" onclick="openScanner('add')">➕ SCAN TO ADD</button>
+        <button class="btn-main" onclick="openScanner('take')" style="background:#fd7e14;">➖ SCAN TO TAKE</button>
         <button onclick="showInventory()" style="background:#444; color:white;">📋 VIEW LIST</button>
     </div>
 
     <div id="scanPage" class="hidden">
-        <h3 id="modeText">Scan Barcode</h3>
-        <p id="status">Tap button when barcode is centered</p>
+        <h3 id="modeText">Align Barcode</h3>
+        <div id="status">Hold steady...</div>
         
         <div id="scanner-wrapper">
             <div id="reader" style="width: 100%;"></div>
+        </div>
+
+        <div class="zoom-container">
+            <label>Zoom: </label>
+            <input type="range" id="zoom-range" min="1" max="5" step="0.1" value="1" oninput="applyZoom(this.value)">
         </div>
         
         <div class="shutter-btn" onclick="snapAndScan()"></div>
         <p><b>TAP TO CAPTURE</b></p>
         
-        <button onclick="location.reload()" style="background:none; color:#777; border:none; text-decoration:underline; margin-top:10px;">Cancel</button>
+        <button onclick="location.reload()" style="background:none; color:#777; border:none; text-decoration:underline;">Cancel</button>
     </div>
 
     <div id="inventoryBox"></div>
@@ -58,8 +66,9 @@
 
 <script>
 let mode = "";
-let inventory = JSON.parse(localStorage.getItem("inventory_v4")) || {};
+let inventory = JSON.parse(localStorage.getItem("inventory_v5")) || {};
 let html5QrCode;
+let cameraTrack = null;
 
 function openScanner(m) {
     mode = m;
@@ -71,65 +80,77 @@ function openScanner(m) {
 function startCamera() {
     html5QrCode = new Html5Qrcode("reader");
     const config = { 
-        fps: 30, 
+        fps: 25, 
         qrbox: { width: 300, height: 120 },
-        videoConstraints: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }
+        videoConstraints: { 
+            facingMode: "environment", 
+            width: { ideal: 1920 }, 
+            height: { ideal: 1080 },
+            focusMode: "continuous" // Force focus
+        }
     };
-    // Start camera - we don't care about the success callback, we use manual trigger
-    html5QrCode.start({ facingMode: "environment" }, config, () => {}).catch(err => alert(err));
+
+    html5QrCode.start({ facingMode: "environment" }, config, () => {})
+    .then(() => {
+        // Get camera track for zoom control
+        const videoElement = document.querySelector('#reader video');
+        const stream = videoElement.srcObject;
+        cameraTrack = stream.getVideoTracks()[0];
+    })
+    .catch(err => alert("Error: Use HTTPS for camera access."));
+}
+
+function applyZoom(val) {
+    if (cameraTrack && cameraTrack.getCapabilities().zoom) {
+        cameraTrack.applyConstraints({ advanced: [{ zoom: val }] });
+    }
 }
 
 async function snapAndScan() {
     const status = document.getElementById("status");
-    status.innerText = "⌛ Scanning...";
-    status.style.color = "yellow";
+    status.innerText = "⌛ Reading...";
+    status.style.color = "#007bff";
 
     try {
-        // Force the scanner to try and decode the CURRENT frame immediately
-        // Note: html5-qrcode's scanFile can take a canvas/blob
+        // Manual high-speed scan of the current frame
         const video = document.querySelector('#reader video');
         const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0);
+        const ctx = canvas.getContext('2d');
         
-        // Use the library to decode the image we just "snapped"
+        // Apply high-contrast filter to help decoder
+        ctx.filter = 'contrast(150%) grayscale(100%)';
+        ctx.drawImage(video, 0, 0);
+        
         const result = await html5QrCode.scanFile(canvasToBlob(canvas), true);
         handleResult(result);
     } catch (e) {
-        status.innerText = "❌ No barcode found. Try again.";
-        status.style.color = "red";
+        status.innerText = "❌ NO BARCODE SEEN";
+        status.style.color = "#ff4444";
     }
 }
 
-// Helper to convert canvas to blob for the scanner
 function canvasToBlob(canvas) {
-    var dataurl = canvas.toDataURL("image/jpeg");
+    var dataurl = canvas.toDataURL("image/jpeg", 0.9);
     var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
         bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
     while(n--){ u8arr[n] = bstr.charCodeAt(n); }
-    return new File([u8arr], "scan.jpg", {type:mime});
+    return new File([u8arr], "temp.jpg", {type:mime});
 }
 
 function handleResult(text) {
     if (navigator.vibrate) navigator.vibrate(100);
-    
-    // Clean P/N
     let pn = text.trim();
     if (pn.startsWith("1P")) pn = pn.substring(2);
     else if (pn.startsWith("P")) pn = pn.substring(1);
 
     html5QrCode.stop().then(() => {
-        if (inventory[pn]) {
-            inventory[pn].qty += (mode === 'add' ? 1 : -1);
-        } else {
-            if (mode === 'add') {
-                inventory[pn] = { qty: 1 };
-            } else {
-                alert("Part not in stock.");
-            }
-        }
-        localStorage.setItem("inventory_v4", JSON.stringify(inventory));
+        if (!inventory[pn]) inventory[pn] = { qty: 0 };
+        inventory[pn].qty += (mode === 'add' ? 1 : -1);
+        if (inventory[pn].qty < 0) inventory[pn].qty = 0;
+        
+        localStorage.setItem("inventory_v5", JSON.stringify(inventory));
         location.reload();
     });
 }
