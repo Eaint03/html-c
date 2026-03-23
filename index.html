@@ -2,56 +2,63 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📦 Smart Inventory</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>📦 High-Res P/N Scanner</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; background: #f0f2f5; margin: 0; }
-        .container { max-width: 450px; margin: auto; background: white; padding: 20px; border-radius: 15px; }
-        button { padding: 15px; margin: 10px 0; font-size: 16px; cursor: pointer; border-radius: 10px; width: 100%; font-weight: bold; }
+        body { font-family: sans-serif; text-align: center; padding: 20px; background: #121212; color: white; margin: 0; }
+        .container { max-width: 450px; margin: auto; }
+        
+        button { padding: 18px; margin: 10px 0; font-size: 16px; cursor: pointer; border-radius: 12px; width: 90%; border: none; font-weight: bold; }
+        .btn-main { background: #007bff; color: white; }
+        .btn-cancel { background: #333; color: #ccc; margin-top: 20px; }
+
         .hidden { display: none; }
         
-        /* Scanner Container */
+        /* Scanner Box */
         #scanner-wrapper { 
-            width: 100%; height: 320px; margin: 15px 0; background: #000; 
-            border: 4px solid #333; border-radius: 12px; overflow: hidden;
+            width: 100%; height: 350px; margin: 15px 0; background: #000; 
+            border: 3px solid #007bff; border-radius: 20px; overflow: hidden;
             position: relative;
         }
 
-        /* The Shutter Button (Like a Phone Camera) */
+        /* SHUTTER BUTTON */
+        .shutter-container { padding: 10px; }
         .shutter-btn { 
-            background: white; color: black; border: 5px solid #ccc; 
-            width: 70px !important; height: 70px; border-radius: 50%; 
-            margin: 10px auto; display: block; box-shadow: 0 0 10px rgba(0,0,0,0.3);
+            background: white; border: 6px solid #444; 
+            width: 85px; height: 85px; border-radius: 50%; 
+            margin: auto; cursor: pointer; box-shadow: 0 0 20px rgba(0,123,255,0.4);
         }
-        .shutter-btn:active { background: #ddd; transform: scale(0.9); }
+        .shutter-btn:active { background: #007bff; transform: scale(0.9); }
 
-        .item-box { border: 1px solid #eee; padding: 12px; margin-top: 10px; background: #fafafa; border-radius: 8px; text-align: left; }
+        #msg { color: #007bff; font-weight: bold; height: 20px; margin-bottom: 10px; }
+        .item-card { border: 1px solid #333; padding: 15px; margin-top: 10px; background: #1e1e1e; border-radius: 12px; text-align: left; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>📦 Smart Inventory</h2>
-
     <div id="homePage">
-        <button onclick="goTo('addPage')" style="background: #007bff; color: white;">➕ Add Stock</button>
-        <button onclick="goTo('takePage')" style="background: #fd7e14; color: white;">➖ Take Stock</button>
-        <button onclick="showInventory()">📋 View List</button>
+        <h2>📦 Smart Inventory</h2>
+        <button class="btn-main" onclick="openScanner('add')">➕ ADD STOCK</button>
+        <button class="btn-main" onclick="openScanner('take')" style="background:#fd7e14;">➖ TAKE STOCK</button>
+        <button class="btn-main" onclick="showInventory()" style="background:#6c757d;">📋 VIEW LIST</button>
     </div>
 
     <div id="scanPage" class="hidden">
-        <h3 id="pageTitle">Scanning...</h3>
-        <button onclick="goHome()" style="background: #6c757d; color: white;">⬅ Cancel</button>
+        <h3 id="modeText">Align P/N Barcode</h3>
+        <div id="msg">Point at barcode...</div>
         
         <div id="scanner-wrapper">
             <div id="reader" style="width: 100%;"></div>
         </div>
-
-        <p>1. Align barcode in box<br>2. Click button to capture</p>
         
-        <button class="shutter-btn" onclick="captureNow()"></button>
-        <p><b>TAP TO SNAP</b></p>
+        <div class="shutter-container">
+            <div class="shutter-btn" onclick="captureNow()"></div>
+            <p>TAP TO CAPTURE</p>
+        </div>
+        
+        <button class="btn-cancel" onclick="location.reload()">Back / Cancel</button>
     </div>
 
     <div id="inventoryBox"></div>
@@ -61,106 +68,88 @@
 let mode = "";
 let inventory = JSON.parse(localStorage.getItem("inventory")) || {};
 let html5QrCode;
-let isScanning = false;
+let currentDetectedText = "";
 
-function goTo(page) {
+function openScanner(m) {
+    mode = m;
     document.getElementById("homePage").classList.add("hidden");
     document.getElementById("scanPage").classList.remove("hidden");
-    mode = (page === 'addPage') ? 'add' : 'take';
-    document.getElementById("pageTitle").innerText = (mode === 'add') ? "Adding Item" : "Taking Item";
-    
     startCamera();
 }
 
 function startCamera() {
     html5QrCode = new Html5Qrcode("reader");
-    const config = { fps: 20, qrbox: { width: 280, height: 120 } };
     
-    html5QrCode.start({ facingMode: "environment" }, config, () => {
-        // We ignore automatic detections here
-    }).catch(err => alert("Camera Error: " + err));
-}
-
-// 🔥 THIS IS THE MANUAL CAPTURE FUNCTION
-async function captureNow() {
-    if (!html5QrCode) return;
-
-    try {
-        // This forces the library to scan the CURRENT frame immediately
-        const result = await html5QrCode.scanFileV2(null, true); 
-        // Note: Some mobile browsers need a slight workaround for scanFile on live streams
-        // So we use the internal decoder on the current video frame:
-        processResult(result.decodedText);
-    } catch (err) {
-        // If scanFile fails, we try a fallback: momentarily "listen" for a result
-        const statusMsg = document.getElementById("pageTitle");
-        statusMsg.innerText = "Processing...";
-        
-        // We "gate" the success callback so it only works once after clicking
-        isScanning = true; 
-        setTimeout(() => { isScanning = false; statusMsg.innerText = "Try Again"; }, 2000);
-    }
-}
-
-// Fallback logic for the listener
-function onScanSuccess(decodedText) {
-    if (isScanning) {
-        isScanning = false;
-        processResult(decodedText);
-    }
-}
-
-// Re-start the camera with the listener enabled for the "Shutter" effect
-function startCamera() {
-    html5QrCode = new Html5Qrcode("reader");
-    const config = { fps: 20, qrbox: { width: 280, height: 120 } };
+    // HIGH-RES CONFIG: This helps with small DigiKey/Mouser labels
+    const config = { 
+        fps: 20, 
+        qrbox: { width: 320, height: 140 },
+        videoConstraints: {
+            facingMode: "environment",
+            width: { min: 1280, ideal: 1920 }, // Request HD video
+            height: { min: 720, ideal: 1080 }
+        }
+    };
     
-    html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
-}
-
-function processResult(text) {
-    let clean = text.trim();
-    if (clean.startsWith("1P")) clean = clean.substring(2);
-    else if (clean.startsWith("P")) clean = clean.substring(1);
-
-    if (navigator.vibrate) navigator.vibrate(100);
-    
-    html5QrCode.stop().then(() => {
-        handleInventory(clean);
+    html5QrCode.start({ facingMode: "environment" }, config, (text) => {
+        currentDetectedText = text; // Constantly updates as it "sees" the code
+        document.getElementById("msg").innerText = "READY! TAP BUTTON";
+    }).catch(err => {
+        alert("Camera Error: Check HTTPS settings.");
     });
 }
 
-function handleInventory(code) {
-    if (inventory[code]) {
-        let qty = prompt("Found: " + inventory[code].name + "\nStock: " + inventory[code].qty + "\nQuantity to " + mode + ":", "1");
-        if (qty) {
-            inventory[code].qty += (mode === 'add' ? parseInt(qty) : -parseInt(qty));
-            localStorage.setItem("inventory", JSON.stringify(inventory));
-            alert("Updated!");
-        }
-        location.reload();
-    } else {
-        if (mode === "add") {
-            let name = prompt("New Part! Enter Name for P/N: " + code);
-            if (name) {
-                inventory[code] = { name: name, qty: 1 };
-                localStorage.setItem("inventory", JSON.stringify(inventory));
-                alert("Saved!");
-            }
-            location.reload();
-        } else {
-            alert("Part not found.");
-            location.reload();
-        }
-    }
+function cleanPN(raw) {
+    let code = raw.trim();
+    if (code.startsWith("1P")) return code.substring(2);
+    if (code.startsWith("P"))  return code.substring(1);
+    return code;
 }
 
-function goHome() { location.reload(); }
+function captureNow() {
+    if (!currentDetectedText) {
+        document.getElementById("msg").innerText = "❌ NOT DETECTED - HOLD STEADY";
+        return;
+    }
+
+    if (navigator.vibrate) navigator.vibrate(100);
+    const finalPN = cleanPN(currentDetectedText);
+    
+    html5QrCode.stop().then(() => {
+        processInventory(finalPN);
+    });
+}
+
+function processInventory(pn) {
+    if (inventory[pn]) {
+        let item = inventory[pn];
+        let qty = prompt(`${item.name}\nIn Stock: ${item.qty}\n\nAmount to ${mode}:`, "1");
+        if (qty && !isNaN(qty)) {
+            inventory[pn].qty += (mode === 'add' ? parseInt(qty) : -parseInt(qty));
+            save();
+        }
+    } else {
+        if (mode === 'add') {
+            let name = prompt("NEW PART!\nEnter name for P/N: " + pn);
+            if (name) {
+                inventory[pn] = { name: name, qty: 1 };
+                save();
+            }
+        } else {
+            alert("Part Number not found.");
+        }
+    }
+    location.reload();
+}
+
+function save() {
+    localStorage.setItem("inventory", JSON.stringify(inventory));
+}
 
 function showInventory() {
-    let html = "<h3>📋 Stock List</h3>";
-    for (let code in inventory) {
-        html += `<div class="item-box"><b>${inventory[code].name}</b><br>PN: ${code}<br>Qty: ${inventory[code].qty}</div>`;
+    let html = "<h3>📋 Stock</h3>";
+    for (let pn in inventory) {
+        html += `<div class="item-card"><b>${inventory[pn].name}</b><br>P/N: ${pn}<br>Qty: ${inventory[pn].qty}</div>`;
     }
     document.getElementById("inventoryBox").innerHTML = html;
 }
