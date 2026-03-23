@@ -1,339 +1,69 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Smart Inventory System</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <style>
-        body {
-            font-family: Arial;
-            text-align: center;
-            background: #f5f5f5;
-            margin-top: 50px;
-        }
-
-        .container {
-            background: black;
-            padding: 30px;
-            border-radius: 12px;
-            width: 90%;
-            max-width: 350px;
-            margin: auto;
-            box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
-        }
-
-        button {
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            border-radius: 8px;
-            border: none;
-            background: #4CAF50;
-            color: white;
-            font-size: 16px;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        /* CAMERA PAGE */
-        #cameraPage {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: black;
-            z-index: 10;
-        }
-
-        video {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            object-fit: cover;
-            background: black;
-        }
-
-        .capture-btn {
-            position: fixed;
-            bottom: 40px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 90px;
-            height: 90px;
-            border-radius: 50%;
-            background: white;
-            border: 6px solid #ccc;
-            z-index: 9999;
-        }
-
-        .capture-btn::after {
-            content: '';
-            width: 65px;
-            height: 65px;
-            background: #4CAF50;
-            display: block;
-            border-radius: 50%;
-            margin: auto;
-            margin-top: 6px;
-        }
-
-        .top-bar {
-            position: absolute;
-            top: 10px;
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            padding: 10px;
-            z-index: 9999;
-        }
-
-        .top-bar button {
-            width: auto;
-            background: rgba(0,0,0,0.6);
-        }
-    </style>
+    <title>Barcode Inventory System</title>
 </head>
 
 <body>
 
-<h1>Welcome to smart Inventory System</h1>
+<h2>📦 Scan Barcode</h2>
 
-<div class="container" id="home">
-    <h3>Select Action</h3>
-    <button onclick="goToAdd()">➕ Add Inventory</button>
-    <button onclick="goToTake()">📤 Take Inventory</button>
-</div>
+<input type="file" accept="image/*" capture="environment" id="fileInput">
 
-<div class="container hidden" id="addPage">
-    <h3>➕ Add Inventory</h3>
-    <button onclick="openCamera()">📷 Take Photo</button>
-    <button onclick="goHome()">Back</button>
-</div>
+<canvas id="canvas" style="display:none;"></canvas>
 
-<div id="cameraPage" class="hidden">
-    <video id="camera" autoplay playsinline muted></video>
-
-    <div class="top-bar">
-        <button onclick="closeCamera()">Back</button>
-    </div>
-
-    <button class="capture-btn" onclick="takePhoto()"></button>
-</div>
-
-<div class="container hidden" id="takePage">
-    <h3>📤 Take Inventory</h3>
-    <button onclick="goHome()">Back</button>
-</div>
+<script src="https://unpkg.com/@zxing/library@latest"></script>
 
 <script>
 
-let video = document.getElementById("camera");
-let stream = null;
+const codeReader = new ZXing.BrowserMultiFormatReader();
 
-// NAVIGATION
-function goToAdd() {
-    document.getElementById("home").classList.add("hidden");
-    document.getElementById("addPage").classList.remove("hidden");
-}
+document.getElementById('fileInput').addEventListener('change', function (e) {
 
-function goToTake() {
-    document.getElementById("home").classList.add("hidden");
-    document.getElementById("takePage").classList.remove("hidden");
-}
+    const file = e.target.files[0];
+    if (!file) return;
 
-function goHome() {
-    document.getElementById("home").classList.remove("hidden");
-    document.getElementById("addPage").classList.add("hidden");
-    document.getElementById("takePage").classList.add("hidden");
-}
+    const img = new Image();
+    img.src = URL.createObjectURL(file);
 
-// CAMERA
-async function openCamera() {
-    document.getElementById("cameraPage").classList.remove("hidden");
+    img.onload = function () {
 
-    try {
-        stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: { ideal: "environment" } }
-        });
-    } catch {
-        stream = await navigator.mediaDevices.getUserMedia({ video: true });
-    }
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
 
-    video.srcObject = stream;
-    video.onloadedmetadata = () => video.play();
-}
+        canvas.width = img.width;
+        canvas.height = img.height;
 
-function closeCamera() {
-    document.getElementById("cameraPage").classList.add("hidden");
+        ctx.drawImage(img, 0, 0);
 
-    if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-    }
-}
+        codeReader.decodeFromCanvas(canvas)
+            .then(result => {
 
-// TAKE PHOTO
-function takePhoto() {
-    let canvas = document.createElement("canvas");
-    canvas.width = video.clientWidth;
-    canvas.height = video.clientHeight;
+                let barcode = result.text;
 
-    let ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0);
+                console.log("Barcode:", barcode);
 
-    processImage(canvas);
-}
+                saveToSheet(barcode);
 
-// OCR + EXTRACTION
-function processImage(canvas) {
-
-    canvas.toBlob(async function(blob) {
-
-        let reader = new FileReader();
-
-        reader.onload = async function() {
-
-            let base64 = reader.result.split(',')[1];
-            let formData = new FormData();
-formData.append("file", blob);
-formData.append("apikey", "helloworld");
-
-let response = await fetch("https://api.ocr.space/parse/image", {
-    method: "POST",
-    body: formData
+            })
+            .catch(err => {
+                alert("❌ Barcode not detected. Try again.");
+            });
+    };
 });
 
-let result = await response.json();
+async function saveToSheet(barcode) {
 
-console.log("OCR RESULT:", result);
+    await fetch("https://script.google.com/macros/s/AKfycbzsX55cEf1cHBXWPgBz-ypLiLz8rZ06IgKZp7edJBsyvwpAzY0riHamRz-ay8S1whV15w/exec", {
+        method: "POST",
+        body: JSON.stringify({
+            component: barcode,
+            quantity: "",
+            location: ""
+        })
+    });
 
-let text = result.ParsedResults?.[0]?.ParsedText;
-
-if (!text) {
-    alert("❌ OCR failed. Try clearer image.");
-    return;
-}
-
-                {
-                    method: "POST",
-                    body: JSON.stringify({
-                        requests: [{
-                            image: { content: base64 },
-                            features: [{ type: "DOCUMENT_TEXT_DETECTION" }]
-                        }]
-                    })
-                }
-            );
-
-            let result = await response.json();
-            console.log("FULL RESULT:", result);
-
-            if (!result.responses || result.responses[0].error) {
-                alert("❌ OCR failed");
-                return;
-            }
-
-            let text = "";
-
-            if (result.responses[0].fullTextAnnotation?.text) {
-                text = result.responses[0].fullTextAnnotation.text;
-            } 
-            else if (result.responses[0].textAnnotations?.length > 0) {
-                text = result.responses[0].textAnnotations[0].description;
-            } 
-            else {
-                alert("❌ No text detected");
-                return;
-            }
-
-            console.log("TEXT:", text);
-
-            let partNumber = "";
-            let quantity = "";
-
-            let lines = text.split("\n").map(l => l.trim()).filter(l => l);
-
-            // PART NUMBER
-            for (let i = 0; i < lines.length; i++) {
-                let line = lines[i].toUpperCase();
-
-                if (line.includes("MFG") || line.includes("P/N") || line.includes("PN")) {
-
-                    let match = lines[i].match(/[A-Z0-9\-,]{6,}/);
-                    if (match) {
-                        partNumber = match[0];
-                        break;
-                    }
-
-                    if (i + 1 < lines.length) {
-                        let nextMatch = lines[i + 1].match(/[A-Z0-9\-,]{6,}/);
-                        if (nextMatch) {
-                            partNumber = nextMatch[0];
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // QUANTITY
-            for (let i = 0; i < lines.length; i++) {
-                let line = lines[i].toUpperCase();
-
-                if (line.includes("QTY") || line.includes("QUANTITY")) {
-
-                    let match = lines[i].match(/\d+/);
-                    if (match) {
-                        quantity = match[0];
-                        break;
-                    }
-
-                    if (i + 1 < lines.length) {
-                        let nextMatch = lines[i + 1].match(/\d+/);
-                        if (nextMatch) {
-                            quantity = nextMatch[0];
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // FALLBACK
-            if (!quantity) {
-                let nums = text.match(/\b\d{1,4}\b/g);
-                if (nums) quantity = nums.sort((a,b)=>b-a)[0];
-            }
-
-            if (!partNumber) {
-                let matches = text.match(/[A-Z0-9\-,]{8,}/g);
-                if (matches) partNumber = matches.sort((a,b)=>b.length-a.length)[0];
-            }
-
-            if (!partNumber || !quantity) {
-                alert("⚠️ Detection failed. Try closer shot.");
-                return;
-            }
-
-            // SAVE TO GOOGLE SHEET
-            await fetch("https://script.google.com/macros/s/AKfycbzsX55cEf1cHBXWPgBz-ypLiLz8rZ06IgKZp7edJBsyvwpAzY0riHamRz-ay8S1whV15w/exec", {
-                method: "POST",
-                body: JSON.stringify({
-                    component: partNumber,
-                    quantity: quantity,
-                    location: ""
-                })
-            });
-
-            alert("✅ Saved!\nP/N: " + partNumber + "\nQTY: " + quantity);
-
-        };
-
-        reader.readAsDataURL(blob);
-
-    }, "image/jpeg");
+    alert("✅ Saved:\n" + barcode);
 }
 
 </script>
