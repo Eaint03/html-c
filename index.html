@@ -1,20 +1,26 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>📦 Smart Inventory</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
 
     <style>
         body {
-            font-family: Arial;
+            font-family: Arial, sans-serif;
             text-align: center;
             padding: 20px;
+            background-color: #f4f4f9;
         }
 
         button {
             padding: 12px;
             margin: 10px;
             font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            border: 1px solid #ddd;
         }
 
         .hidden {
@@ -24,21 +30,35 @@
         #scanner {
             width: 100%;
             max-width: 400px;
-            height: 250px;
+            min-height: 250px;
             margin: auto;
-            background: #eee;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
         }
 
         input {
             padding: 10px;
             margin: 5px;
             width: 80%;
+            border: 1px solid #ccc;
+            border-radius: 4px;
         }
 
         .box {
             border: 1px solid #ccc;
-            padding: 10px;
+            padding: 15px;
             margin-top: 10px;
+            background: white;
+            border-radius: 8px;
+            text-align: left;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+
+        #status-msg {
+            color: #666;
+            font-style: italic;
+            margin-top: 5px;
         }
     </style>
 </head>
@@ -48,33 +68,35 @@
 <h2>📦 Smart Inventory System</h2>
 
 <div id="homePage">
-    <button onclick="goTo('addPage')">➕ Add Inventory</button>
-    <button onclick="goTo('takePage')">➖ Take Inventory</button>
+    <button onclick="goTo('addPage')" style="background: #e1f5fe;">➕ Add Inventory</button>
+    <button onclick="goTo('takePage')" style="background: #fff3e0;">➖ Take Inventory</button>
     <button onclick="showInventory()">📋 View Inventory</button>
 </div>
 
 <div id="addPage" class="hidden">
     <h3>Add Inventory</h3>
     <button onclick="goHome()">⬅ Back</button>
-    <button onclick="startScanner('add')">📷 Scan P/N</button>
+    <button onclick="startScanner('add')" style="background: #4caf50; color: white;">📷 Start Scanner</button>
 
     <div id="scanner"></div>
+    <p id="status-msg">Ready to scan...</p>
     <p>Result: <b id="resultAdd">None</b></p>
 
     <div id="formBox" class="hidden">
-        <input id="name" placeholder="Component Name"><br>
+        <input id="name" placeholder="Component Name (e.g. Diode Zener)"><br>
         <input id="qty" type="number" placeholder="Quantity"><br>
-        <input id="location" placeholder="Location"><br>
-        <button onclick="saveNewItem()">💾 Save</button>
+        <input id="location" placeholder="Location (e.g. Bin A1)"><br>
+        <button onclick="saveNewItem()" style="background: #2196f3; color: white;">💾 Save New Item</button>
     </div>
 </div>
 
 <div id="takePage" class="hidden">
     <h3>Take Inventory</h3>
     <button onclick="goHome()">⬅ Back</button>
-    <button onclick="startScanner('take')">📷 Scan P/N</button>
+    <button onclick="startScanner('take')" style="background: #ff5722; color: white;">📷 Start Scanner</button>
 
     <div id="scanner"></div>
+    <p id="status-msg">Ready to scan...</p>
     <p>Result: <b id="resultTake">None</b></p>
 </div>
 
@@ -86,6 +108,11 @@ let currentCode = "";
 let inventory = JSON.parse(localStorage.getItem("inventory")) || {};
 let html5QrCode;
 
+// Focus/Validation variables
+let lastResult = "";
+let matchCount = 0;
+const REQUIRED_MATCHES = 5; // Must see same code 5 times to confirm focus
+
 function saveData() {
     localStorage.setItem("inventory", JSON.stringify(inventory));
 }
@@ -96,122 +123,149 @@ function goTo(page) {
     document.getElementById("addPage").classList.add("hidden");
     document.getElementById("takePage").classList.add("hidden");
     document.getElementById(page).classList.remove("hidden");
+    document.getElementById("inventoryBox").innerHTML = ""; 
 }
 
 function goHome() {
-    if (html5QrCode) {
-        html5QrCode.stop().catch(() => {});
+    if (html5QrCode && html5QrCode.getState() === 2) {
+        html5QrCode.stop().catch(err => console.log(err));
     }
     document.getElementById("homePage").classList.remove("hidden");
     document.getElementById("addPage").classList.add("hidden");
     document.getElementById("takePage").classList.add("hidden");
+    document.getElementById("formBox").classList.add("hidden");
 }
 
-// 🔥 INDUSTRIAL PARSER (Fixes DigiKey/Mouser prefix issues)
+// 🔥 INDUSTRIAL PARSER (Strips '1P', 'P', 'K' from Mouser/DigiKey)
 function cleanPartNumber(rawCode) {
     let clean = rawCode.trim();
-    // Remove common prefixes: 1P (Supplier PN), P (PN), K (PO), Q (Qty)
     if (clean.startsWith("1P")) return clean.substring(2);
     if (clean.startsWith("P"))  return clean.substring(1);
     if (clean.startsWith("K"))  return clean.substring(1);
     return clean;
 }
 
-// 🔥 SCANNER (Upgraded Logic)
+// 🔥 SCANNER LOGIC (With Focus Delay)
 function startScanner(m) {
     mode = m;
+    lastResult = "";
+    matchCount = 0;
     
-    // Reset display
-    document.getElementById("resultAdd").innerText = "Scanning...";
-    document.getElementById("resultTake").innerText = "Scanning...";
+    const statusLabel = document.querySelectorAll("#status-msg");
+    statusLabel.forEach(el => el.innerText = "Aligning camera... hold steady");
 
-    if(html5QrCode) { html5QrCode.clear(); }
+    if (html5QrCode) {
+        html5QrCode.clear();
+    }
+    
     html5QrCode = new Html5Qrcode("scanner");
 
     const config = { 
         fps: 20, 
-        qrbox: { width: 250, height: 120 } // Narrow box for stacked barcodes
+        qrbox: { width: 300, height: 120 } // Targeted for narrow Part Number barcodes
     };
 
     html5QrCode.start(
         { facingMode: "environment" }, 
         config,
         (decodedText) => {
-            const finalPN = cleanPartNumber(decodedText);
-            
-            // Success! Stop scanner and update UI
-            html5QrCode.stop().then(() => {
-                currentCode = finalPN;
-                if (mode === "add") {
-                    document.getElementById("resultAdd").innerText = finalPN;
-                } else {
-                    document.getElementById("resultTake").innerText = finalPN;
-                }
-                handleScan(finalPN);
-            });
+            // Validation Logic: Wait for focus
+            if (decodedText === lastResult) {
+                matchCount++;
+            } else {
+                lastResult = decodedText;
+                matchCount = 0;
+            }
+
+            // Only trigger once the image is sharp (identical for 5 frames)
+            if (matchCount >= REQUIRED_MATCHES) {
+                const finalPN = cleanPartNumber(decodedText);
+                
+                html5QrCode.stop().then(() => {
+                    currentCode = finalPN;
+                    if (mode === "add") {
+                        document.getElementById("resultAdd").innerText = finalPN;
+                    } else {
+                        document.getElementById("resultTake").innerText = finalPN;
+                    }
+                    statusLabel.forEach(el => el.innerText = "Success!");
+                    handleScan(finalPN);
+                }).catch(err => console.log(err));
+            }
         }
     ).catch(err => {
-        alert("Camera error: Ensure you are on HTTPS");
+        alert("Camera error: Ensure you are using HTTPS on GitHub Pages.");
     });
 }
 
-// LOGIC
+// INVENTORY LOGIC
 function handleScan(code) {
     if (inventory[code]) {
         let item = inventory[code];
         if (mode === "add") {
-            let addQty = prompt("Add qty for " + item.name);
-            if (addQty) {
+            let addQty = prompt("Add quantity for " + item.name + "\n(Current Stock: " + item.qty + ")", "1");
+            if (addQty && !isNaN(addQty)) {
                 item.qty += parseInt(addQty);
                 saveData();
-                alert("Updated!");
+                alert("Updated stock for " + item.name);
             }
         } else {
-            let takeQty = prompt("Take qty for " + item.name);
-            if (takeQty) {
+            let takeQty = prompt("Take quantity for " + item.name + "\n(Current Stock: " + item.qty + ")", "1");
+            if (takeQty && !isNaN(takeQty)) {
                 if (parseInt(takeQty) > item.qty) {
-                    alert("Not enough stock");
+                    alert("Error: Not enough stock!");
                 } else {
                     item.qty -= parseInt(takeQty);
                     saveData();
-                    alert("Updated!");
+                    alert("Updated stock for " + item.name);
                 }
             }
         }
     } else {
         if (mode === "add") {
+            alert("New P/N Detected: " + code + "\nPlease fill in the details.");
             document.getElementById("formBox").classList.remove("hidden");
             document.getElementById("name").value = code;
+            document.getElementById("qty").value = "1";
         } else {
-            alert("Item not found");
+            alert("Part Number '" + code + "' not found in local inventory.");
         }
     }
 }
 
-// SAVE NEW
 function saveNewItem() {
     let name = document.getElementById("name").value;
     let qty = parseInt(document.getElementById("qty").value);
     let location = document.getElementById("location").value;
 
+    if (!name || isNaN(qty)) {
+        alert("Please enter a name and valid quantity.");
+        return;
+    }
+
     inventory[currentCode] = { name, qty, location };
     saveData();
 
-    alert("Saved!");
+    alert("Part saved to inventory!");
     document.getElementById("formBox").classList.add("hidden");
+    goHome();
 }
 
-// VIEW
 function showInventory() {
-    let html = "<h3>Inventory</h3>";
+    let html = "<h3>📦 Current Inventory</h3>";
+    let keys = Object.keys(inventory);
+    
+    if (keys.length === 0) {
+        html += "<p>No items found. Start by adding a part.</p>";
+    }
+
     for (let code in inventory) {
         let item = inventory[code];
         html += `
         <div class="box">
-            ${item.name}<br>
-            ${code}<br>
-            Qty: ${item.qty}<br>
-            Location: ${item.location}
+            <strong>${item.name}</strong><br>
+            <small>P/N: ${code}</small><br>
+            <b>Qty: ${item.qty}</b> | Loc: ${item.location}
         </div>`;
     }
     document.getElementById("inventoryBox").innerHTML = html;
