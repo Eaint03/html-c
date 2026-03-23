@@ -1,201 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+</head>
+
+<body>
+
+<h2>Scanner Test</h2>
+
+<button onclick="startScanner()">Start</button>
+
+<div id="scanner" style="width:300px;height:300px;background:#eee;"></div>
+
 <script>
-let mode = "";
-let currentCode = "";
-let inventory = JSON.parse(localStorage.getItem("inventory")) || {};
-
-let detectedList = [];
-
-function saveData() {
-    localStorage.setItem("inventory", JSON.stringify(inventory));
-}
-
-// NAVIGATION
-function goTo(page) {
-    document.getElementById("homePage").classList.add("hidden");
-    document.getElementById("addPage").classList.add("hidden");
-    document.getElementById("takePage").classList.add("hidden");
-    document.getElementById(page).classList.remove("hidden");
-}
-
-function goHome() {
-    document.getElementById("homePage").classList.remove("hidden");
-    document.getElementById("addPage").classList.add("hidden");
-    document.getElementById("takePage").classList.add("hidden");
-}
-
-// 🔥 PERFECT SCANNER
-function startScanner(m) {
-    mode = m;
-    detectedList = [];
+function startScanner() {
+    alert("Starting...");
 
     Quagga.init({
         inputStream: {
             type: "LiveStream",
             target: document.querySelector('#scanner'),
             constraints: {
-                facingMode: "environment",
-                width: { ideal: 1280 },
-                height: { ideal: 720 }
+                facingMode: "environment"
             }
         },
-
-        locator: {
-            patchSize: "medium",
-            halfSample: true
-        },
-
-        // 🔥 FOCUS CENTER AREA ONLY
-        area: {
-            top: "30%",
-            right: "10%",
-            left: "10%",
-            bottom: "30%"
-        },
-
         decoder: {
-            readers: [
-                "code_128_reader",
-                "ean_reader",
-                "ean_8_reader",
-                "code_39_reader",
-                "upc_reader",
-                "upc_e_reader"
-            ]
+            readers: ["code_128_reader"]
         }
-
     }, function(err) {
         if (err) {
-            alert("Camera error");
+            console.log(err);
+            alert("Error starting camera");
             return;
         }
 
         Quagga.start();
     });
 
-    // 🔥 COLLECT ALL DETECTIONS
     Quagga.onDetected(function(data) {
-        let code = data.codeResult.code;
-        console.log("Detected:", code);
-        detectedList.push(code);
-    });
-
-    // 🔥 AFTER 1.5s → PICK BEST
-    setTimeout(() => {
-
+        alert("Detected: " + data.codeResult.code);
         Quagga.stop();
-
-        if (detectedList.length === 0) {
-            alert("No barcode detected");
-            return;
-        }
-
-        let bestCode = chooseBestCode(detectedList);
-
-        if (!bestCode) {
-            alert("No valid part number found");
-            return;
-        }
-
-        currentCode = bestCode;
-
-        if (mode === "add") {
-            document.getElementById("resultAdd").innerText = bestCode;
-        } else {
-            document.getElementById("resultTake").innerText = bestCode;
-        }
-
-        handleScan(bestCode);
-
-    }, 1500);
-}
-
-// 🔥 SMART FILTER
-function isValidPartNumber(code) {
-    return /^[A-Z0-9]+(-[A-Z0-9]+)+$/.test(code);
-}
-
-// 🔥 PICK BEST BARCODE
-function chooseBestCode(list) {
-
-    // 1. Filter valid part numbers
-    let valid = list.filter(code => isValidPartNumber(code));
-
-    if (valid.length === 0) return null;
-
-    // 2. Prefer longest (most complete)
-    let best = valid.reduce((a, b) => a.length > b.length ? a : b);
-
-    return best;
-}
-
-// LOGIC (UNCHANGED)
-function handleScan(code) {
-
-    if (inventory[code]) {
-        let item = inventory[code];
-
-        if (mode === "add") {
-            let addQty = prompt(`ADD\n${item.name}\nCurrent: ${item.qty}`);
-
-            if (addQty) {
-                item.qty += parseInt(addQty);
-                saveData();
-                alert("Updated!");
-            }
-
-        } else {
-            let takeQty = prompt(`TAKE\n${item.name}\nCurrent: ${item.qty}`);
-
-            if (takeQty > item.qty) {
-                alert("Not enough stock!");
-                return;
-            }
-
-            if (takeQty) {
-                item.qty -= parseInt(takeQty);
-                saveData();
-                alert("Updated!");
-            }
-        }
-
-    } else {
-        if (mode === "add") {
-            document.getElementById("formBox").classList.remove("hidden");
-        } else {
-            alert("Item not found!");
-        }
-    }
-}
-
-// SAVE NEW
-function saveNewItem() {
-    let name = document.getElementById("name").value;
-    let qty = parseInt(document.getElementById("qty").value);
-    let location = document.getElementById("location").value;
-
-    inventory[currentCode] = { name, qty, location };
-    saveData();
-
-    alert("Saved!");
-    document.getElementById("formBox").classList.add("hidden");
-}
-
-// VIEW
-function showInventory() {
-    let html = "<h3>📋 Inventory</h3>";
-
-    for (let code in inventory) {
-        let item = inventory[code];
-        html += `
-            <div class="box">
-                <b>${item.name}</b><br>
-                Code: ${code}<br>
-                Qty: ${item.qty}<br>
-                Location: ${item.location}
-            </div>
-        `;
-    }
-
-    document.getElementById("inventoryBox").innerHTML = html;
+    });
 }
 </script>
+
+</body>
+</html>
