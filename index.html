@@ -3,31 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>📦 Industrial P/N Scanner</title>
+    <title>📦 Direct P/N Scanner</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         body { font-family: sans-serif; text-align: center; padding: 20px; background: #121212; color: white; margin: 0; }
         .container { max-width: 450px; margin: auto; }
-        button { padding: 18px; margin: 10px 0; font-size: 16px; cursor: pointer; border-radius: 12px; width: 90%; border: none; font-weight: bold; transition: 0.1s; }
+        button { padding: 18px; margin: 10px 0; font-size: 16px; cursor: pointer; border-radius: 12px; width: 90%; border: none; font-weight: bold; }
         .btn-main { background: #007bff; color: white; }
-        .btn-orange { background: #fd7e14; color: white; }
+        .btn-take { background: #fd7e14; color: white; }
         .hidden { display: none; }
         
-        /* Scanner Box */
         #scanner-wrapper { 
-            width: 100%; height: 320px; margin: 15px 0; background: #000; 
+            width: 100%; height: 350px; margin: 15px 0; background: #000; 
             border: 3px solid #444; border-radius: 20px; overflow: hidden; position: relative;
         }
 
         /* SHUTTER BUTTON */
         .shutter-btn { 
-            background: white; border: 8px solid #333; 
+            background: white; border: 6px solid #555; 
             width: 80px; height: 80px; border-radius: 50%; 
-            margin: 10px auto; cursor: pointer; box-shadow: 0 0 15px rgba(255,255,255,0.2);
+            margin: 10px auto; cursor: pointer;
         }
         .shutter-btn:active { background: #007bff; transform: scale(0.9); }
 
-        #debug-info { color: #888; font-size: 12px; margin-top: 5px; }
         .item-card { border: 1px solid #333; padding: 15px; margin-top: 10px; background: #1e1e1e; border-radius: 12px; text-align: left; }
     </style>
 </head>
@@ -36,24 +34,23 @@
 <div class="container">
     <div id="homePage">
         <h2>📦 Smart Inventory</h2>
-        <button class="btn-main" onclick="openScanner('add')">➕ SCAN TO ADD</button>
-        <button class="btn-orange" onclick="openScanner('take')">➖ SCAN TO TAKE</button>
-        <button onclick="showInventory()" style="background:#444; color:white;">📋 VIEW STOCK</button>
+        <button class="btn-main" onclick="openScanner('add')">➕ ADD STOCK</button>
+        <button class="btn-main" onclick="openScanner('take')" style="background:#fd7e14;">➖ TAKE STOCK</button>
+        <button onclick="showInventory()" style="background:#444; color:white;">📋 VIEW LIST</button>
     </div>
 
     <div id="scanPage" class="hidden">
-        <h3 id="modeText">Align P/N Barcode</h3>
-        <p id="hint" style="color:#007bff">Hold steady & tap when clear</p>
+        <h3 id="modeText">Scan Barcode</h3>
+        <p id="status">Tap button when barcode is centered</p>
         
         <div id="scanner-wrapper">
             <div id="reader" style="width: 100%;"></div>
         </div>
         
-        <div class="shutter-btn" onclick="forceScan()"></div>
-        <p>TAP TO SCAN NOW</p>
-        <div id="debug-info">Engine: High-Sensitivity Mode</div>
+        <div class="shutter-btn" onclick="snapAndScan()"></div>
+        <p><b>TAP TO CAPTURE</b></p>
         
-        <button onclick="location.reload()" style="background:none; color:#777; border:none; text-decoration:underline; margin-top:20px;">Cancel</button>
+        <button onclick="location.reload()" style="background:none; color:#777; border:none; text-decoration:underline; margin-top:10px;">Cancel</button>
     </div>
 
     <div id="inventoryBox"></div>
@@ -61,9 +58,8 @@
 
 <script>
 let mode = "";
-let inventory = JSON.parse(localStorage.getItem("inv_v3")) || {};
+let inventory = JSON.parse(localStorage.getItem("inventory_v4")) || {};
 let html5QrCode;
-let lastDetected = "";
 
 function openScanner(m) {
     mode = m;
@@ -75,95 +71,73 @@ function openScanner(m) {
 function startCamera() {
     html5QrCode = new Html5Qrcode("reader");
     const config = { 
-        fps: 30, // Faster frame rate
-        qrbox: { width: 320, height: 140 },
-        videoConstraints: { 
-            facingMode: "environment", 
-            width: { ideal: 1920 }, 
-            height: { ideal: 1080 },
-            focusMode: "continuous"
-        }
+        fps: 30, 
+        qrbox: { width: 300, height: 120 },
+        videoConstraints: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }
     };
-    
-    // We listen in the background, but we don't "force" a transition 
-    // until the user clicks the button or a perfect match is found.
-    html5QrCode.start({ facingMode: "environment" }, config, (text) => {
-        lastDetected = text;
-        document.getElementById("hint").innerText = "✨ READY! TAP NOW";
-        document.getElementById("hint").style.color = "#28a745";
-    }).catch(err => alert("Camera Error: Check HTTPS"));
+    // Start camera - we don't care about the success callback, we use manual trigger
+    html5QrCode.start({ facingMode: "environment" }, config, () => {}).catch(err => alert(err));
 }
 
-function cleanPN(raw) {
-    let code = raw.trim();
-    if (code.startsWith("1P")) return code.substring(2);
-    if (code.startsWith("P"))  return code.substring(1);
-    return code;
-}
-
-// 🔥 THE FORCE-SCAN BUTTON
-async function forceScan() {
-    const hint = document.getElementById("hint");
-    
-    // If the background engine already has a result, use it immediately
-    if (lastDetected) {
-        finishScan(lastDetected);
-        return;
-    }
-
-    // Otherwise, try to "grab" the current frame and decode it manually
-    hint.innerText = "⌛ Decoding...";
-    hint.style.color = "yellow";
+async function snapAndScan() {
+    const status = document.getElementById("status");
+    status.innerText = "⌛ Scanning...";
+    status.style.color = "yellow";
 
     try {
-        // This is a manual "capture and decode" attempt
-        const canvas = document.querySelector('#reader video');
-        if (canvas) {
-            // We give it one more half-second to find a result
-            await new Promise(r => setTimeout(r, 500));
-            if (lastDetected) {
-                finishScan(lastDetected);
-            } else {
-                hint.innerText = "❌ No code seen. Move phone back.";
-                hint.style.color = "red";
-            }
-        }
+        // Force the scanner to try and decode the CURRENT frame immediately
+        // Note: html5-qrcode's scanFile can take a canvas/blob
+        const video = document.querySelector('#reader video');
+        const canvas = document.createElement('canvas');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        
+        // Use the library to decode the image we just "snapped"
+        const result = await html5QrCode.scanFile(canvasToBlob(canvas), true);
+        handleResult(result);
     } catch (e) {
-        hint.innerText = "❌ Error. Try again.";
+        status.innerText = "❌ No barcode found. Try again.";
+        status.style.color = "red";
     }
 }
 
-function finishScan(text) {
+// Helper to convert canvas to blob for the scanner
+function canvasToBlob(canvas) {
+    var dataurl = canvas.toDataURL("image/jpeg");
+    var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+        bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+    while(n--){ u8arr[n] = bstr.charCodeAt(n); }
+    return new File([u8arr], "scan.jpg", {type:mime});
+}
+
+function handleResult(text) {
     if (navigator.vibrate) navigator.vibrate(100);
-    const pn = cleanPN(text);
     
+    // Clean P/N
+    let pn = text.trim();
+    if (pn.startsWith("1P")) pn = pn.substring(2);
+    else if (pn.startsWith("P")) pn = pn.substring(1);
+
     html5QrCode.stop().then(() => {
-        processInventory(pn);
+        if (inventory[pn]) {
+            inventory[pn].qty += (mode === 'add' ? 1 : -1);
+        } else {
+            if (mode === 'add') {
+                inventory[pn] = { qty: 1 };
+            } else {
+                alert("Part not in stock.");
+            }
+        }
+        localStorage.setItem("inventory_v4", JSON.stringify(inventory));
+        location.reload();
     });
 }
 
-function processInventory(pn) {
-    if (inventory[pn]) {
-        let amount = prompt(`Found P/N: ${pn}\nIn Stock: ${inventory[pn].qty}\n\nAmount to ${mode}:`, "1");
-        if (amount) {
-            inventory[pn].qty += (mode === 'add' ? parseInt(amount) : -parseInt(amount));
-        }
-    } else {
-        if (mode === 'add') {
-            let desc = prompt(`NEW PART: ${pn}\nEnter Description:`, "Electronic Component");
-            inventory[pn] = { desc: desc || "No Desc", qty: 1 };
-        } else {
-            alert("Part Number not found in stock.");
-        }
-    }
-    localStorage.setItem("inv_v3", JSON.stringify(inventory));
-    location.reload();
-}
-
 function showInventory() {
-    let html = "<h3>📋 Stock List</h3>";
+    let html = "<h3>📋 Stock</h3>";
     for (let pn in inventory) {
-        html += `<div class="item-card"><b>P/N: ${pn}</b><br><small>${inventory[pn].desc}</small><br>Qty: ${inventory[pn].qty}</div>`;
+        html += `<div class="item-card"><b>P/N: ${pn}</b><br>Qty: ${inventory[pn].qty}</div>`;
     }
     document.getElementById("inventoryBox").innerHTML = html;
 }
