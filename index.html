@@ -3,22 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>📦 Full-Data Inventory</title>
+    <title>📦 Manual P/N Scanner</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 20px; background: #121212; color: white; margin: 0; }
+        body { font-family: sans-serif; text-align: center; padding: 20px; background: #1a1a1a; color: white; margin: 0; }
         .container { max-width: 450px; margin: auto; }
         button { padding: 18px; margin: 10px 0; font-size: 16px; cursor: pointer; border-radius: 12px; width: 90%; border: none; font-weight: bold; }
-        .btn-add { background: #28a745; color: white; }
-        .btn-take { background: #fd7e14; color: white; }
-        .btn-view { background: #6c757d; color: white; }
+        .btn-main { background: #007bff; color: white; }
         .hidden { display: none; }
-        #scanner-wrapper { width: 100%; height: 350px; margin: 15px 0; background: #000; border: 3px solid #007bff; border-radius: 20px; overflow: hidden; position: relative; }
-        .shutter-btn { background: white; border: 6px solid #444; width: 85px; height: 85px; border-radius: 50%; margin: auto; cursor: pointer; }
-        .shutter-btn:active { background: #007bff; transform: scale(0.9); }
-        .item-card { border: 1px solid #333; padding: 15px; margin-top: 10px; background: #1e1e1e; border-radius: 12px; text-align: left; line-height: 1.4; }
-        .qty-label { color: #007bff; font-weight: bold; font-size: 1.2em; }
-        .desc-text { color: #aaa; font-size: 0.9em; }
+        
+        /* Scanner Box */
+        #scanner-wrapper { 
+            width: 100%; height: 300px; margin: 15px 0; background: #000; 
+            border: 3px solid #444; border-radius: 20px; overflow: hidden;
+            position: relative;
+        }
+
+        /* SHUTTER BUTTON */
+        .shutter-btn { 
+            background: white; border: 6px solid #555; 
+            width: 80px; height: 80px; border-radius: 50%; 
+            margin: 20px auto; cursor: pointer;
+        }
+        .shutter-btn:active { background: #007bff; }
+
+        .item-card { border: 1px solid #333; padding: 15px; margin-top: 10px; background: #222; border-radius: 12px; text-align: left; }
     </style>
 </head>
 <body>
@@ -26,18 +35,23 @@
 <div class="container">
     <div id="homePage">
         <h2>📦 Smart Inventory</h2>
-        <button class="btn-add" onclick="openScanner('add')">➕ SCAN TO ADD</button>
-        <button class="btn-take" onclick="openScanner('take')">➖ SCAN TO TAKE</button>
-        <button class="btn-view" onclick="showInventory()">📋 VIEW STOCK</button>
+        <button class="btn-main" onclick="openScanner('add')">➕ SCAN TO ADD</button>
+        <button class="btn-main" onclick="openScanner('take')" style="background:#fd7e14;">➖ SCAN TO TAKE</button>
+        <button class="btn-main" onclick="showInventory()" style="background:#6c757d;">📋 VIEW LIST</button>
     </div>
 
     <div id="scanPage" class="hidden">
-        <h3 id="modeText">Align Label Barcode</h3>
-        <div id="msg" style="color:#007bff">Waiting for focus...</div>
-        <div id="scanner-wrapper"><div id="reader" style="width: 100%;"></div></div>
-        <div class="shutter-btn" onclick="captureNow()"></div>
-        <p>TAP TO CAPTURE DATA</p>
-        <button onclick="location.reload()" style="background:none; color:#aaa; border:none; text-decoration:underline;">Cancel</button>
+        <h3 id="modeText">Align Barcode</h3>
+        <p id="hint">Hold phone 15cm away and steady</p>
+        
+        <div id="scanner-wrapper">
+            <div id="reader" style="width: 100%;"></div>
+        </div>
+        
+        <div class="shutter-btn" onclick="manualCapture()"></div>
+        <p>TAP TO SCAN</p>
+        
+        <button onclick="location.reload()" style="background:none; color:#777; border:none; text-decoration:underline;">Cancel</button>
     </div>
 
     <div id="inventoryBox"></div>
@@ -45,93 +59,70 @@
 
 <script>
 let mode = "";
-let inventory = JSON.parse(localStorage.getItem("full_inventory")) || {};
+let inventory = JSON.parse(localStorage.getItem("full_inv")) || {};
 let html5QrCode;
-let currentRawData = "";
 
 function openScanner(m) {
     mode = m;
     document.getElementById("homePage").classList.add("hidden");
     document.getElementById("scanPage").classList.remove("hidden");
-    startCamera();
-}
-
-function startCamera() {
+    
     html5QrCode = new Html5Qrcode("reader");
     const config = { 
-        fps: 25, 
-        qrbox: { width: 300, height: 200 }, // Box for both 1D and 2D codes
+        fps: 10, 
+        qrbox: { width: 300, height: 150 },
         videoConstraints: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }
     };
-    html5QrCode.start({ facingMode: "environment" }, config, (text) => {
-        currentRawData = text;
-        document.getElementById("msg").innerText = "READY! CAPTURE NOW";
-    });
+    
+    // Start camera but don't do anything automatically
+    html5QrCode.start({ facingMode: "environment" }, config, () => {}).catch(err => alert(err));
 }
 
-// 🔥 SMART PARSER: Tries to find PN, Desc, and Qty automatically
-function parseData(raw) {
-    let result = { pn: raw, desc: "New Item", qty: 1 };
-    
-    // Logic for DigiKey/Mouser 2D DataMatrix Strings
-    if (raw.includes('[)>')) {
-        // This is a complex industrial string. We'll try to find 'P' for P/N and 'Q' for Qty
-        const parts = raw.split(/[^a-zA-Z0-9-]/);
-        parts.forEach(p => {
-            if (p.startsWith('P')) result.pn = p.substring(1);
-            if (p.startsWith('Q')) result.qty = parseInt(p.substring(1)) || 1;
-        });
-    } else {
-        // Standard 1D Barcode Cleanup
-        let clean = raw.trim();
-        if (clean.startsWith("1P")) clean = clean.substring(2);
-        else if (clean.startsWith("P")) clean = clean.substring(1);
-        result.pn = clean;
+// 🔥 THE SNAPSHOT SCANNER
+async function manualCapture() {
+    document.getElementById("hint").innerText = "⌛ Processing... Please wait";
+    document.getElementById("hint").style.color = "yellow";
+
+    try {
+        // This captures the current frame and tries to decode it
+        const imageFile = await html5QrCode.takePhoto(); 
+        const result = await html5QrCode.scanFile(imageFile, true);
+        
+        if (navigator.vibrate) navigator.vibrate(100);
+        processData(result);
+    } catch (err) {
+        document.getElementById("hint").innerText = "❌ FAILED. Try moving further back.";
+        document.getElementById("hint").style.color = "red";
     }
-    return result;
 }
 
-function captureNow() {
-    if (!currentRawData) return;
-    if (navigator.vibrate) navigator.vibrate(100);
-    
-    const parsed = parseData(currentRawData);
-    
+function processData(text) {
+    let pn = text.trim();
+    if (pn.startsWith("1P")) pn = pn.substring(2);
+    else if (pn.startsWith("P")) pn = pn.substring(1);
+
     html5QrCode.stop().then(() => {
-        if (inventory[parsed.pn]) {
-            // Update existing
-            let amount = prompt("Update " + parsed.pn + "\nQuantity to " + mode + ":", parsed.qty);
-            if (amount) {
-                inventory[parsed.pn].qty += (mode === 'add' ? parseInt(amount) : -parseInt(amount));
-            }
+        if (inventory[pn]) {
+            let qty = prompt(`Updating P/N: ${pn}\nAmount to ${mode}:`, "1");
+            if (qty) inventory[pn].qty += (mode === 'add' ? parseInt(qty) : -parseInt(qty));
         } else {
-            // Create New
             if (mode === 'add') {
-                let desc = prompt("New Part Found!\nEnter Description:", "Electronic Component");
-                inventory[parsed.pn] = { desc: desc || "No Desc", qty: parsed.qty };
+                let desc = prompt(`New Part: ${pn}\nEnter Description:`, "Component");
+                inventory[pn] = { desc: desc || "No Desc", qty: 1 };
             } else {
-                alert("Part not found in stock.");
+                alert("Part not found.");
             }
         }
-        localStorage.setItem("full_inventory", JSON.stringify(inventory));
+        localStorage.setItem("full_inv", JSON.stringify(inventory));
         location.reload();
     });
 }
 
 function showInventory() {
-    let html = "<h3>📋 Current Stock</h3>";
-    let keys = Object.keys(inventory);
-    if (keys.length === 0) html += "<p>Empty</p>";
-    
-    keys.forEach(pn => {
-        let item = inventory[pn];
-        html += `
-        <div class="item-card">
-            <b>P/N: ${pn}</b><br>
-            <span class="desc-text">${item.desc}</span><br>
-            <span class="qty-label">Quantity: ${item.qty}</span>
-        </div>`;
-    });
+    let html = "<h3>📋 Stock</h3>";
+    for (let pn in inventory) {
+        html += `<div class="item-card"><b>P/N: ${pn}</b><br><small>${inventory[pn].desc}</small><br>Qty: ${inventory[pn].qty}</div>`;
+    }
     document.getElementById("inventoryBox").innerHTML = html;
 }
 </script>
