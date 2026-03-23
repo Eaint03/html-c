@@ -18,6 +18,10 @@
             cursor: pointer;
         }
 
+        .hidden {
+            display: none;
+        }
+
         #scanner {
             margin: auto;
             width: 100%;
@@ -42,60 +46,80 @@
 
 <h2>📦 Smart Inventory System</h2>
 
-<!-- HOME -->
-<div>
-    <button onclick="setMode('add')">➕ Add Stock</button>
-    <button onclick="setMode('take')">➖ Take Stock</button>
+<!-- 🏠 HOME PAGE -->
+<div id="homePage">
+    <h3>🏠 Home</h3>
+    <button onclick="goTo('addPage')">➕ Add Inventory</button>
+    <button onclick="goTo('takePage')">➖ Take Inventory</button>
     <button onclick="showInventory()">📋 View Inventory</button>
 </div>
 
-<h3 id="modeText">Mode: None</h3>
+<!-- ➕ ADD PAGE -->
+<div id="addPage" class="hidden">
+    <h3>➕ Add Inventory</h3>
+    <button onclick="goHome()">⬅ Back</button>
+    <button onclick="startScanner('add')">📷 Scan Barcode</button>
 
-<button onclick="startScanner()">📷 Scan Barcode</button>
+    <div id="scanner"></div>
+    <p>Code: <b id="resultAdd">None</b></p>
 
-<div id="scanner"></div>
-
-<p>Scanned Code: <b id="result">None</b></p>
-
-<!-- FORM -->
-<div class="box" id="formBox" style="display:none;">
-    <input id="name" placeholder="Component Name"><br>
-    <input id="qty" type="number" placeholder="Quantity"><br>
-    <input id="location" placeholder="Location"><br>
-    <button onclick="saveNewItem()">💾 Save Item</button>
+    <div id="formBox" class="hidden">
+        <input id="name" placeholder="Component Name"><br>
+        <input id="qty" type="number" placeholder="Quantity"><br>
+        <input id="location" placeholder="Location"><br>
+        <button onclick="saveNewItem()">💾 Save</button>
+    </div>
 </div>
 
+<!-- ➖ TAKE PAGE -->
+<div id="takePage" class="hidden">
+    <h3>➖ Take Inventory</h3>
+    <button onclick="goHome()">⬅ Back</button>
+    <button onclick="startScanner('take')">📷 Scan Barcode</button>
+
+    <div id="scanner"></div>
+    <p>Code: <b id="resultTake">None</b></p>
+</div>
+
+<!-- INVENTORY VIEW -->
 <div id="inventoryBox"></div>
 
 <script>
 let mode = "";
 let currentCode = "";
-
-// LOAD DATA
 let inventory = JSON.parse(localStorage.getItem("inventory")) || {};
 
 function saveData() {
     localStorage.setItem("inventory", JSON.stringify(inventory));
 }
 
-// MODE
-function setMode(m) {
-    mode = m;
-    document.getElementById("modeText").innerText = "Mode: " + m.toUpperCase();
+// NAVIGATION
+function goTo(page) {
+    document.getElementById("homePage").classList.add("hidden");
+    document.getElementById("addPage").classList.add("hidden");
+    document.getElementById("takePage").classList.add("hidden");
+
+    document.getElementById(page).classList.remove("hidden");
+}
+
+function goHome() {
+    document.getElementById("homePage").classList.remove("hidden");
+    document.getElementById("addPage").classList.add("hidden");
+    document.getElementById("takePage").classList.add("hidden");
 }
 
 // SCANNER
-function startScanner() {
+function startScanner(m) {
+    mode = m;
+
     Quagga.init({
         inputStream: {
             type: "LiveStream",
             target: document.querySelector('#scanner'),
-            constraints: {
-                facingMode: "environment"
-            }
+            constraints: { facingMode: "environment" }
         },
         decoder: {
-            readers: ["code_128_reader", "ean_reader", "ean_8_reader"]
+            readers: ["code_128_reader", "ean_reader"]
         }
     }, function(err) {
         if (err) {
@@ -109,27 +133,25 @@ function startScanner() {
         let code = data.codeResult.code;
         currentCode = code;
 
-        document.getElementById("result").innerText = code;
+        if (mode === "add") {
+            document.getElementById("resultAdd").innerText = code;
+        } else {
+            document.getElementById("resultTake").innerText = code;
+        }
 
         Quagga.stop();
-
         handleScan(code);
     });
 }
 
-// MAIN LOGIC
+// LOGIC
 function handleScan(code) {
-
-    if (!mode) {
-        alert("Select mode first!");
-        return;
-    }
 
     if (inventory[code]) {
         let item = inventory[code];
 
         if (mode === "add") {
-            let addQty = prompt(`ADD STOCK\n${item.name}\nCurrent: ${item.qty}\nEnter qty:`);
+            let addQty = prompt(`ADD\n${item.name}\nCurrent: ${item.qty}`);
 
             if (addQty) {
                 item.qty += parseInt(addQty);
@@ -137,8 +159,8 @@ function handleScan(code) {
                 alert("Updated!");
             }
 
-        } else if (mode === "take") {
-            let takeQty = prompt(`TAKE STOCK\n${item.name}\nCurrent: ${item.qty}\nEnter qty:`);
+        } else {
+            let takeQty = prompt(`TAKE\n${item.name}\nCurrent: ${item.qty}`);
 
             if (takeQty > item.qty) {
                 alert("Not enough stock!");
@@ -154,7 +176,7 @@ function handleScan(code) {
 
     } else {
         if (mode === "add") {
-            document.getElementById("formBox").style.display = "block";
+            document.getElementById("formBox").classList.remove("hidden");
         } else {
             alert("Item not found!");
         }
@@ -167,23 +189,15 @@ function saveNewItem() {
     let qty = parseInt(document.getElementById("qty").value);
     let location = document.getElementById("location").value;
 
-    inventory[currentCode] = {
-        name: name,
-        qty: qty,
-        location: location
-    };
-
+    inventory[currentCode] = { name, qty, location };
     saveData();
 
-    alert("Item saved!");
-
-    document.getElementById("formBox").style.display = "none";
+    alert("Saved!");
+    document.getElementById("formBox").classList.add("hidden");
 }
 
-// VIEW INVENTORY
+// VIEW
 function showInventory() {
-    let box = document.getElementById("inventoryBox");
-
     let html = "<h3>📋 Inventory</h3>";
 
     for (let code in inventory) {
@@ -191,14 +205,14 @@ function showInventory() {
         html += `
             <div class="box">
                 <b>${item.name}</b><br>
-                Barcode: ${code}<br>
+                Code: ${code}<br>
                 Qty: ${item.qty}<br>
                 Location: ${item.location}
             </div>
         `;
     }
 
-    box.innerHTML = html;
+    document.getElementById("inventoryBox").innerHTML = html;
 }
 </script>
 
