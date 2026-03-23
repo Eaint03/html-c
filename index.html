@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>📦 Super-Scanner P/N</title>
+    <title>📦 Industrial P/N Scanner</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         body { font-family: sans-serif; text-align: center; padding: 20px; background: #1a1a1a; color: white; margin: 0; }
@@ -20,18 +20,14 @@
         /* Target Overlays */
         .laser { position: absolute; top: 50%; left: 10%; width: 80%; height: 2px; background: red; box-shadow: 0 0 8px red; z-index: 10; }
         .overlay-dim {
-            position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 5;
-            clip-path: polygon(0% 0%, 0% 100%, 10% 100%, 10% 40%, 90% 40%, 90% 60%, 10% 60%, 10% 100%, 100% 100%, 100% 0%);
+            position: absolute; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 5;
+            clip-path: polygon(0% 0%, 0% 100%, 5% 100%, 5% 42%, 95% 42%, 95% 58%, 5% 58%, 5% 100%, 100% 100%, 100% 0%);
         }
-
-        /* Controls Area */
-        .controls { display: flex; justify-content: space-around; padding: 10px; background: #222; border-radius: 15px; margin-bottom: 10px; }
-        .ctrl-btn { width: 45% !important; padding: 10px !important; font-size: 14px !important; background: #444; color: white; }
         
-        .shutter-btn { background: white; border: 6px solid #555; width: 80px; height: 80px; border-radius: 50%; margin: 10px auto; cursor: pointer; }
+        .shutter-btn { background: white; border: 8px solid #555; width: 85px; height: 85px; border-radius: 50%; margin: 10px auto; cursor: pointer; }
         .shutter-btn:active { background: #007bff; }
         
-        #hint { font-size: 14px; font-weight: bold; margin: 10px; color: #aaa; }
+        #status { font-size: 16px; font-weight: bold; margin: 10px; color: #007bff; height: 24px; }
         .item-card { border: 1px solid #333; padding: 15px; margin-top: 10px; background: #222; border-radius: 12px; text-align: left; }
     </style>
 </head>
@@ -46,7 +42,7 @@
     </div>
 
     <div id="scanPage" class="hidden">
-        <div id="hint">Align Barcode to Red Line</div>
+        <div id="status">READY TO SCAN</div>
         
         <div id="scanner-wrapper">
             <div class="overlay-dim"></div>
@@ -54,13 +50,8 @@
             <div id="reader" style="width: 100%;"></div>
         </div>
 
-        <div class="controls">
-            <button class="ctrl-btn" id="torch-btn" onclick="toggleFlash()">🔦 FLASH: OFF</button>
-            <button class="ctrl-btn" id="zoom-btn" onclick="toggleZoom()">🔍 ZOOM: 1x</button>
-        </div>
-        
-        <div class="shutter-btn" onclick="manualCapture()"></div>
-        <p><b>TAP TO CAPTURE</b></p>
+        <div class="shutter-btn" onclick="captureAndProcess()"></div>
+        <p><b>ALIGNS P/N TO RED LINE & TAP</b></p>
         
         <button onclick="location.reload()" style="background:none; color:#777; border:none; text-decoration:underline;">Cancel</button>
     </div>
@@ -72,9 +63,6 @@
 let mode = "";
 let inventory = JSON.parse(localStorage.getItem("full_inv")) || {};
 let html5QrCode;
-let track = null;
-let zoomLevel = 1;
-let flashOn = false;
 
 function openScanner(m) {
     mode = m;
@@ -83,65 +71,54 @@ function openScanner(m) {
     
     html5QrCode = new Html5Qrcode("reader");
     const config = { 
-        fps: 20, 
-        qrbox: { width: 300, height: 100 },
+        fps: 10, // Slower FPS for better camera stability
+        qrbox: { width: 350, height: 100 },
         videoConstraints: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }
     };
     
-    html5QrCode.start({ facingMode: "environment" }, config, () => {})
-    .then(() => {
-        const video = document.querySelector('#reader video');
-        track = video.srcObject.getVideoTracks()[0];
-    })
-    .catch(err => alert("Camera Error: Check HTTPS."));
+    // Start camera but disable the auto-detection engine
+    html5QrCode.start({ facingMode: "environment" }, config, () => {}).catch(err => alert(err));
 }
 
-function toggleZoom() {
-    if (!track) return;
-    zoomLevel = (zoomLevel >= 3) ? 1 : zoomLevel + 1;
-    track.applyConstraints({ advanced: [{ zoom: zoomLevel }] }).catch(e => console.log(e));
-    document.getElementById("zoom-btn").innerText = `🔍 ZOOM: ${zoomLevel}x`;
-}
-
-function toggleFlash() {
-    if (!track) return;
-    flashOn = !flashOn;
-    track.applyConstraints({ advanced: [{ torch: flashOn }] }).catch(e => console.log(e));
-    document.getElementById("torch-btn").innerText = `🔦 FLASH: ${flashOn ? 'ON' : 'OFF'}`;
-}
-
-async function manualCapture() {
-    const hint = document.getElementById("hint");
-    hint.innerText = "⌛ Decoding...";
-    hint.style.color = "yellow";
+async function captureAndProcess() {
+    const status = document.getElementById("status");
+    status.innerText = "⌛ CAPTURING PHOTO...";
+    status.style.color = "yellow";
 
     try {
-        const imageFile = await html5QrCode.takePhoto(); 
+        // 1. Take a high-quality photo
+        const imageFile = await html5QrCode.takePhoto();
+        
+        status.innerText = "🔍 ANALYZING LINES...";
+        
+        // 2. Run the heavy decoding math on the still image
         const result = await html5QrCode.scanFile(imageFile, true);
         
         if (navigator.vibrate) navigator.vibrate(100);
         processData(result);
     } catch (err) {
-        hint.innerText = "❌ No barcode found. Zoom in or move back.";
-        hint.style.color = "#ff4444";
+        status.innerText = "❌ FAILED. TRY MOVING BACK.";
+        status.style.color = "#ff4444";
+        console.error(err);
     }
 }
 
 function processData(text) {
     let pn = text.trim();
+    // Clean DigiKey/Mouser Prefixes
     if (pn.startsWith("1P")) pn = pn.substring(2);
     else if (pn.startsWith("P")) pn = pn.substring(1);
 
     html5QrCode.stop().then(() => {
         if (inventory[pn]) {
-            let qty = prompt(`Updating P/N: ${pn}\nAmount to ${mode}:`, "1");
+            let qty = prompt(`Update P/N: ${pn}\nStock: ${inventory[pn].qty}\n\nAmount to ${mode}:`, "1");
             if (qty) inventory[pn].qty += (mode === 'add' ? parseInt(qty) : -parseInt(qty));
         } else {
             if (mode === 'add') {
                 let desc = prompt(`New Part: ${pn}\nEnter Description:`, "Component");
                 inventory[pn] = { desc: desc || "No Desc", qty: 1 };
             } else {
-                alert("Part not found.");
+                alert("Part not found in inventory.");
             }
         }
         localStorage.setItem("full_inv", JSON.stringify(inventory));
