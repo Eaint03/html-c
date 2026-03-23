@@ -2,7 +2,7 @@
 <html>
 <head>
     <title>📦 Smart Inventory</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
 
     <style>
         body {
@@ -47,14 +47,12 @@
 
 <h2>📦 Smart Inventory System</h2>
 
-<!-- HOME -->
 <div id="homePage">
     <button onclick="goTo('addPage')">➕ Add Inventory</button>
     <button onclick="goTo('takePage')">➖ Take Inventory</button>
     <button onclick="showInventory()">📋 View Inventory</button>
 </div>
 
-<!-- ADD -->
 <div id="addPage" class="hidden">
     <h3>Add Inventory</h3>
     <button onclick="goHome()">⬅ Back</button>
@@ -71,7 +69,6 @@
     </div>
 </div>
 
-<!-- TAKE -->
 <div id="takePage" class="hidden">
     <h3>Take Inventory</h3>
     <button onclick="goHome()">⬅ Back</button>
@@ -81,14 +78,13 @@
     <p>Result: <b id="resultTake">None</b></p>
 </div>
 
-<!-- INVENTORY -->
 <div id="inventoryBox"></div>
 
 <script>
 let mode = "";
 let currentCode = "";
 let inventory = JSON.parse(localStorage.getItem("inventory")) || {};
-let detectedList = [];
+let html5QrCode;
 
 function saveData() {
     localStorage.setItem("inventory", JSON.stringify(inventory));
@@ -103,85 +99,66 @@ function goTo(page) {
 }
 
 function goHome() {
+    if (html5QrCode) {
+        html5QrCode.stop().catch(() => {});
+    }
     document.getElementById("homePage").classList.remove("hidden");
     document.getElementById("addPage").classList.add("hidden");
     document.getElementById("takePage").classList.add("hidden");
 }
 
-// 🔥 FILTER P/N
-function isValidPartNumber(code) {
-    return /^[A-Z0-9]+(-[A-Z0-9]+)+$/.test(code);
+// 🔥 INDUSTRIAL PARSER (Fixes DigiKey/Mouser prefix issues)
+function cleanPartNumber(rawCode) {
+    let clean = rawCode.trim();
+    // Remove common prefixes: 1P (Supplier PN), P (PN), K (PO), Q (Qty)
+    if (clean.startsWith("1P")) return clean.substring(2);
+    if (clean.startsWith("P"))  return clean.substring(1);
+    if (clean.startsWith("K"))  return clean.substring(1);
+    return clean;
 }
 
-// 🔥 PICK BEST
-function chooseBestCode(list) {
-    let valid = list.filter(code => isValidPartNumber(code));
-    if (valid.length === 0) return null;
-    return valid.reduce((a, b) => a.length > b.length ? a : b);
-}
-
-// 🔥 SCANNER
+// 🔥 SCANNER (Upgraded Logic)
 function startScanner(m) {
     mode = m;
-    detectedList = [];
+    
+    // Reset display
+    document.getElementById("resultAdd").innerText = "Scanning...";
+    document.getElementById("resultTake").innerText = "Scanning...";
 
-    Quagga.init({
-        inputStream: {
-            type: "LiveStream",
-            target: document.querySelector('#scanner'),
-            constraints: { facingMode: "environment" }
-        },
-        decoder: {
-            readers: [
-                "code_128_reader",
-                "code_39_reader",
-                "ean_reader"
-            ]
+    if(html5QrCode) { html5QrCode.clear(); }
+    html5QrCode = new Html5Qrcode("scanner");
+
+    const config = { 
+        fps: 20, 
+        qrbox: { width: 250, height: 120 } // Narrow box for stacked barcodes
+    };
+
+    html5QrCode.start(
+        { facingMode: "environment" }, 
+        config,
+        (decodedText) => {
+            const finalPN = cleanPartNumber(decodedText);
+            
+            // Success! Stop scanner and update UI
+            html5QrCode.stop().then(() => {
+                currentCode = finalPN;
+                if (mode === "add") {
+                    document.getElementById("resultAdd").innerText = finalPN;
+                } else {
+                    document.getElementById("resultTake").innerText = finalPN;
+                }
+                handleScan(finalPN);
+            });
         }
-    }, function(err) {
-        if (err) {
-            alert("Camera error");
-            return;
-        }
-        Quagga.start();
+    ).catch(err => {
+        alert("Camera error: Ensure you are on HTTPS");
     });
-
-    Quagga.onDetected(function(data) {
-        let code = data.codeResult.code;
-        detectedList.push(code);
-    });
-
-    // AUTO PICK AFTER 1.5s
-    setTimeout(() => {
-
-        Quagga.stop();
-
-        let bestCode = chooseBestCode(detectedList);
-
-        if (!bestCode) {
-            alert("No valid P/N found");
-            return;
-        }
-
-        currentCode = bestCode;
-
-        if (mode === "add") {
-            document.getElementById("resultAdd").innerText = bestCode;
-        } else {
-            document.getElementById("resultTake").innerText = bestCode;
-        }
-
-        handleScan(bestCode);
-
-    }, 1500);
 }
 
 // LOGIC
 function handleScan(code) {
-
     if (inventory[code]) {
         let item = inventory[code];
-
         if (mode === "add") {
             let addQty = prompt("Add qty for " + item.name);
             if (addQty) {
@@ -189,20 +166,18 @@ function handleScan(code) {
                 saveData();
                 alert("Updated!");
             }
-
         } else {
             let takeQty = prompt("Take qty for " + item.name);
-            if (takeQty > item.qty) {
-                alert("Not enough stock");
-                return;
-            }
             if (takeQty) {
-                item.qty -= parseInt(takeQty);
-                saveData();
-                alert("Updated!");
+                if (parseInt(takeQty) > item.qty) {
+                    alert("Not enough stock");
+                } else {
+                    item.qty -= parseInt(takeQty);
+                    saveData();
+                    alert("Updated!");
+                }
             }
         }
-
     } else {
         if (mode === "add") {
             document.getElementById("formBox").classList.remove("hidden");
@@ -229,7 +204,6 @@ function saveNewItem() {
 // VIEW
 function showInventory() {
     let html = "<h3>Inventory</h3>";
-
     for (let code in inventory) {
         let item = inventory[code];
         html += `
@@ -240,7 +214,6 @@ function showInventory() {
             Location: ${item.location}
         </div>`;
     }
-
     document.getElementById("inventoryBox").innerHTML = html;
 }
 </script>
