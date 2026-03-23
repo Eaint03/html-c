@@ -103,21 +103,18 @@
 
 <h1>Welcome to smart Inventory System</h1>
 
-<!-- HOME -->
 <div class="container" id="home">
     <h3>Select Action</h3>
     <button onclick="goToAdd()">➕ Add Inventory</button>
     <button onclick="goToTake()">📤 Take Inventory</button>
 </div>
 
-<!-- ADD PAGE -->
 <div class="container hidden" id="addPage">
     <h3>➕ Add Inventory</h3>
     <button onclick="openCamera()">📷 Take Photo</button>
     <button onclick="goHome()">Back</button>
 </div>
 
-<!-- CAMERA -->
 <div id="cameraPage" class="hidden">
     <video id="camera" autoplay playsinline muted></video>
 
@@ -128,7 +125,6 @@
     <button class="capture-btn" onclick="takePhoto()"></button>
 </div>
 
-<!-- TAKE PAGE -->
 <div class="container hidden" id="takePage">
     <h3>📤 Take Inventory</h3>
     <button onclick="goHome()">Back</button>
@@ -169,10 +165,7 @@ async function openCamera() {
     }
 
     video.srcObject = stream;
-
-    video.onloadedmetadata = () => {
-        video.play();
-    };
+    video.onloadedmetadata = () => video.play();
 }
 
 function closeCamera() {
@@ -185,7 +178,6 @@ function closeCamera() {
 
 // TAKE PHOTO
 function takePhoto() {
-
     let canvas = document.createElement("canvas");
     canvas.width = video.clientWidth;
     canvas.height = video.clientHeight;
@@ -196,7 +188,7 @@ function takePhoto() {
     processImage(canvas);
 }
 
-// OCR
+// OCR + EXTRACTION
 function processImage(canvas) {
 
     canvas.toBlob(async function(blob) {
@@ -220,31 +212,13 @@ function processImage(canvas) {
                 }
             );
 
-        let result = await response.json();
-console.log("FULL RESULT:", result);
+            let result = await response.json();
+            console.log("FULL RESULT:", result);
 
-// 🔥 Check API error
-if (result.error) {
-    alert("❌ API Error: " + result.error.message);
-    return;
-}
-
-// 🔥 Get text properly
-let text = "";
-
-if (result.responses?.[0]?.fullTextAnnotation?.text) {
-    text = result.responses[0].fullTextAnnotation.text;
-}
-else if (result.responses?.[0]?.textAnnotations?.length > 0) {
-    text = result.responses[0].textAnnotations[0].description;
-}
-else {
-    console.log(result);
-    alert("❌ No text detected. Try clearer image.");
-    return;
-}
-
-console.log("DETECTED TEXT:", text);
+            if (!result.responses || result.responses[0].error) {
+                alert("❌ OCR failed");
+                return;
+            }
 
             let text = "";
 
@@ -261,17 +235,72 @@ console.log("DETECTED TEXT:", text);
 
             console.log("TEXT:", text);
 
-            let part = text.match(/(MFG|P\/N|MPN).*?([A-Z0-9\-]{4,})/i);
-            let qty = text.match(/QTY[:\s]*(\d+)/i);
+            let partNumber = "";
+            let quantity = "";
 
-            let partNumber = part ? part[2] : "";
-            let quantity = qty ? qty[1] : "";
+            let lines = text.split("\n").map(l => l.trim()).filter(l => l);
+
+            // PART NUMBER
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i].toUpperCase();
+
+                if (line.includes("MFG") || line.includes("P/N") || line.includes("PN")) {
+
+                    let match = lines[i].match(/[A-Z0-9\-,]{6,}/);
+                    if (match) {
+                        partNumber = match[0];
+                        break;
+                    }
+
+                    if (i + 1 < lines.length) {
+                        let nextMatch = lines[i + 1].match(/[A-Z0-9\-,]{6,}/);
+                        if (nextMatch) {
+                            partNumber = nextMatch[0];
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // QUANTITY
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i].toUpperCase();
+
+                if (line.includes("QTY") || line.includes("QUANTITY")) {
+
+                    let match = lines[i].match(/\d+/);
+                    if (match) {
+                        quantity = match[0];
+                        break;
+                    }
+
+                    if (i + 1 < lines.length) {
+                        let nextMatch = lines[i + 1].match(/\d+/);
+                        if (nextMatch) {
+                            quantity = nextMatch[0];
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // FALLBACK
+            if (!quantity) {
+                let nums = text.match(/\b\d{1,4}\b/g);
+                if (nums) quantity = nums.sort((a,b)=>b-a)[0];
+            }
+
+            if (!partNumber) {
+                let matches = text.match(/[A-Z0-9\-,]{8,}/g);
+                if (matches) partNumber = matches.sort((a,b)=>b.length-a.length)[0];
+            }
 
             if (!partNumber || !quantity) {
-                alert("⚠️ Detection failed. Try closer photo.");
+                alert("⚠️ Detection failed. Try closer shot.");
                 return;
             }
 
+            // SAVE TO GOOGLE SHEET
             await fetch("https://script.google.com/macros/s/AKfycbzsX55cEf1cHBXWPgBz-ypLiLz8rZ06IgKZp7edJBsyvwpAzY0riHamRz-ay8S1whV15w/exec", {
                 method: "POST",
                 body: JSON.stringify({
@@ -282,6 +311,7 @@ console.log("DETECTED TEXT:", text);
             });
 
             alert("✅ Saved!\nP/N: " + partNumber + "\nQTY: " + quantity);
+
         };
 
         reader.readAsDataURL(blob);
