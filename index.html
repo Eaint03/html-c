@@ -1,71 +1,205 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Barcode Inventory System</title>
+    <title>📦 Smart Inventory</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial;
+            text-align: center;
+            padding: 20px;
+        }
+
+        button {
+            padding: 12px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        #scanner {
+            margin: auto;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        input {
+            padding: 10px;
+            margin: 5px;
+            width: 80%;
+        }
+
+        .box {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin-top: 15px;
+        }
+    </style>
 </head>
 
 <body>
 
-<h2>📦 Scan Barcode</h2>
+<h2>📦 Smart Inventory System</h2>
 
-<input type="file" accept="image/*" capture="environment" id="fileInput">
+<!-- HOME -->
+<div>
+    <button onclick="setMode('add')">➕ Add Stock</button>
+    <button onclick="setMode('take')">➖ Take Stock</button>
+    <button onclick="showInventory()">📋 View Inventory</button>
+</div>
 
-<canvas id="canvas" style="display:none;"></canvas>
+<h3 id="modeText">Mode: None</h3>
 
-<script src="https://unpkg.com/@zxing/library@latest"></script>
+<button onclick="startScanner()">📷 Scan Barcode</button>
+
+<div id="scanner"></div>
+
+<p>Scanned Code: <b id="result">None</b></p>
+
+<!-- FORM -->
+<div class="box" id="formBox" style="display:none;">
+    <input id="name" placeholder="Component Name"><br>
+    <input id="qty" type="number" placeholder="Quantity"><br>
+    <input id="location" placeholder="Location"><br>
+    <button onclick="saveNewItem()">💾 Save Item</button>
+</div>
+
+<div id="inventoryBox"></div>
 
 <script>
+let mode = "";
+let currentCode = "";
 
-const codeReader = new ZXing.BrowserMultiFormatReader();
+// LOAD DATA
+let inventory = JSON.parse(localStorage.getItem("inventory")) || {};
 
-document.getElementById('fileInput').addEventListener('change', function (e) {
-
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const img = new Image();
-    img.src = URL.createObjectURL(file);
-
-    img.onload = function () {
-
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-
-        canvas.width = img.width;
-        canvas.height = img.height;
-
-        ctx.drawImage(img, 0, 0);
-
-        codeReader.decodeFromCanvas(canvas)
-            .then(result => {
-
-                let barcode = result.text;
-
-                console.log("Barcode:", barcode);
-
-                saveToSheet(barcode);
-
-            })
-            .catch(err => {
-                alert("❌ Barcode not detected. Try again.");
-            });
-    };
-});
-
-async function saveToSheet(barcode) {
-
-    await fetch("https://script.google.com/macros/s/AKfycbzsX55cEf1cHBXWPgBz-ypLiLz8rZ06IgKZp7edJBsyvwpAzY0riHamRz-ay8S1whV15w/exec", {
-        method: "POST",
-        body: JSON.stringify({
-            component: barcode,
-            quantity: "",
-            location: ""
-        })
-    });
-
-    alert("✅ Saved:\n" + barcode);
+function saveData() {
+    localStorage.setItem("inventory", JSON.stringify(inventory));
 }
 
+// MODE
+function setMode(m) {
+    mode = m;
+    document.getElementById("modeText").innerText = "Mode: " + m.toUpperCase();
+}
+
+// SCANNER
+function startScanner() {
+    Quagga.init({
+        inputStream: {
+            type: "LiveStream",
+            target: document.querySelector('#scanner'),
+            constraints: {
+                facingMode: "environment"
+            }
+        },
+        decoder: {
+            readers: ["code_128_reader", "ean_reader", "ean_8_reader"]
+        }
+    }, function(err) {
+        if (err) {
+            alert("Camera error");
+            return;
+        }
+        Quagga.start();
+    });
+
+    Quagga.onDetected(function(data) {
+        let code = data.codeResult.code;
+        currentCode = code;
+
+        document.getElementById("result").innerText = code;
+
+        Quagga.stop();
+
+        handleScan(code);
+    });
+}
+
+// MAIN LOGIC
+function handleScan(code) {
+
+    if (!mode) {
+        alert("Select mode first!");
+        return;
+    }
+
+    if (inventory[code]) {
+        let item = inventory[code];
+
+        if (mode === "add") {
+            let addQty = prompt(`ADD STOCK\n${item.name}\nCurrent: ${item.qty}\nEnter qty:`);
+
+            if (addQty) {
+                item.qty += parseInt(addQty);
+                saveData();
+                alert("Updated!");
+            }
+
+        } else if (mode === "take") {
+            let takeQty = prompt(`TAKE STOCK\n${item.name}\nCurrent: ${item.qty}\nEnter qty:`);
+
+            if (takeQty > item.qty) {
+                alert("Not enough stock!");
+                return;
+            }
+
+            if (takeQty) {
+                item.qty -= parseInt(takeQty);
+                saveData();
+                alert("Updated!");
+            }
+        }
+
+    } else {
+        if (mode === "add") {
+            document.getElementById("formBox").style.display = "block";
+        } else {
+            alert("Item not found!");
+        }
+    }
+}
+
+// SAVE NEW
+function saveNewItem() {
+    let name = document.getElementById("name").value;
+    let qty = parseInt(document.getElementById("qty").value);
+    let location = document.getElementById("location").value;
+
+    inventory[currentCode] = {
+        name: name,
+        qty: qty,
+        location: location
+    };
+
+    saveData();
+
+    alert("Item saved!");
+
+    document.getElementById("formBox").style.display = "none";
+}
+
+// VIEW INVENTORY
+function showInventory() {
+    let box = document.getElementById("inventoryBox");
+
+    let html = "<h3>📋 Inventory</h3>";
+
+    for (let code in inventory) {
+        let item = inventory[code];
+        html += `
+            <div class="box">
+                <b>${item.name}</b><br>
+                Barcode: ${code}<br>
+                Qty: ${item.qty}<br>
+                Location: ${item.location}
+            </div>
+        `;
+    }
+
+    box.innerHTML = html;
+}
 </script>
 
 </body>
