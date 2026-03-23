@@ -198,9 +198,26 @@ function processImage(canvas) {
         reader.onload = async function() {
 
             let base64 = reader.result.split(',')[1];
+            let formData = new FormData();
+formData.append("file", blob);
+formData.append("apikey", "helloworld");
 
-            let response = await fetch(
-                "https://vision.googleapis.com/v1/images:annotate?key=AIzaSyD_IJCoucQxNSnuC8zckz8cnq8emjYc_oM",
+let response = await fetch("https://api.ocr.space/parse/image", {
+    method: "POST",
+    body: formData
+});
+
+let result = await response.json();
+
+console.log("OCR RESULT:", result);
+
+let text = result.ParsedResults?.[0]?.ParsedText;
+
+if (!text) {
+    alert("❌ OCR failed. Try clearer image.");
+    return;
+}
+
                 {
                     method: "POST",
                     body: JSON.stringify({
