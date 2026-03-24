@@ -1,63 +1,77 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Smart Inventory OCR</title>
-
+    <title>Precision Inventory OCR</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
     <style>
-        body {
-            font-family: Arial;
-            text-align: center;
-            background: #f5f5f5;
+        body { font-family: sans-serif; text-align: center; background: #1a1a1a; color: white; margin: 0; padding: 20px; }
+        .hidden { display: none; }
+        
+        /* Container for the scanner */
+        #reader-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            margin: auto;
+            border-radius: 12px;
+            overflow: hidden;
         }
 
-        .hidden { display: none; }
+        /* The Red Targeting Box */
+        #scanner-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            height: 60px; /* Narrow focus area */
+            border: 2px solid #ff4444;
+            box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.5); /* Dims the outside area */
+            z-index: 10;
+            pointer-events: none;
+        }
 
         button {
-            padding: 15px;
-            margin: 10px;
-            width: 200px;
-            font-size: 16px;
-            border-radius: 10px;
-            border: none;
-            background: #007bff;
-            color: white;
+            padding: 15px; margin: 10px; width: 80%; max-width: 300px;
+            font-size: 16px; border-radius: 12px; border: none;
+            background: #007bff; color: white; font-weight: bold;
         }
-
-        #reader {
-            width: 100%;
-            max-width: 350px;
-            margin: auto;
-        }
-
-        #status {
-            margin-top: 15px;
-            font-weight: bold;
+        
+        #status { margin: 15px; font-size: 18px; color: #ffcc00; }
+        
+        #debugCanvas { 
+            width: 100%; max-width: 400px; 
+            background: white; border: 1px solid #555; margin-top: 10px;
         }
     </style>
 </head>
 
 <body>
 
-<!-- HOME -->
 <div id="homePage">
     <h1>📦 Smart Inventory</h1>
-    <button onclick="openScanner('add')">➕ Add Item</button>
-    <button onclick="openScanner('take')">➖ Take Item</button>
+    <button onclick="openScanner('add')">➕ Add / Restock</button>
+    <button onclick="openScanner('take')" style="background: #444;">➖ Remove / Take</button>
 </div>
 
-<!-- SCANNER -->
 <div id="scanPage" class="hidden">
-    <h2>📸 Scan Part Number</h2>
+    <h2>Align Part Number</h2>
+    
+    <div id="reader-container">
+        <div id="reader"></div>
+        <div id="scanner-overlay"></div>
+    </div>
 
-    <div id="reader"></div>
-
-    <button onclick="captureAndProcess()">📸 Capture</button>
-    <button onclick="stopScanner()">❌ Cancel</button>
-
-    <p id="status"></p>
+    <p id="status">Place P/N inside the red box</p>
+    
+    <button onclick="captureAndProcess()">📸 CAPTURE</button>
+    <button onclick="stopScanner()" style="background: #dc3545;">❌ CANCEL</button>
+    
+    <div style="font-size: 12px; color: #aaa; margin-top: 20px;">OCR SIGHT:</div>
+    <canvas id="debugCanvas"></canvas>
 </div>
 
 <script>
@@ -65,167 +79,119 @@ let mode = "";
 let html5QrCode;
 let inventory = JSON.parse(localStorage.getItem("full_inv")) || {};
 
-// OPEN CAMERA
-function openScanner(m) {
+async function openScanner(m) {
     mode = m;
-
     document.getElementById("homePage").classList.add("hidden");
     document.getElementById("scanPage").classList.remove("hidden");
 
     html5QrCode = new Html5Qrcode("reader");
-
-    const config = {
-        fps: 10,
-        qrbox: { width: 200, height: 60 },
-        videoConstraints: {
-            facingMode: "environment",
-            width: { ideal: 640 },
-            height: { ideal: 480 }
-        }
-    };
-
-    html5QrCode.start(
-        { facingMode: "environment" },
-        config,
-        () => {},
-        () => {}
-    );
+    
+    try {
+        await html5QrCode.start(
+            { facingMode: "environment" },
+            { fps: 10, aspectRatio: 1.0 },
+            () => {}, () => {}
+        );
+    } catch (err) {
+        alert("Camera error: " + err);
+    }
 }
 
-// 🔥 HARD-CROP + HIGH CONTRAST
-function preprocessImage(file) {
+function preprocessImage(blob) {
     return new Promise((resolve) => {
         const img = new Image();
-        img.src = URL.createObjectURL(file);
-
+        img.src = URL.createObjectURL(blob);
         img.onload = () => {
-            const canvas = document.createElement("canvas");
+            const canvas = document.getElementById("debugCanvas");
             const ctx = canvas.getContext("2d");
 
-            // 🔥 ADJUST THIS IF NEEDED
-            const cropX = img.width * 0.05;
-            const cropY = img.height * 0.5;
-            const cropW = img.width * 0.9;
-            const cropH = img.height * 0.2;
+            // --- THE PRECISION CROP LOGIC ---
+            // We only capture the horizontal center strip (matches the red box)
+            const cropWidth = img.width * 0.8;
+            const cropHeight = img.height * 0.15; // Only 15% of the total image height
+            const startX = (img.width - cropWidth) / 2;
+            const startY = (img.height - cropHeight) / 2;
 
-            canvas.width = 640;
-            canvas.height = 120;
+            canvas.width = 800;  // High resolution for Tesseract
+            canvas.height = 150;
 
+            // Apply sharpening and contrast filters
+            ctx.filter = 'grayscale(1) contrast(2) brightness(1.2)';
+            
             ctx.drawImage(
-                img,
-                cropX, cropY, cropW, cropH,
-                0, 0, canvas.width, canvas.height
+                img, 
+                startX, startY, cropWidth, cropHeight, // Source
+                0, 0, canvas.width, canvas.height      // Destination
             );
 
-            // 🔥 HIGH CONTRAST
-            let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            let data = imageData.data;
-
-            for (let i = 0; i < data.length; i += 4) {
-                let avg = (data[i] + data[i+1] + data[i+2]) / 3;
-                let val = avg > 140 ? 255 : 0;
-
-                data[i] = val;
-                data[i+1] = val;
-                data[i+2] = val;
-            }
-
-            ctx.putImageData(imageData, 0, 0);
-
-            canvas.toBlob(resolve, "image/jpeg");
+            canvas.toBlob(resolve, "image/jpeg", 1.0);
         };
     });
 }
 
-// CAPTURE + OCR
 async function captureAndProcess() {
     const status = document.getElementById("status");
-
     try {
         status.innerText = "📸 Capturing...";
+        const rawBlob = await html5QrCode.takePhoto();
+        
+        status.innerText = "⚙️ Cropping & Filtering...";
+        const processedBlob = await preprocessImage(rawBlob);
 
-        const raw = await html5QrCode.takePhoto();
-
-        await html5QrCode.stop();
-
-        const imageFile = await preprocessImage(raw);
-
-        status.innerText = "🧠 Reading Part Number...";
-
+        status.innerText = "🧠 Reading...";
         const result = await Tesseract.recognize(
-            imageFile,
+            processedBlob,
             'eng',
-            {
-                tessedit_pageseg_mode: 7,
-                tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-.,'
+            { 
+                tessedit_pageseg_mode: 7, // Mode 7: Treat as a single line
+                tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-' 
             }
         );
 
-        let text = result.data.text;
-
-        console.log("OCR:", text);
-
-        let pn = extractPN(text);
+        const pn = extractPN(result.data.text);
 
         if (!pn) {
-            status.innerText = "❌ OCR Failed";
-            return;
+            status.innerHTML = "❌ Failed to detect P/N";
+        } else {
+            status.innerHTML = "✅ Found: " + pn;
+            setTimeout(() => processData(pn), 600);
         }
-
-        status.innerText = "✅ " + pn;
-
-        processData(pn);
 
     } catch (err) {
-        status.innerText = "❌ Error";
-        console.error(err);
+        status.innerText = "❌ Error: " + err;
     }
 }
 
-// SIMPLE EXTRACT
 function extractPN(text) {
-    return text
-        .replace(/\s+/g, "")
-        .replace(/[^A-Z0-9\-,\.]/g, "");
+    // Cleans up OCR artifacts and finds the longest alphanumeric string
+    const matches = text.trim().match(/[A-Z0-9-]{3,}/g);
+    return matches ? matches.reduce((a, b) => a.length > b.length ? a : b) : null;
 }
 
-// STOP
-function stopScanner() {
-    if (html5QrCode) {
-        html5QrCode.stop().then(() => location.reload());
-    }
-}
-
-// PROCESS
 function processData(pn) {
-
     if (inventory[pn]) {
-
-        let qty = prompt(
-            `P/N: ${pn}\nStock: ${inventory[pn].qty}\n\nQty to ${mode}:`,
-            "1"
-        );
-
-        if (qty) {
-            if (mode === "add") inventory[pn].qty += parseInt(qty);
-            else inventory[pn].qty -= parseInt(qty);
+        let change = prompt(`P/N: ${pn}\nStock: ${inventory[pn].qty}\n\nQty to ${mode}:`, "1");
+        if (change) {
+            inventory[pn].qty += (mode === "add" ? 1 : -1) * parseInt(change);
+            saveAndReload();
         }
-
+    } else if (mode === "add") {
+        let desc = prompt(`New Part: ${pn}\nDescription:`, "Component");
+        if (desc) {
+            inventory[pn] = { desc: desc, qty: 1 };
+            saveAndReload();
+        }
     } else {
-
-        if (mode === "add") {
-            let desc = prompt(`New Part: ${pn}\nEnter Description:`, "Component");
-
-            inventory[pn] = {
-                desc: desc || "No Desc",
-                qty: 1
-            };
-        } else {
-            alert("❌ Part not found!");
-        }
+        alert("Part not found!");
     }
+}
 
+function saveAndReload() {
     localStorage.setItem("full_inv", JSON.stringify(inventory));
+    location.reload();
+}
+
+function stopScanner() {
     location.reload();
 }
 </script>
