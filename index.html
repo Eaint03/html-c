@@ -1,116 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📦 Smart Inventory OCR</title>
+
 <script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+
+<style>
+body {
+    font-family: sans-serif;
+    text-align: center;
+    padding: 20px;
+    background: #1a1a1a;
+    color: white;
+    margin: 0;
+}
+
+.container { max-width: 450px; margin: auto; }
+
+button {
+    padding: 18px;
+    margin: 10px 0;
+    font-size: 16px;
+    border-radius: 12px;
+    width: 90%;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.btn-main { background: #007bff; color: white; }
+.hidden { display: none; }
+
+#scanner-wrapper {
+    width: 100%;
+    height: 350px;
+    margin: 15px 0;
+    background: black;
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+#status {
+    font-size: 16px;
+    margin: 10px;
+    color: #00ffcc;
+    min-height: 24px;
+}
+
+.shutter-btn {
+    background: white;
+    border: 8px solid #555;
+    width: 85px;
+    height: 85px;
+    border-radius: 50%;
+    margin: 10px auto;
+}
+
+.item-card {
+    border: 1px solid #333;
+    padding: 15px;
+    margin-top: 10px;
+    background: #222;
+    border-radius: 12px;
+    text-align: left;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<!-- HOME -->
+<div id="homePage">
+    <h2>📦 Smart Inventory OCR</h2>
+    <button class="btn-main" onclick="openScanner('add')">➕ SCAN TO ADD</button>
+    <button class="btn-main" onclick="openScanner('take')" style="background:#fd7e14;">➖ SCAN TO TAKE</button>
+    <button class="btn-main" onclick="showInventory()" style="background:#6c757d;">📋 VIEW LIST</button>
+</div>
+
+<!-- SCANNER -->
+<div id="scanPage" class="hidden">
+    <div id="status">📷 ALIGN P/N & TAP</div>
+
+    <div id="scanner-wrapper">
+        <div id="reader" style="width:100%;"></div>
+    </div>
+
+    <div class="shutter-btn" onclick="captureAndProcess()"></div>
+
+    <button onclick="stopScanner()" style="background:#444;">Cancel</button>
+</div>
+
+<!-- INVENTORY -->
+<div id="inventoryBox"></div>
+
+</div>
 
 <script>
+
 let mode = "";
 let html5QrCode;
-let scanned = false;
-let lastScanTime = 0;
-
 let inventory = JSON.parse(localStorage.getItem("full_inv")) || {};
 
+// OPEN CAMERA
 function openScanner(m) {
     mode = m;
-    scanned = false;
 
     document.getElementById("homePage").classList.add("hidden");
     document.getElementById("scanPage").classList.remove("hidden");
 
     html5QrCode = new Html5Qrcode("reader");
 
-    const config = {
-        fps: 20, // 🔥 faster scanning
-        qrbox: { width: 280, height: 120 },
-        aspectRatio: 1.7778,
-        disableFlip: false,
-        experimentalFeatures: {
-            useBarCodeDetectorIfSupported: true
-        },
-        videoConstraints: {
-            facingMode: "environment",
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-            focusMode: "continuous" // 🔥 auto focus
-        }
-    };
-
     html5QrCode.start(
         { facingMode: "environment" },
-        config,
-
-        (decodedText) => {
-            let now = Date.now();
-
-            // 🔥 ANTI-SPAM (prevent multiple triggers)
-            if (now - lastScanTime < 1500) return;
-            lastScanTime = now;
-
-            if (scanned) return;
-            scanned = true;
-
-            if (navigator.vibrate) navigator.vibrate(100);
-
-            document.getElementById("status").innerText = "✅ DETECTED: " + decodedText;
-
-            processData(decodedText);
-        },
-
-        () => {
-            // silent errors (normal)
+        {
+            fps: 10,
+            qrbox: { width: 300, height: 120 },
+            videoConstraints: {
+                facingMode: "environment",
+                width: { ideal: 1920 },
+                height: { ideal: 1080 }
+            }
         }
-
-    ).catch(err => alert(err));
+    );
 }
 
-// STOP
+// STOP CAMERA
 function stopScanner() {
     if (html5QrCode) {
         html5QrCode.stop().then(() => location.reload());
+    } else {
+        location.reload();
     }
 }
 
-// PROCESS
-function processData(text) {
+// 📸 CAPTURE + OCR
+async function captureAndProcess() {
 
-    let pn = text.trim();
+    const status = document.getElementById("status");
 
-    if (pn.startsWith("1P")) pn = pn.substring(2);
-    else if (pn.startsWith("P")) pn = pn.substring(1);
+    try {
+        status.innerText = "📸 Capturing...";
 
-    setTimeout(() => {
+        const imageFile = await html5QrCode.takePhoto();
 
-        html5QrCode.stop().then(() => {
+        status.innerText = "🧠 Reading P/N...";
 
-            if (inventory[pn]) {
+        const result = await Tesseract.recognize(
+            imageFile,
+            'eng',
+            {
+                logger: m => console.log(m)
+            }
+        );
 
-                let qty = prompt(
-                    `P/N: ${pn}\nStock: ${inventory[pn].qty}\n\nQty to ${mode}:`,
-                    "1"
-                );
+        let rawText = result.data.text;
 
-                if (qty) {
-                    if (mode === "add") inventory[pn].qty += parseInt(qty);
-                    else inventory[pn].qty -= parseInt(qty);
-                }
+        let pn = cleanPN(rawText);
 
-            } else {
+        if (!pn) {
+            status.innerText = "❌ Cannot read P/N";
+            return;
+        }
 
-                if (mode === "add") {
-                    let desc = prompt(`New Part: ${pn}\nEnter Description:`, "Component");
+        status.innerText = "✅ " + pn;
 
-                    inventory[pn] = {
-                        desc: desc || "No Desc",
-                        qty: 1
-                    };
-                } else {
-                    alert("❌ Part not found!");
-                }
+        processData(pn);
+
+    } catch (err) {
+        status.innerText = "❌ OCR FAILED";
+        console.error(err);
+    }
+}
+
+// 🔥 CLEAN TEXT (IMPORTANT)
+function cleanPN(text) {
+
+    let cleaned = text
+        .replace(/\s+/g, "")
+        .replace(/[^A-Za-z0-9\-]/g, "")
+        .toUpperCase();
+
+    // OPTIONAL: filter realistic P/N (length)
+    if (cleaned.length < 3) return "";
+
+    return cleaned;
+}
+
+// INVENTORY LOGIC
+function processData(pn) {
+
+    html5QrCode.stop().then(() => {
+
+        if (inventory[pn]) {
+
+            let qty = prompt(
+                `P/N: ${pn}\nStock: ${inventory[pn].qty}\n\nQty to ${mode}:`,
+                "1"
+            );
+
+            if (qty) {
+                if (mode === "add") inventory[pn].qty += parseInt(qty);
+                else inventory[pn].qty -= parseInt(qty);
             }
 
-            localStorage.setItem("full_inv", JSON.stringify(inventory));
-            location.reload();
+        } else {
 
-        });
+            if (mode === "add") {
 
-    }, 500);
+                let desc = prompt(`New Part: ${pn}\nEnter Description:`, "Component");
+
+                inventory[pn] = {
+                    desc: desc || "No Desc",
+                    qty: 1
+                };
+
+            } else {
+                alert("❌ Part not found!");
+            }
+        }
+
+        localStorage.setItem("full_inv", JSON.stringify(inventory));
+        location.reload();
+
+    });
 }
+
+// SHOW INVENTORY
+function showInventory() {
+
+    let html = "<h3>📋 Stock</h3>";
+
+    for (let pn in inventory) {
+        html += `
+        <div class="item-card">
+            <b>P/N: ${pn}</b><br>
+            <small>${inventory[pn].desc}</small><br>
+            Qty: ${inventory[pn].qty}
+        </div>`;
+    }
+
+    document.getElementById("inventoryBox").innerHTML = html;
+}
+
 </script>
+
+</body>
+</html>
