@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Smart Inventory</title>
+    <title>Smart Inventory OCR</title>
 
     <!-- LIBRARIES -->
     <script src="https://unpkg.com/html5-qrcode"></script>
@@ -12,35 +12,19 @@
             font-family: Arial;
             text-align: center;
             background: #f5f5f5;
-            margin: 0;
         }
 
-        h1 {
-            margin-top: 40px;
-        }
-
-        .hidden {
-            display: none;
-        }
-
-        .container {
-            margin-top: 50px;
-        }
+        .hidden { display: none; }
 
         button {
-            width: 200px;
             padding: 15px;
             margin: 10px;
+            width: 200px;
             font-size: 16px;
-            border: none;
             border-radius: 10px;
+            border: none;
             background: #007bff;
             color: white;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background: #0056b3;
         }
 
         #reader {
@@ -53,25 +37,33 @@
             margin-top: 15px;
             font-weight: bold;
         }
+
+        #guide {
+            color: red;
+            margin-top: 10px;
+        }
     </style>
 </head>
 
 <body>
 
-<!-- 🔥 HOME PAGE -->
-<div id="homePage" class="container">
+<!-- HOME -->
+<div id="homePage">
     <h1>📦 Smart Inventory</h1>
-
     <button onclick="openScanner('add')">➕ Add Item</button>
-    <br>
     <button onclick="openScanner('take')">➖ Take Item</button>
 </div>
 
-<!-- 🔥 SCAN PAGE -->
-<div id="scanPage" class="hidden container">
-    <h2>📸 Scan Component</h2>
+<!-- SCANNER -->
+<div id="scanPage" class="hidden">
+    <h2>📸 Scan Label</h2>
 
     <div id="reader"></div>
+
+    <p id="guide">
+        📌 Aim at "MFR PN" line<br>
+        📌 Move closer & avoid reflection
+    </p>
 
     <button onclick="captureAndProcess()">📸 Capture</button>
     <button onclick="stopScanner()">❌ Cancel</button>
@@ -96,7 +88,6 @@ function openScanner(m) {
     const config = {
         fps: 10, // 🔥 reduce lag
         qrbox: { width: 280, height: 120 },
-        aspectRatio: 1.7778,
         videoConstraints: {
             facingMode: "environment",
             width: { ideal: 640 },
@@ -112,7 +103,7 @@ function openScanner(m) {
     ).catch(err => alert(err));
 }
 
-// CAPTURE + OCR
+// 📸 CAPTURE + OCR
 async function captureAndProcess() {
     const status = document.getElementById("status");
 
@@ -121,22 +112,29 @@ async function captureAndProcess() {
 
         const imageFile = await html5QrCode.takePhoto();
 
-        // 🔥 STOP CAMERA FIRST
+        // 🔥 STOP CAMERA BEFORE OCR (IMPORTANT)
         await html5QrCode.stop();
 
-        status.innerText = "🧠 Reading P/N...";
+        status.innerText = "🧠 Reading MFR PN...";
 
         const result = await Tesseract.recognize(
             imageFile,
-            'eng'
+            'eng',
+            {
+                tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-.,',
+                logger: m => console.log(m)
+            }
         );
 
         let rawText = result.data.text;
 
         let pn = extractPN(rawText);
 
+        // 🔥 CONFIRM / EDIT
         if (!pn) {
-            pn = prompt("❌ Cannot detect P/N.\nEnter manually:");
+            pn = prompt("❌ Cannot detect MFR PN.\nEnter manually:");
+        } else {
+            pn = prompt(`Detected MFR PN:\n${pn}\n\nConfirm or edit:`, pn);
         }
 
         if (!pn) {
@@ -146,7 +144,7 @@ async function captureAndProcess() {
 
         status.innerText = "✅ " + pn;
 
-        processData(pn);
+        processData(pn.toUpperCase());
 
     } catch (err) {
         status.innerText = "❌ OCR Failed";
@@ -154,18 +152,23 @@ async function captureAndProcess() {
     }
 }
 
-// SMART P/N
+// 🔥 EXTRACT ONLY MFR PN
 function extractPN(text) {
-    let cleaned = text
-        .replace(/\s+/g, "")
-        .replace(/[^A-Za-z0-9\-]/g, "")
-        .toUpperCase();
 
-    let matches = cleaned.match(/[A-Z0-9\-]{4,20}/g);
+    text = text.toUpperCase();
+    text = text.replace(/\n/g, " ");
 
-    if (!matches) return "";
+    // 🔥 Find "MFR PN"
+    let mfr = text.match(/MFR\s*PN[:\s]*([A-Z0-9\-\,\.]+)/);
 
-    return matches.sort((a,b) => b.length - a.length)[0];
+    if (mfr && mfr[1]) return mfr[1];
+
+    // fallback if OCR misses space
+    let fallback = text.match(/MFRPN\s*([A-Z0-9\-\,\.]+)/);
+
+    if (fallback && fallback[1]) return fallback[1];
+
+    return "";
 }
 
 // STOP
@@ -175,7 +178,7 @@ function stopScanner() {
     }
 }
 
-// PROCESS
+// PROCESS INVENTORY
 function processData(pn) {
 
     if (inventory[pn]) {
