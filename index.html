@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Inventory Scanner</title>
+    <title>Smart Inventory Pro</title>
     
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
@@ -14,7 +14,6 @@
         .page { padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         .hidden { display: none !important; }
 
-        /* Buttons */
         button { 
             width: 90%; max-width: 350px; padding: 16px; margin: 10px 0; 
             border-radius: 12px; border: none; font-size: 16px; font-weight: bold; 
@@ -26,7 +25,6 @@
         .btn-sync { background: var(--green); color: white; width: 100%; }
         .btn-danger { background: var(--red); color: white; }
 
-        /* Scanner */
         #reader-container { 
             position: relative; width: 100%; max-width: 400px; 
             margin: 15px auto; border-radius: 15px; overflow: hidden; border: 2px solid #333;
@@ -37,14 +35,13 @@
             box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.6); z-index: 5; pointer-events: none;
         }
 
-        /* Review Table */
         .review-card { background: var(--card); width: 100%; max-width: 500px; border-radius: 15px; padding: 15px; margin-top: 20px; }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #333; font-size: 14px; }
         th { color: #888; text-transform: uppercase; font-size: 11px; }
-        .del-btn { color: var(--red); font-weight: bold; padding: 5px; }
+        .del-btn { color: var(--red); font-weight: bold; padding: 5px; cursor: pointer; }
 
-        #status { margin: 10px; color: #00ff00; font-weight: bold; height: 20px; }
+        #status { margin: 10px; color: #00ff00; font-weight: bold; height: 20px; font-size: 14px; }
         #debugCanvas { width: 100%; max-width: 350px; background: white; border-radius: 8px; margin-top: 10px; }
         .badge { background: var(--red); padding: 2px 8px; border-radius: 10px; font-size: 12px; }
     </style>
@@ -53,7 +50,7 @@
 
     <div id="homePage" class="page">
         <h1 style="margin-top: 40px;">📦 Smart Inventory</h1>
-        <p style="color: #888;">Live OCR Inventory Tracker</p>
+        <p style="color: #888;">Precision OCR Tracker</p>
         
         <button class="btn-main" onclick="goTo('scanPage', 'add')">➕ Scan to ADD</button>
         <button class="btn-secondary" onclick="goTo('scanPage', 'take')">➖ Scan to REMOVE</button>
@@ -75,18 +72,19 @@
         </div>
 
         <button class="btn-danger" onclick="goTo('homePage')">Exit Scanner</button>
+        <div style="font-size: 10px; color: #555;">AI VIEW (CONTRAST ENHANCED)</div>
         <canvas id="debugCanvas"></canvas>
     </div>
 
     <div id="reviewPage" class="page hidden">
-        <h2>📋 Pending Scans</h2>
+        <h2>📋 Review & Sync</h2>
         <div class="review-card">
             <table id="reviewTable">
                 <thead>
                     <tr>
-                        <th>Part Number</th>
+                        <th>P/N</th>
                         <th>Qty</th>
-                        <th>Mode</th>
+                        <th>Type</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -99,7 +97,6 @@
     </div>
 
     <script>
-        // --- CONFIGURATION ---
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsX55cEf1cHBXWPgBz-ypLiLz8rZ06IgKZp7edJBsyvwpAzY0riHamRz-ay8S1whV15w/exec";
         
         let mode = "";
@@ -107,6 +104,10 @@
         let scanTimer = null;
         let processing = false;
         let pendingList = JSON.parse(localStorage.getItem("inv_pending")) || [];
+
+        // Sensitivity Improvements
+        let lastMatch = "";
+        let matchStreak = 0;
 
         function goTo(pageId, m = "") {
             document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
@@ -126,9 +127,10 @@
         async function initScanner() {
             html5QrCode = new Html5Qrcode("reader");
             try {
-                await html5QrCode.start({ facingMode: "environment" }, { fps: 10, aspectRatio: 1.0 }, () => {}, () => {});
-                document.getElementById("status").innerText = "Searching for Part Number...";
-                scanTimer = setInterval(takeStep, 1300);
+                // High FPS for better tracking
+                await html5QrCode.start({ facingMode: "environment" }, { fps: 20, aspectRatio: 1.0 }, () => {}, () => {});
+                document.getElementById("status").innerText = "Align Part Number...";
+                scanTimer = setInterval(takeStep, 1000); 
             } catch (e) { alert(e); }
         }
 
@@ -146,34 +148,59 @@
             const canvas = document.getElementById("debugCanvas");
             const ctx = canvas.getContext("2d");
 
-            // Crop Logic (Middle Strip)
+            // Tighter crop for better focus
             const vW = video.videoWidth; const vH = video.videoHeight;
-            const cropW = vW * 0.85; const cropH = vH * 0.2;
+            const cropW = vW * 0.75; const cropH = vH * 0.15; 
             const sx = (vW - cropW) / 2; const sy = (vH - cropH) / 2;
 
-            canvas.width = 600; canvas.height = 150;
-            ctx.filter = 'grayscale(1) contrast(2) brightness(1.2)';
+            canvas.width = 800; canvas.height = 160; 
+            // Extreme contrast for OCR accuracy
+            ctx.filter = 'grayscale(1) contrast(3) brightness(1.1)';
             ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
 
             canvas.toBlob(async (blob) => {
-                const res = await Tesseract.recognize(blob, 'eng', { tessedit_pageseg_mode: 7 });
-                const found = res.data.text.trim().match(/[A-Z0-9-]{4,}/g);
-                
-                if (found) {
-                    const pn = found.reduce((a, b) => a.length > b.length ? a : b);
-                    document.getElementById("status").innerText = "FOUND: " + pn;
+                try {
+                    const res = await Tesseract.recognize(blob, 'eng', { 
+                        tessedit_pageseg_mode: 7,
+                        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-'
+                    });
+
+                    const conf = res.data.confidence;
+                    const text = res.data.text.trim().match(/[A-Z0-9-]{4,}/g);
                     
-                    setTimeout(() => {
-                        const q = prompt(`Part: ${pn}\nQuantity:`, "1");
-                        if (q) {
-                            pendingList.push({ pn: pn, qty: parseInt(q), mode: mode, date: new Date().toLocaleString() });
-                            localStorage.setItem("inv_pending", JSON.stringify(pendingList));
-                            alert("Saved to Review List");
+                    if (text && conf > 70) {
+                        const currentPN = text.reduce((a, b) => a.length > b.length ? a : b);
+                        
+                        // DEBOUNCE LOGIC: Check if it's the same result twice
+                        if (currentPN === lastMatch) {
+                            matchStreak++;
+                        } else {
+                            lastMatch = currentPN;
+                            matchStreak = 0;
                         }
+
+                        if (matchStreak >= 1) { // Confirmed match
+                            document.getElementById("status").innerText = "✅ CONFIRMED: " + currentPN;
+                            if (navigator.vibrate) navigator.vibrate(50);
+                            
+                            setTimeout(() => {
+                                const q = prompt(`PART: ${currentPN}\nQuantity:`, "1");
+                                if (q) {
+                                    pendingList.push({ pn: currentPN, qty: parseInt(q), mode: mode, date: new Date().toLocaleString() });
+                                    localStorage.setItem("inv_pending", JSON.stringify(pendingList));
+                                }
+                                lastMatch = ""; matchStreak = 0; processing = false;
+                            }, 100);
+                        } else {
+                            document.getElementById("status").innerText = "🔍 Stabilizing: " + currentPN;
+                            processing = false;
+                        }
+                    } else {
+                        document.getElementById("status").innerText = "Searching...";
                         processing = false;
-                    }, 100);
-                } else { processing = false; }
-            }, "image/jpeg");
+                    }
+                } catch (e) { processing = false; }
+            }, "image/jpeg", 0.9);
         }
 
         function renderTable() {
@@ -183,7 +210,7 @@
                 tbody.innerHTML += `<tr>
                     <td>${item.pn}</td>
                     <td>${item.qty}</td>
-                    <td>${item.mode.toUpperCase()}</td>
+                    <td style="color:${item.mode=='add'?'#28a745':'#dc3545'}">${item.mode.toUpperCase()}</td>
                     <td class="del-btn" onclick="removeItem(${i})">✕</td>
                 </tr>`;
             });
@@ -199,15 +226,15 @@
         async function syncData() {
             if (pendingList.length === 0) return;
             const btn = document.getElementById("syncBtn");
-            btn.innerText = "Syncing..."; btn.disabled = true;
+            btn.innerText = "⏳ Uploading..."; btn.disabled = true;
 
             try {
                 await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(pendingList) });
-                alert("Synced to Google Sheets!");
+                alert("Success! Google Sheets updated.");
                 pendingList = [];
                 localStorage.setItem("inv_pending", JSON.stringify(pendingList));
                 goTo('homePage');
-            } catch (e) { alert("Sync Error"); }
+            } catch (e) { alert("Network Error"); }
             btn.innerText = "🚀 Sync to Google Sheets"; btn.disabled = false;
         }
 
