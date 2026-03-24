@@ -8,33 +8,75 @@
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
     <style>
-        body { font-family: Arial; text-align: center; }
-        .hidden { display: none; }
-        button { padding: 12px; margin: 10px; }
-        #reader { width: 100%; max-width: 400px; margin: auto; }
-        #preview img { width: 100%; margin-top: 10px; }
+        body {
+            font-family: Arial;
+            text-align: center;
+            background: #f5f5f5;
+            margin: 0;
+        }
+
+        h1 {
+            margin-top: 40px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .container {
+            margin-top: 50px;
+        }
+
+        button {
+            width: 200px;
+            padding: 15px;
+            margin: 10px;
+            font-size: 16px;
+            border: none;
+            border-radius: 10px;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        #reader {
+            width: 100%;
+            max-width: 350px;
+            margin: auto;
+        }
+
+        #status {
+            margin-top: 15px;
+            font-weight: bold;
+        }
     </style>
 </head>
 
 <body>
 
-<!-- HOME -->
-<div id="homePage">
-    <h2>📦 Smart Inventory</h2>
+<!-- 🔥 HOME PAGE -->
+<div id="homePage" class="container">
+    <h1>📦 Smart Inventory</h1>
+
     <button onclick="openScanner('add')">➕ Add Item</button>
+    <br>
     <button onclick="openScanner('take')">➖ Take Item</button>
 </div>
 
-<!-- SCANNER -->
-<div id="scanPage" class="hidden">
-    <h3>📸 Scan Component</h3>
+<!-- 🔥 SCAN PAGE -->
+<div id="scanPage" class="hidden container">
+    <h2>📸 Scan Component</h2>
+
     <div id="reader"></div>
 
     <button onclick="captureAndProcess()">📸 Capture</button>
     <button onclick="stopScanner()">❌ Cancel</button>
 
     <p id="status"></p>
-    <div id="preview"></div>
 </div>
 
 <script>
@@ -42,7 +84,7 @@ let mode = "";
 let html5QrCode;
 let inventory = JSON.parse(localStorage.getItem("full_inv")) || {};
 
-// 🚀 OPEN CAMERA
+// OPEN CAMERA
 function openScanner(m) {
     mode = m;
 
@@ -52,12 +94,12 @@ function openScanner(m) {
     html5QrCode = new Html5Qrcode("reader");
 
     const config = {
-        fps: 10, // 🔥 reduced for performance
+        fps: 10, // 🔥 reduce lag
         qrbox: { width: 280, height: 120 },
         aspectRatio: 1.7778,
         videoConstraints: {
             facingMode: "environment",
-            width: { ideal: 640 },   // 🔥 reduced resolution
+            width: { ideal: 640 },
             height: { ideal: 480 }
         }
     };
@@ -70,7 +112,7 @@ function openScanner(m) {
     ).catch(err => alert(err));
 }
 
-// 📸 CAPTURE + OCR (OPTIMIZED)
+// CAPTURE + OCR
 async function captureAndProcess() {
     const status = document.getElementById("status");
 
@@ -79,16 +121,8 @@ async function captureAndProcess() {
 
         const imageFile = await html5QrCode.takePhoto();
 
-        // 🔥 STOP CAMERA BEFORE OCR (VERY IMPORTANT)
+        // 🔥 STOP CAMERA FIRST
         await html5QrCode.stop();
-
-        // show preview
-        const imgURL = URL.createObjectURL(imageFile);
-        document.getElementById("preview").innerHTML =
-            `<img src="${imgURL}">`;
-
-        // small delay to avoid freeze
-        await new Promise(r => setTimeout(r, 300));
 
         status.innerText = "🧠 Reading P/N...";
 
@@ -97,18 +131,12 @@ async function captureAndProcess() {
             'eng'
         );
 
-        let words = result.data.words;
+        let rawText = result.data.text;
 
-        let bestText = words
-            .filter(w => w.confidence > 60)
-            .map(w => w.text)
-            .join("");
+        let pn = extractPN(rawText);
 
-        let pn = extractPN(bestText);
-
-        // 🔥 fallback manual input
         if (!pn) {
-            pn = prompt("❌ OCR failed.\nEnter P/N manually:");
+            pn = prompt("❌ Cannot detect P/N.\nEnter manually:");
         }
 
         if (!pn) {
@@ -118,38 +146,36 @@ async function captureAndProcess() {
 
         status.innerText = "✅ " + pn;
 
-        // clear memory
-        URL.revokeObjectURL(imgURL);
-
-        processData(pn.toUpperCase());
+        processData(pn);
 
     } catch (err) {
-        status.innerText = "❌ Failed";
+        status.innerText = "❌ OCR Failed";
         console.error(err);
     }
 }
 
-// 🔥 SMART P/N EXTRACTION
+// SMART P/N
 function extractPN(text) {
     let cleaned = text
         .replace(/\s+/g, "")
+        .replace(/[^A-Za-z0-9\-]/g, "")
         .toUpperCase();
 
-    let matches = cleaned.match(/[A-Z]{1,5}[0-9]{2,10}[A-Z0-9\-]*/g);
+    let matches = cleaned.match(/[A-Z0-9\-]{4,20}/g);
 
     if (!matches) return "";
 
-    return matches[0];
+    return matches.sort((a,b) => b.length - a.length)[0];
 }
 
-// ❌ STOP CAMERA
+// STOP
 function stopScanner() {
     if (html5QrCode) {
         html5QrCode.stop().then(() => location.reload());
     }
 }
 
-// 📦 PROCESS INVENTORY
+// PROCESS
 function processData(pn) {
 
     if (inventory[pn]) {
