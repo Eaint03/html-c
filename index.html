@@ -1,154 +1,220 @@
-<script>
-    // --- CONFIGURATION ---
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsX55cEf1cHBXWPgBz-ypLiLz8rZ06IgKZp7edJBsyvwpAzY0riHamRz-ay8S1whV15w/exec";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro Inventory Scanner</title>
     
-    let mode = "";
-    let html5QrCode = null;
-    let scanTimer = null;
-    let processing = false;
-    let pendingList = JSON.parse(localStorage.getItem("inv_pending")) || [];
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
-    // --- STABILIZER VARIABLES ---
-    let lastResult = "";
-    let resultCount = 0;
+    <style>
+        :root { --blue: #007bff; --green: #28a745; --red: #dc3545; --dark: #121212; --card: #1e1e1e; }
+        body { font-family: -apple-system, sans-serif; background: var(--dark); color: white; margin: 0; text-align: center; }
+        .page { padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        .hidden { display: none !important; }
 
-    function goTo(pageId, m = "") {
-        document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-        document.getElementById(pageId).classList.remove('hidden');
-
-        if (pageId === 'scanPage') {
-            mode = m;
-            document.getElementById('modeTitle').innerText = (m === 'add' ? "Add Stock" : "Remove Stock");
-            initScanner();
-        } else {
-            killScanner();
-            if (pageId === 'reviewPage') renderTable();
-            if (pageId === 'homePage') updateBadge();
+        /* Buttons */
+        button { 
+            width: 90%; max-width: 350px; padding: 16px; margin: 10px 0; 
+            border-radius: 12px; border: none; font-size: 16px; font-weight: bold; 
+            cursor: pointer; transition: 0.2s; 
         }
-    }
+        .btn-main { background: var(--blue); color: white; }
+        .btn-secondary { background: #333; color: white; }
+        .btn-review { background: #6f42c1; color: white; }
+        .btn-sync { background: var(--green); color: white; width: 100%; }
+        .btn-danger { background: var(--red); color: white; }
 
-    async function initScanner() {
-        html5QrCode = new Html5Qrcode("reader");
-        try {
-            // Increased FPS to 15 for smoother capture
-            await html5QrCode.start({ facingMode: "environment" }, { fps: 15, aspectRatio: 1.0 }, () => {}, () => {});
-            document.getElementById("status").innerText = "Align Part Number in Box...";
-            // Check every 800ms for a balance of speed and stability
-            scanTimer = setInterval(takeStep, 800);
-        } catch (e) { alert(e); }
-    }
+        /* Scanner */
+        #reader-container { 
+            position: relative; width: 100%; max-width: 400px; 
+            margin: 15px auto; border-radius: 15px; overflow: hidden; border: 2px solid #333;
+        }
+        #scanner-overlay {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 80%; height: 60px; border: 3px solid #00ff00;
+            box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.6); z-index: 5; pointer-events: none;
+        }
 
-    function killScanner() {
-        clearInterval(scanTimer);
-        if (html5QrCode) html5QrCode.stop().catch(() => {});
-        lastResult = ""; 
-        resultCount = 0;
-    }
+        /* Review Table */
+        .review-card { background: var(--card); width: 100%; max-width: 500px; border-radius: 15px; padding: 15px; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #333; font-size: 14px; }
+        th { color: #888; text-transform: uppercase; font-size: 11px; }
+        .del-btn { color: var(--red); font-weight: bold; padding: 5px; }
 
-    async function takeStep() {
-        if (processing) return;
-        const video = document.querySelector("#reader video");
-        if (!video || video.readyState < 2) return;
+        #status { margin: 10px; color: #00ff00; font-weight: bold; height: 20px; }
+        #debugCanvas { width: 100%; max-width: 350px; background: white; border-radius: 8px; margin-top: 10px; }
+        .badge { background: var(--red); padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+    </style>
+</head>
+<body>
 
-        processing = true;
-        const canvas = document.getElementById("debugCanvas");
-        const ctx = canvas.getContext("2d");
+    <div id="homePage" class="page">
+        <h1 style="margin-top: 40px;">📦 Smart Inventory</h1>
+        <p style="color: #888;">Live OCR Inventory Tracker</p>
+        
+        <button class="btn-main" onclick="goTo('scanPage', 'add')">➕ Scan to ADD</button>
+        <button class="btn-secondary" onclick="goTo('scanPage', 'take')">➖ Scan to REMOVE</button>
+        
+        <div style="margin: 20px 0; width: 80%; border-top: 1px solid #333;"></div>
+        
+        <button class="btn-review" onclick="goTo('reviewPage')">
+            📋 Review Scans <span id="countBadge" class="badge">0</span>
+        </button>
+    </div>
 
-        const vW = video.videoWidth; const vH = video.videoHeight;
-        const cropW = vW * 0.8; const cropH = vH * 0.15; // Tighter height to reduce noise
-        const sx = (vW - cropW) / 2; const sy = (vH - cropH) / 2;
+    <div id="scanPage" class="page hidden">
+        <h2 id="modeTitle">Scanning...</h2>
+        <div id="status">Initializing...</div>
 
-        // Upscale slightly for better OCR clarity
-        canvas.width = 800; canvas.height = 150;
-        ctx.filter = 'grayscale(1) contrast(2.5) brightness(1.1)';
-        ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
+        <div id="reader-container">
+            <div id="reader"></div>
+            <div id="scanner-overlay"></div>
+        </div>
 
-        canvas.toBlob(async (blob) => {
+        <button class="btn-danger" onclick="goTo('homePage')">Exit Scanner</button>
+        <canvas id="debugCanvas"></canvas>
+    </div>
+
+    <div id="reviewPage" class="page hidden">
+        <h2>📋 Pending Scans</h2>
+        <div class="review-card">
+            <table id="reviewTable">
+                <thead>
+                    <tr>
+                        <th>Part Number</th>
+                        <th>Qty</th>
+                        <th>Mode</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="reviewList"></tbody>
+            </table>
+        </div>
+
+        <button class="btn-sync" id="syncBtn" onclick="syncData()">🚀 Sync to Google Sheets</button>
+        <button class="btn-secondary" onclick="goTo('homePage')">Back to Home</button>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsX55cEf1cHBXWPgBz-ypLiLz8rZ06IgKZp7edJBsyvwpAzY0riHamRz-ay8S1whV15w/exec";
+        
+        let mode = "";
+        let html5QrCode = null;
+        let scanTimer = null;
+        let processing = false;
+        let pendingList = JSON.parse(localStorage.getItem("inv_pending")) || [];
+
+        function goTo(pageId, m = "") {
+            document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+            document.getElementById(pageId).classList.remove('hidden');
+
+            if (pageId === 'scanPage') {
+                mode = m;
+                document.getElementById('modeTitle').innerText = (m === 'add' ? "Add Stock" : "Remove Stock");
+                initScanner();
+            } else {
+                killScanner();
+                if (pageId === 'reviewPage') renderTable();
+                if (pageId === 'homePage') updateBadge();
+            }
+        }
+
+        async function initScanner() {
+            html5QrCode = new Html5Qrcode("reader");
             try {
-                const res = await Tesseract.recognize(blob, 'eng', { 
-                    tessedit_pageseg_mode: 7,
-                    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-' // Ignore symbols/lowercase
-                });
+                await html5QrCode.start({ facingMode: "environment" }, { fps: 10, aspectRatio: 1.0 }, () => {}, () => {});
+                document.getElementById("status").innerText = "Searching for Part Number...";
+                scanTimer = setInterval(takeStep, 1300);
+            } catch (e) { alert(e); }
+        }
 
-                const text = res.data.text.trim().replace(/\s/g, "");
-                const found = text.match(/[A-Z0-9-]{4,}/g);
-                const confidence = res.data.confidence;
+        function killScanner() {
+            clearInterval(scanTimer);
+            if (html5QrCode) html5QrCode.stop().catch(() => {});
+        }
 
-                if (found && confidence > 65) {
+        async function takeStep() {
+            if (processing) return;
+            const video = document.querySelector("#reader video");
+            if (!video || video.readyState < 2) return;
+
+            processing = true;
+            const canvas = document.getElementById("debugCanvas");
+            const ctx = canvas.getContext("2d");
+
+            // Crop Logic (Middle Strip)
+            const vW = video.videoWidth; const vH = video.videoHeight;
+            const cropW = vW * 0.85; const cropH = vH * 0.2;
+            const sx = (vW - cropW) / 2; const sy = (vH - cropH) / 2;
+
+            canvas.width = 600; canvas.height = 150;
+            ctx.filter = 'grayscale(1) contrast(2) brightness(1.2)';
+            ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
+
+            canvas.toBlob(async (blob) => {
+                const res = await Tesseract.recognize(blob, 'eng', { tessedit_pageseg_mode: 7 });
+                const found = res.data.text.trim().match(/[A-Z0-9-]{4,}/g);
+                
+                if (found) {
                     const pn = found.reduce((a, b) => a.length > b.length ? a : b);
+                    document.getElementById("status").innerText = "FOUND: " + pn;
                     
-                    // --- STABILITY CHECK ---
-                    if (pn === lastResult) {
-                        resultCount++;
-                    } else {
-                        lastResult = pn;
-                        resultCount = 0;
-                    }
+                    setTimeout(() => {
+                        const q = prompt(`Part: ${pn}\nQuantity:`, "1");
+                        if (q) {
+                            pendingList.push({ pn: pn, qty: parseInt(q), mode: mode, date: new Date().toLocaleString() });
+                            localStorage.setItem("inv_pending", JSON.stringify(pendingList));
+                            alert("Saved to Review List");
+                        }
+                        processing = false;
+                    }, 100);
+                } else { processing = false; }
+            }, "image/jpeg");
+        }
 
-                    // If we see the same PN twice, confirm it
-                    if (resultCount >= 1) {
-                        document.getElementById("status").innerText = "✅ CONFIRMED: " + pn;
-                        if (navigator.vibrate) navigator.vibrate(50);
-                        
-                        // Small pause to let user see the green status before prompt
-                        setTimeout(() => {
-                            const q = prompt(`Part: ${pn}\nQuantity:`, "1");
-                            if (q) {
-                                pendingList.push({ pn: pn, qty: parseInt(q), mode: mode, date: new Date().toLocaleString() });
-                                localStorage.setItem("inv_pending", JSON.stringify(pendingList));
-                            }
-                            lastResult = ""; resultCount = 0; processing = false;
-                        }, 200);
-                        return;
-                    } else {
-                        document.getElementById("status").innerText = "🔍 Checking... " + pn;
-                    }
-                } else {
-                    document.getElementById("status").innerText = "Searching...";
-                    lastResult = ""; resultCount = 0;
-                }
-            } catch (e) { console.error(e); }
-            processing = false;
-        }, "image/jpeg", 0.8);
-    }
+        function renderTable() {
+            const tbody = document.getElementById("reviewList");
+            tbody.innerHTML = "";
+            pendingList.forEach((item, i) => {
+                tbody.innerHTML += `<tr>
+                    <td>${item.pn}</td>
+                    <td>${item.qty}</td>
+                    <td>${item.mode.toUpperCase()}</td>
+                    <td class="del-btn" onclick="removeItem(${i})">✕</td>
+                </tr>`;
+            });
+            document.getElementById("syncBtn").style.display = pendingList.length ? "block" : "none";
+        }
 
-    function renderTable() {
-        const tbody = document.getElementById("reviewList");
-        tbody.innerHTML = "";
-        pendingList.forEach((item, i) => {
-            tbody.innerHTML += `<tr>
-                <td>${item.pn}</td>
-                <td>${item.qty}</td>
-                <td style="color:${item.mode=='add'?'#28a745':'#dc3545'}">${item.mode.toUpperCase()}</td>
-                <td class="del-btn" onclick="removeItem(${i})">✕</td>
-            </tr>`;
-        });
-        document.getElementById("syncBtn").style.display = pendingList.length ? "block" : "none";
-    }
-
-    function removeItem(i) {
-        pendingList.splice(i, 1);
-        localStorage.setItem("inv_pending", JSON.stringify(pendingList));
-        renderTable();
-    }
-
-    async function syncData() {
-        if (pendingList.length === 0) return;
-        const btn = document.getElementById("syncBtn");
-        btn.innerText = "⏳ Syncing..."; btn.disabled = true;
-
-        try {
-            await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(pendingList) });
-            alert("Success! Google Sheets updated.");
-            pendingList = [];
+        function removeItem(i) {
+            pendingList.splice(i, 1);
             localStorage.setItem("inv_pending", JSON.stringify(pendingList));
-            goTo('homePage');
-        } catch (e) { alert("Sync Error - check connection"); }
-        btn.innerText = "🚀 Sync to Google Sheets"; btn.disabled = false;
-    }
+            renderTable();
+        }
 
-    function updateBadge() { 
-        document.getElementById("countBadge").innerText = pendingList.length; 
-    }
-    updateBadge();
-</script>
+        async function syncData() {
+            if (pendingList.length === 0) return;
+            const btn = document.getElementById("syncBtn");
+            btn.innerText = "Syncing..."; btn.disabled = true;
+
+            try {
+                await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(pendingList) });
+                alert("Synced to Google Sheets!");
+                pendingList = [];
+                localStorage.setItem("inv_pending", JSON.stringify(pendingList));
+                goTo('homePage');
+            } catch (e) { alert("Sync Error"); }
+            btn.innerText = "🚀 Sync to Google Sheets"; btn.disabled = false;
+        }
+
+        function updateBadge() { document.getElementById("countBadge").innerText = pendingList.length; }
+        updateBadge();
+    </script>
+</body>
+</html>
+
+
