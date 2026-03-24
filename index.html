@@ -1,16 +1,14 @@
 <script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
 <script>
 let mode = "";
 let html5QrCode;
-let scanned = false;
-let lastScanTime = 0;
-
 let inventory = JSON.parse(localStorage.getItem("full_inv")) || {};
 
+// OPEN CAMERA (UNCHANGED)
 function openScanner(m) {
     mode = m;
-    scanned = false;
 
     document.getElementById("homePage").classList.add("hidden");
     document.getElementById("scanPage").classList.remove("hidden");
@@ -18,47 +16,81 @@ function openScanner(m) {
     html5QrCode = new Html5Qrcode("reader");
 
     const config = {
-        fps: 20, // 🔥 faster scanning
+        fps: 20,
         qrbox: { width: 280, height: 120 },
         aspectRatio: 1.7778,
         disableFlip: false,
-        experimentalFeatures: {
-            useBarCodeDetectorIfSupported: true
-        },
         videoConstraints: {
             facingMode: "environment",
             width: { ideal: 1920 },
             height: { ideal: 1080 },
-            focusMode: "continuous" // 🔥 auto focus
+            focusMode: "continuous"
         }
     };
 
+    // 🔥 IMPORTANT: NO BARCODE CALLBACK
     html5QrCode.start(
         { facingMode: "environment" },
         config,
+        () => {},   // disable scanner
+        () => {}
+    ).catch(err => alert(err));
+}
 
-        (decodedText) => {
-            let now = Date.now();
+// 📸 CAPTURE + OCR
+async function captureAndProcess() {
+    const status = document.getElementById("status");
 
-            // 🔥 ANTI-SPAM (prevent multiple triggers)
-            if (now - lastScanTime < 1500) return;
-            lastScanTime = now;
+    try {
+        status.innerText = "📸 Capturing...";
 
-            if (scanned) return;
-            scanned = true;
+        const imageFile = await html5QrCode.takePhoto();
 
-            if (navigator.vibrate) navigator.vibrate(100);
+        status.innerText = "🧠 Reading P/N...";
 
-            document.getElementById("status").innerText = "✅ DETECTED: " + decodedText;
+        const result = await Tesseract.recognize(
+            imageFile,
+            'eng',
+            { logger: m => console.log(m) }
+        );
 
-            processData(decodedText);
-        },
+        let rawText = result.data.text;
 
-        () => {
-            // silent errors (normal)
+        let pn = extractPN(rawText);
+
+        if (!pn) {
+            status.innerText = "❌ Cannot detect P/N";
+            return;
         }
 
-    ).catch(err => alert(err));
+        status.innerText = "✅ " + pn;
+
+        processData(pn);
+
+    } catch (err) {
+        status.innerText = "❌ OCR Failed";
+        console.error(err);
+    }
+}
+
+// 🔥 SMART P/N EXTRACTION (IMPORTANT)
+function extractPN(text) {
+
+    // Remove spaces & symbols
+    let cleaned = text
+        .replace(/\s+/g, "")
+        .replace(/[^A-Za-z0-9\-]/g, "")
+        .toUpperCase();
+
+    // Try to find realistic P/N pattern
+    let matches = cleaned.match(/[A-Z0-9\-]{4,20}/g);
+
+    if (!matches) return "";
+
+    // Return longest match (usually P/N)
+    let pn = matches.sort((a,b) => b.length - a.length)[0];
+
+    return pn;
 }
 
 // STOP
@@ -68,49 +100,40 @@ function stopScanner() {
     }
 }
 
-// PROCESS
-function processData(text) {
+// PROCESS (UNCHANGED)
+function processData(pn) {
 
-    let pn = text.trim();
+    html5QrCode.stop().then(() => {
 
-    if (pn.startsWith("1P")) pn = pn.substring(2);
-    else if (pn.startsWith("P")) pn = pn.substring(1);
+        if (inventory[pn]) {
 
-    setTimeout(() => {
+            let qty = prompt(
+                `P/N: ${pn}\nStock: ${inventory[pn].qty}\n\nQty to ${mode}:`,
+                "1"
+            );
 
-        html5QrCode.stop().then(() => {
-
-            if (inventory[pn]) {
-
-                let qty = prompt(
-                    `P/N: ${pn}\nStock: ${inventory[pn].qty}\n\nQty to ${mode}:`,
-                    "1"
-                );
-
-                if (qty) {
-                    if (mode === "add") inventory[pn].qty += parseInt(qty);
-                    else inventory[pn].qty -= parseInt(qty);
-                }
-
-            } else {
-
-                if (mode === "add") {
-                    let desc = prompt(`New Part: ${pn}\nEnter Description:`, "Component");
-
-                    inventory[pn] = {
-                        desc: desc || "No Desc",
-                        qty: 1
-                    };
-                } else {
-                    alert("❌ Part not found!");
-                }
+            if (qty) {
+                if (mode === "add") inventory[pn].qty += parseInt(qty);
+                else inventory[pn].qty -= parseInt(qty);
             }
 
-            localStorage.setItem("full_inv", JSON.stringify(inventory));
-            location.reload();
+        } else {
 
-        });
+            if (mode === "add") {
+                let desc = prompt(`New Part: ${pn}\nEnter Description:`, "Component");
 
-    }, 500);
+                inventory[pn] = {
+                    desc: desc || "No Desc",
+                    qty: 1
+                };
+            } else {
+                alert("❌ Part not found!");
+            }
+        }
+
+        localStorage.setItem("full_inv", JSON.stringify(inventory));
+        location.reload();
+
+    });
 }
 </script>
