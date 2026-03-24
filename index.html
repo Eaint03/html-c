@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Auto-Scan Inventory</title>
+    <title>Robust Auto-Inventory</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
@@ -9,25 +9,20 @@
     <style>
         body { font-family: sans-serif; text-align: center; background: #1a1a1a; color: white; margin: 0; }
         .hidden { display: none; }
-        
         #reader-container { position: relative; width: 100%; max-width: 400px; margin: auto; }
-
-        /* The Focus Box */
         #scanner-overlay {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 80%; height: 60px; border: 3px solid #00ff00; /* Green for "Ready" */
+            width: 85%; height: 70px; border: 3px solid #00ff00;
             box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.6); z-index: 10; pointer-events: none;
         }
-
         .controls { padding: 20px; }
         button {
             padding: 15px; margin: 10px; width: 80%; max-width: 300px;
             font-size: 16px; border-radius: 12px; border: none;
             background: #007bff; color: white; font-weight: bold;
         }
-        
-        #status { margin: 15px; font-size: 16px; color: #00ff00; height: 20px; }
-        #debugCanvas { width: 100%; max-width: 400px; background: white; margin-top: 10px; display: block; margin-left: auto; margin-right: auto; }
+        #status { margin: 15px; font-size: 16px; color: #00ff00; min-height: 20px; }
+        #debugCanvas { width: 100%; max-width: 400px; background: white; margin: 10px auto; display: block; }
     </style>
 </head>
 
@@ -40,7 +35,7 @@
 </div>
 
 <div id="scanPage" class="hidden">
-    <div id="status">Scanning for Part Number...</div>
+    <div id="status">Starting Camera...</div>
     
     <div id="reader-container">
         <div id="reader"></div>
@@ -48,10 +43,10 @@
     </div>
 
     <div class="controls">
-        <button onclick="location.reload()" style="background: #dc3545;">❌ Stop Scanner</button>
+        <button onclick="location.reload()" style="background: #dc3545;">❌ Stop & Exit</button>
     </div>
 
-    <div style="font-size: 11px; color: #777;">OCR PREVIEW:</div>
+    <div style="font-size: 11px; color: #777;">OCR SIGHT (LOCKED TO CENTER):</div>
     <canvas id="debugCanvas"></canvas>
 </div>
 
@@ -59,7 +54,7 @@
 let mode = "";
 let html5QrCode;
 let inventory = JSON.parse(localStorage.getItem("full_inv")) || {};
-let isProcessing = false; // Prevents overlapping OCR scans
+let isProcessing = false;
 let scanInterval;
 
 async function startAutoScanner(m) {
@@ -73,101 +68,105 @@ async function startAutoScanner(m) {
         await html5QrCode.start(
             { facingMode: "environment" },
             { fps: 10, aspectRatio: 1.0 },
-            () => {}, () => {}
+            () => {}, 
+            () => {}
         );
 
-        // Start the auto-detection loop (Every 1 second)
-        scanInterval = setInterval(autoCapture, 1000);
+        document.getElementById("status").innerText = "Searching for Part Number...";
+        // Start the loop: Try to read the screen every 1200ms
+        scanInterval = setInterval(manualFrameCapture, 1200);
 
     } catch (err) {
-        alert("Camera error: " + err);
+        document.getElementById("status").innerText = "Camera Error: " + err;
     }
 }
 
-async function autoCapture() {
-    if (isProcessing) return; // Don't start a new scan if one is running
-    
+async function manualFrameCapture() {
+    if (isProcessing) return;
+
+    // 1. Get the video element manually
     const video = document.querySelector("#reader video");
-    if (!video || video.readyState !== 4) return;
+    if (!video || video.readyState < 2) return; 
 
     isProcessing = true;
     const canvas = document.getElementById("debugCanvas");
     const ctx = canvas.getContext("2d");
 
-    // Dynamic Crop based on video feed
+    // 2. Calculate the "Letterbox" crop based on real video size
     const vW = video.videoWidth;
     const vH = video.videoHeight;
-    const cropW = vW * 0.8;
-    const cropH = vH * 0.15;
-    const startX = (vW - cropW) / 2;
-    const startY = (vH - cropH) / 2;
+    
+    // We want a narrow strip in the middle
+    const cropW = vW * 0.9;
+    const cropH = vH * 0.2;
+    const sx = (vW - cropW) / 2;
+    const sy = (vH - cropH) / 2;
 
-    canvas.width = 600;
-    canvas.height = 120;
-    ctx.filter = 'grayscale(1) contrast(2) brightness(1.1)';
-    ctx.drawImage(video, startX, startY, cropW, cropH, 0, 0, canvas.width, canvas.height);
+    canvas.width = 600; 
+    canvas.height = 150;
 
+    // 3. Pre-process (Grayscale & High Contrast)
+    ctx.filter = 'grayscale(1) contrast(2) brightness(1.2)';
+    
+    // 4. DRAW THE VIDEO FRAME TO CANVAS (The Fix for the Error)
+    ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
+
+    // 5. Run OCR on the result
     canvas.toBlob(async (blob) => {
         try {
             const result = await Tesseract.recognize(blob, 'eng', {
-                tessedit_pageseg_mode: 7,
+                tessedit_pageseg_mode: 7, // Single line mode
                 tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-'
             });
 
             const pn = extractPN(result.data.text);
 
-            if (pn && pn.length >= 4) { // Only trigger if it finds a "real" looking part number
-                clearInterval(scanInterval); // Stop scanning immediately
+            if (pn && pn.length >= 4) {
+                clearInterval(scanInterval); // Pause scanning
                 handleMatch(pn);
             } else {
-                isProcessing = false; // Allow next scan
+                isProcessing = false;
             }
         } catch (e) {
+            console.error("OCR Error:", e);
             isProcessing = false;
         }
-    }, "image/jpeg");
+    }, "image/jpeg", 0.9);
 }
 
 function extractPN(text) {
+    // Look for alphanumeric strings 4+ chars long
     const matches = text.trim().match(/[A-Z0-9-]{4,}/g);
     return matches ? matches.reduce((a, b) => a.length > b.length ? a : b) : null;
 }
 
 function handleMatch(pn) {
-    // Visual feedback
-    document.getElementById("status").innerText = "MATCH FOUND: " + pn;
+    document.getElementById("status").innerText = "FOUND: " + pn;
     document.getElementById("scanner-overlay").style.borderColor = "#ffff00";
 
-    // Play a beep if you want here
+    // Small delay so user sees the "Found" message before the prompt
     setTimeout(() => {
-        if (inventory[pn]) {
-            let qty = prompt(`Found P/N: ${pn}\nStock: ${inventory[pn].qty}\n\nQty to ${mode}:`, "1");
-            if (qty) {
-                inventory[pn].qty += (mode === "add" ? 1 : -1) * parseInt(qty);
-                save();
+        let actionMsg = (mode === "add") ? "Add to stock" : "Take from stock";
+        let qty = prompt(`PART NUMBER: ${pn}\nAction: ${actionMsg}\n\nEnter Quantity:`, "1");
+
+        if (qty !== null) {
+            let val = parseInt(qty) || 0;
+            if (inventory[pn]) {
+                inventory[pn].qty += (mode === "add" ? 1 : -1) * val;
+            } else if (mode === "add") {
+                let desc = prompt("New Part! Enter Description:", "Component");
+                inventory[pn] = { desc: desc || "No Desc", qty: val };
             }
-        } else if (mode === "add") {
-            let desc = prompt(`New Part Detected: ${pn}\nEnter Description:`, "Component");
-            if (desc) {
-                inventory[pn] = { desc: desc, qty: 1 };
-                save();
-            }
-        } else {
-            alert("Part not in inventory.");
+            localStorage.setItem("full_inv", JSON.stringify(inventory));
         }
-        
-        // Restart scanner after prompt is closed
+
+        // Reset and Restart
         isProcessing = false;
-        scanInterval = setInterval(autoCapture, 1000);
         document.getElementById("scanner-overlay").style.borderColor = "#00ff00";
-        document.getElementById("status").innerText = "Scanning for Part Number...";
+        document.getElementById("status").innerText = "Searching for Part Number...";
+        scanInterval = setInterval(manualFrameCapture, 1200);
     }, 100);
 }
-
-function save() {
-    localStorage.setItem("full_inv", JSON.stringify(inventory));
-}
-
 </script>
 </body>
 </html>
