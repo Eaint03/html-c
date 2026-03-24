@@ -3,7 +3,6 @@
 <head>
     <title>Smart Inventory OCR</title>
 
-    <!-- LIBRARIES -->
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
@@ -31,16 +30,22 @@
             width: 100%;
             max-width: 350px;
             margin: auto;
+            position: relative;
+        }
+
+        #guideBox {
+            position: absolute;
+            border: 3px solid red;
+            width: 70%;
+            height: 15%;
+            top: 45%;
+            left: 15%;
+            pointer-events: none;
         }
 
         #status {
             margin-top: 15px;
             font-weight: bold;
-        }
-
-        #guide {
-            color: red;
-            margin-top: 10px;
         }
     </style>
 </head>
@@ -56,14 +61,13 @@
 
 <!-- SCANNER -->
 <div id="scanPage" class="hidden">
-    <h2>📸 Scan Label</h2>
+    <h2>📸 Scan MFR PN</h2>
 
-    <div id="reader"></div>
+    <div id="reader">
+        <div id="guideBox"></div>
+    </div>
 
-    <p id="guide">
-        📌 Aim at "MFR PN" line<br>
-        📌 Move closer & avoid reflection
-    </p>
+    <p>📌 Align ONLY "MFR PN" inside the red box</p>
 
     <button onclick="captureAndProcess()">📸 Capture</button>
     <button onclick="stopScanner()">❌ Cancel</button>
@@ -86,8 +90,8 @@ function openScanner(m) {
     html5QrCode = new Html5Qrcode("reader");
 
     const config = {
-        fps: 10, // 🔥 reduce lag
-        qrbox: { width: 280, height: 120 },
+        fps: 10,
+        qrbox: { width: 200, height: 60 }, // 🔥 SMALL BOX
         videoConstraints: {
             facingMode: "environment",
             width: { ideal: 640 },
@@ -100,20 +104,53 @@ function openScanner(m) {
         config,
         () => {},
         () => {}
-    ).catch(err => alert(err));
+    );
 }
 
-// 📸 CAPTURE + OCR
+// 🔥 AUTO CROP CENTER (ZOOM EFFECT)
+function preprocessImage(file) {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.src = URL.createObjectURL(file);
+
+        img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+
+            // crop center strip (where guide box is)
+            const cropWidth = img.width * 0.7;
+            const cropHeight = img.height * 0.2;
+
+            const startX = (img.width - cropWidth) / 2;
+            const startY = (img.height - cropHeight) / 2;
+
+            canvas.width = 640;
+            canvas.height = 200;
+
+            ctx.drawImage(
+                img,
+                startX, startY, cropWidth, cropHeight,
+                0, 0, canvas.width, canvas.height
+            );
+
+            canvas.toBlob(resolve, "image/jpeg", 0.8);
+        };
+    });
+}
+
+// CAPTURE + OCR
 async function captureAndProcess() {
     const status = document.getElementById("status");
 
     try {
         status.innerText = "📸 Capturing...";
 
-        const imageFile = await html5QrCode.takePhoto();
+        const raw = await html5QrCode.takePhoto();
 
-        // 🔥 STOP CAMERA BEFORE OCR (IMPORTANT)
         await html5QrCode.stop();
+
+        // 🔥 crop image
+        const imageFile = await preprocessImage(raw);
 
         status.innerText = "🧠 Reading MFR PN...";
 
@@ -121,20 +158,24 @@ async function captureAndProcess() {
             imageFile,
             'eng',
             {
-                tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-.,',
-                logger: m => console.log(m)
+                tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-.,'
             }
         );
 
-        let rawText = result.data.text;
+        let words = result.data.words;
 
-        let pn = extractPN(rawText);
+        let filtered = words
+            .filter(w => w.confidence > 60)
+            .map(w => w.text)
+            .join(" ");
 
-        // 🔥 CONFIRM / EDIT
+        let pn = extractPN(filtered);
+
+        // 🔥 CONFIRM
         if (!pn) {
-            pn = prompt("❌ Cannot detect MFR PN.\nEnter manually:");
+            pn = prompt("❌ OCR failed.\nEnter manually:");
         } else {
-            pn = prompt(`Detected MFR PN:\n${pn}\n\nConfirm or edit:`, pn);
+            pn = prompt(`Detected:\n${pn}\n\nConfirm or edit:`, pn);
         }
 
         if (!pn) {
@@ -152,21 +193,15 @@ async function captureAndProcess() {
     }
 }
 
-// 🔥 EXTRACT ONLY MFR PN
+// 🔥 EXTRACT MFR PN ONLY
 function extractPN(text) {
 
     text = text.toUpperCase();
     text = text.replace(/\n/g, " ");
 
-    // 🔥 Find "MFR PN"
-    let mfr = text.match(/MFR\s*PN[:\s]*([A-Z0-9\-\,\.]+)/);
+    let match = text.match(/MFR\s*P?N?\s*[:\-]?\s*([A-Z0-9\-\,\.]+)/);
 
-    if (mfr && mfr[1]) return mfr[1];
-
-    // fallback if OCR misses space
-    let fallback = text.match(/MFRPN\s*([A-Z0-9\-\,\.]+)/);
-
-    if (fallback && fallback[1]) return fallback[1];
+    if (match && match[1]) return match[1];
 
     return "";
 }
@@ -178,7 +213,7 @@ function stopScanner() {
     }
 }
 
-// PROCESS INVENTORY
+// PROCESS
 function processData(pn) {
 
     if (inventory[pn]) {
