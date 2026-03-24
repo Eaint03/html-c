@@ -1,228 +1,116 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📦 OCR Inventory Scanner</title>
-
 <script src="https://unpkg.com/html5-qrcode"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
-
-<style>
-body {
-    font-family: sans-serif;
-    text-align: center;
-    background: #1a1a1a;
-    color: white;
-    margin: 0;
-    padding: 20px;
-}
-
-.container { max-width: 450px; margin: auto; }
-
-button {
-    padding: 16px;
-    margin: 10px;
-    border-radius: 10px;
-    border: none;
-    font-weight: bold;
-    width: 90%;
-}
-
-.btn-main { background: #007bff; color: white; }
-
-.hidden { display: none; }
-
-#reader {
-    width: 100%;
-    border-radius: 15px;
-    overflow: hidden;
-}
-
-#status {
-    margin: 10px;
-    font-size: 16px;
-    color: #00ffcc;
-}
-
-.shutter {
-    width: 80px;
-    height: 80px;
-    border-radius: 50%;
-    background: white;
-    margin: 15px auto;
-}
-
-.item-card {
-    background: #222;
-    padding: 10px;
-    margin: 10px;
-    border-radius: 10px;
-    text-align: left;
-}
-</style>
-</head>
-
-<body>
-
-<div class="container">
-
-<!-- HOME -->
-<div id="homePage">
-    <h2>📦 OCR Inventory</h2>
-    <button class="btn-main" onclick="openScanner('add')">➕ Add Item</button>
-    <button class="btn-main" onclick="openScanner('take')" style="background:#fd7e14;">➖ Take Item</button>
-    <button class="btn-main" onclick="showInventory()" style="background:#6c757d;">📋 View List</button>
-</div>
-
-<!-- SCANNER -->
-<div id="scanPage" class="hidden">
-    <div id="status">📷 Camera Ready</div>
-
-    <div id="reader"></div>
-
-    <div class="shutter" onclick="captureImage()"></div>
-
-    <button onclick="stopScanner()">Cancel</button>
-</div>
-
-<!-- INVENTORY -->
-<div id="inventoryBox"></div>
-
-</div>
 
 <script>
-
-let html5QrCode;
 let mode = "";
+let html5QrCode;
+let scanned = false;
+let lastScanTime = 0;
+
 let inventory = JSON.parse(localStorage.getItem("full_inv")) || {};
 
-// OPEN CAMERA
 function openScanner(m) {
     mode = m;
+    scanned = false;
 
     document.getElementById("homePage").classList.add("hidden");
     document.getElementById("scanPage").classList.remove("hidden");
 
     html5QrCode = new Html5Qrcode("reader");
 
+    const config = {
+        fps: 20, // 🔥 faster scanning
+        qrbox: { width: 280, height: 120 },
+        aspectRatio: 1.7778,
+        disableFlip: false,
+        experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true
+        },
+        videoConstraints: {
+            facingMode: "environment",
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            focusMode: "continuous" // 🔥 auto focus
+        }
+    };
+
     html5QrCode.start(
         { facingMode: "environment" },
-        {
-            fps: 10,
-            qrbox: 250
+        config,
+
+        (decodedText) => {
+            let now = Date.now();
+
+            // 🔥 ANTI-SPAM (prevent multiple triggers)
+            if (now - lastScanTime < 1500) return;
+            lastScanTime = now;
+
+            if (scanned) return;
+            scanned = true;
+
+            if (navigator.vibrate) navigator.vibrate(100);
+
+            document.getElementById("status").innerText = "✅ DETECTED: " + decodedText;
+
+            processData(decodedText);
         },
-        () => {}, // no scanning
-        () => {}
-    ).catch(err => {
-        alert("Camera error: " + err);
-    });
+
+        () => {
+            // silent errors (normal)
+        }
+
+    ).catch(err => alert(err));
 }
 
-// STOP CAMERA
+// STOP
 function stopScanner() {
     if (html5QrCode) {
         html5QrCode.stop().then(() => location.reload());
     }
 }
 
-// 📸 CAPTURE IMAGE
-async function captureImage() {
-    const status = document.getElementById("status");
+// PROCESS
+function processData(text) {
 
-    try {
-        status.innerText = "📸 Capturing...";
+    let pn = text.trim();
 
-        const img = await html5QrCode.takePhoto();
+    if (pn.startsWith("1P")) pn = pn.substring(2);
+    else if (pn.startsWith("P")) pn = pn.substring(1);
 
-        status.innerText = "🧠 Reading text...";
+    setTimeout(() => {
 
-        const result = await Tesseract.recognize(img, 'eng');
+        html5QrCode.stop().then(() => {
 
-        let raw = result.data.text;
+            if (inventory[pn]) {
 
-        let pn = cleanText(raw);
+                let qty = prompt(
+                    `P/N: ${pn}\nStock: ${inventory[pn].qty}\n\nQty to ${mode}:`,
+                    "1"
+                );
 
-        if (!pn) {
-            status.innerText = "❌ Cannot read";
-            return;
-        }
+                if (qty) {
+                    if (mode === "add") inventory[pn].qty += parseInt(qty);
+                    else inventory[pn].qty -= parseInt(qty);
+                }
 
-        status.innerText = "✅ " + pn;
-
-        processData(pn);
-
-    } catch (err) {
-        status.innerText = "❌ Failed";
-        console.error(err);
-    }
-}
-
-// CLEAN TEXT
-function cleanText(text) {
-    let t = text
-        .replace(/\s+/g, "")
-        .replace(/[^A-Za-z0-9\-]/g, "")
-        .toUpperCase();
-
-    if (t.length < 3) return "";
-    return t;
-}
-
-// INVENTORY
-function processData(pn) {
-
-    html5QrCode.stop().then(() => {
-
-        if (inventory[pn]) {
-
-            let qty = prompt(
-                `P/N: ${pn}\nStock: ${inventory[pn].qty}\n\nQty to ${mode}:`,
-                "1"
-            );
-
-            if (qty) {
-                if (mode === "add") inventory[pn].qty += parseInt(qty);
-                else inventory[pn].qty -= parseInt(qty);
-            }
-
-        } else {
-
-            if (mode === "add") {
-                let desc = prompt("New Part: " + pn);
-
-                inventory[pn] = {
-                    desc: desc || "No Desc",
-                    qty: 1
-                };
             } else {
-                alert("❌ Not found");
+
+                if (mode === "add") {
+                    let desc = prompt(`New Part: ${pn}\nEnter Description:`, "Component");
+
+                    inventory[pn] = {
+                        desc: desc || "No Desc",
+                        qty: 1
+                    };
+                } else {
+                    alert("❌ Part not found!");
+                }
             }
-        }
 
-        localStorage.setItem("full_inv", JSON.stringify(inventory));
-        location.reload();
+            localStorage.setItem("full_inv", JSON.stringify(inventory));
+            location.reload();
 
-    });
+        });
+
+    }, 500);
 }
-
-// VIEW INVENTORY
-function showInventory() {
-    let html = "<h3>📋 Inventory</h3>";
-
-    for (let pn in inventory) {
-        html += `
-        <div class="item-card">
-            <b>${pn}</b><br>
-            ${inventory[pn].desc}<br>
-            Qty: ${inventory[pn].qty}
-        </div>`;
-    }
-
-    document.getElementById("inventoryBox").innerHTML = html;
-}
-
 </script>
-
-</body>
-</html>
