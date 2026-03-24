@@ -41,7 +41,7 @@
         th { color: #888; text-transform: uppercase; font-size: 11px; }
         .del-btn { color: var(--red); font-weight: bold; padding: 5px; cursor: pointer; }
 
-        #status { margin: 10px; color: #00ff00; font-weight: bold; height: 20px; }
+        #status { margin: 10px; color: #00ff00; font-weight: bold; height: 20px; font-size: 14px; }
         #debugCanvas { width: 100%; max-width: 350px; background: white; border-radius: 8px; margin-top: 10px; }
         .badge { background: var(--red); padding: 2px 8px; border-radius: 10px; font-size: 12px; }
     </style>
@@ -105,9 +105,9 @@
         let processing = false;
         let pendingList = JSON.parse(localStorage.getItem("inv_pending")) || [];
 
-        // Stability Logic
-        let lastMatch = "";
-        let matchCount = 0;
+        // Debounce / Stability Logic
+        let lastResult = "";
+        let resultStreak = 0;
 
         function goTo(pageId, m = "") {
             document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
@@ -128,7 +128,7 @@
             html5QrCode = new Html5Qrcode("reader");
             try {
                 await html5QrCode.start({ facingMode: "environment" }, { fps: 15, aspectRatio: 1.0 }, () => {}, () => {});
-                document.getElementById("status").innerText = "Searching for Part Number...";
+                document.getElementById("status").innerText = "Align P/N in Green Box...";
                 scanTimer = setInterval(takeStep, 900);
             } catch (e) { alert(e); }
         }
@@ -136,7 +136,7 @@
         function killScanner() {
             clearInterval(scanTimer);
             if (html5QrCode) html5QrCode.stop().catch(() => {});
-            lastMatch = ""; matchCount = 0;
+            lastResult = ""; resultStreak = 0;
         }
 
         async function takeStep() {
@@ -153,7 +153,7 @@
             const sx = (vW - cropW) / 2; const sy = (vH - cropH) / 2;
 
             canvas.width = 800; canvas.height = 150;
-            ctx.filter = 'grayscale(1) contrast(2.5) brightness(1.1)';
+            ctx.filter = 'grayscale(1) contrast(3) brightness(1.1)';
             ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
 
             canvas.toBlob(async (blob) => {
@@ -164,20 +164,15 @@
                     });
 
                     const found = res.data.text.trim().match(/[A-Z0-9-]{4,}/g);
-                    const confidence = res.data.confidence;
+                    const conf = res.data.confidence;
                     
-                    if (found && confidence > 65) {
+                    if (found && conf > 65) {
                         const pn = found.reduce((a, b) => a.length > b.length ? a : b);
                         
-                        // DEBOUNCE: Verify text is stable
-                        if (pn === lastMatch) {
-                            matchCount++;
-                        } else {
-                            lastMatch = pn;
-                            matchCount = 0;
-                        }
+                        if (pn === lastResult) { resultStreak++; } 
+                        else { lastResult = pn; resultStreak = 0; }
 
-                        if (matchCount >= 1) {
+                        if (resultStreak >= 1) {
                             document.getElementById("status").innerText = "✅ CONFIRMED: " + pn;
                             if (navigator.vibrate) navigator.vibrate(50);
                             
@@ -186,12 +181,11 @@
                                 if (q) {
                                     pendingList.push({ pn: pn, qty: parseInt(q), mode: mode, date: new Date().toLocaleString() });
                                     localStorage.setItem("inv_pending", JSON.stringify(pendingList));
-                                    alert("Added to Review List");
                                 }
-                                lastMatch = ""; matchCount = 0; processing = false;
+                                lastResult = ""; resultStreak = 0; processing = false;
                             }, 100);
                         } else {
-                            document.getElementById("status").innerText = "🔍 Checking... " + pn;
+                            document.getElementById("status").innerText = "🔍 Confirming... " + pn;
                             processing = false;
                         }
                     } else { 
@@ -228,23 +222,24 @@
             btn.innerText = "⏳ Syncing..."; btn.disabled = true;
 
             try {
-                // Sends the whole pending list to your Apps Script
+                // FIXED: mode: "no-cors" is required for GitHub Pages to work with Google Apps Script
                 await fetch(SCRIPT_URL, { 
                     method: "POST", 
                     mode: "no-cors", 
+                    cache: "no-cache",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(pendingList) 
                 });
 
-                alert("🚀 Synced to Google Sheets!");
+                alert("Synced to Google Sheets!");
                 pendingList = [];
                 localStorage.setItem("inv_pending", JSON.stringify(pendingList));
+                updateBadge();
                 goTo('homePage');
             } catch (e) { 
-                alert("Sync Error: Check your connection or Apps Script deployment."); 
+                alert("Sync Error: Check your internet or Google Script deployment."); 
             } finally {
-                btn.innerText = "🚀 Sync to Google Sheets"; 
-                btn.disabled = false;
+                btn.innerText = "🚀 Sync to Google Sheets"; btn.disabled = false;
             }
         }
 
