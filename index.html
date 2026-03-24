@@ -1,12 +1,48 @@
-<script src="https://unpkg.com/html5-qrcode"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Smart Inventory</title>
+
+    <!-- LIBRARIES -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+
+    <style>
+        body { font-family: Arial; text-align: center; }
+        .hidden { display: none; }
+        button { padding: 12px; margin: 10px; }
+        #reader { width: 100%; max-width: 400px; margin: auto; }
+        #preview img { width: 100%; margin-top: 10px; }
+    </style>
+</head>
+
+<body>
+
+<!-- HOME -->
+<div id="homePage">
+    <h2>📦 Smart Inventory</h2>
+    <button onclick="openScanner('add')">➕ Add Item</button>
+    <button onclick="openScanner('take')">➖ Take Item</button>
+</div>
+
+<!-- SCANNER -->
+<div id="scanPage" class="hidden">
+    <h3>📸 Scan Component</h3>
+    <div id="reader"></div>
+
+    <button onclick="captureAndProcess()">📸 Capture</button>
+    <button onclick="stopScanner()">❌ Cancel</button>
+
+    <p id="status"></p>
+    <div id="preview"></div>
+</div>
 
 <script>
 let mode = "";
 let html5QrCode;
 let inventory = JSON.parse(localStorage.getItem("full_inv")) || {};
 
-// OPEN CAMERA (UNCHANGED)
+// 🚀 OPEN CAMERA
 function openScanner(m) {
     mode = m;
 
@@ -16,28 +52,25 @@ function openScanner(m) {
     html5QrCode = new Html5Qrcode("reader");
 
     const config = {
-        fps: 20,
+        fps: 10, // 🔥 reduced for performance
         qrbox: { width: 280, height: 120 },
         aspectRatio: 1.7778,
-        disableFlip: false,
         videoConstraints: {
             facingMode: "environment",
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-            focusMode: "continuous"
+            width: { ideal: 640 },   // 🔥 reduced resolution
+            height: { ideal: 480 }
         }
     };
 
-    // 🔥 IMPORTANT: NO BARCODE CALLBACK
     html5QrCode.start(
         { facingMode: "environment" },
         config,
-        () => {},   // disable scanner
+        () => {},
         () => {}
     ).catch(err => alert(err));
 }
 
-// 📸 CAPTURE + OCR
+// 📸 CAPTURE + OCR (OPTIMIZED)
 async function captureAndProcess() {
     const status = document.getElementById("status");
 
@@ -46,94 +79,109 @@ async function captureAndProcess() {
 
         const imageFile = await html5QrCode.takePhoto();
 
+        // 🔥 STOP CAMERA BEFORE OCR (VERY IMPORTANT)
+        await html5QrCode.stop();
+
+        // show preview
+        const imgURL = URL.createObjectURL(imageFile);
+        document.getElementById("preview").innerHTML =
+            `<img src="${imgURL}">`;
+
+        // small delay to avoid freeze
+        await new Promise(r => setTimeout(r, 300));
+
         status.innerText = "🧠 Reading P/N...";
 
         const result = await Tesseract.recognize(
             imageFile,
-            'eng',
-            { logger: m => console.log(m) }
+            'eng'
         );
 
-        let rawText = result.data.text;
+        let words = result.data.words;
 
-        let pn = extractPN(rawText);
+        let bestText = words
+            .filter(w => w.confidence > 60)
+            .map(w => w.text)
+            .join("");
+
+        let pn = extractPN(bestText);
+
+        // 🔥 fallback manual input
+        if (!pn) {
+            pn = prompt("❌ OCR failed.\nEnter P/N manually:");
+        }
 
         if (!pn) {
-            status.innerText = "❌ Cannot detect P/N";
+            status.innerText = "❌ No input";
             return;
         }
 
         status.innerText = "✅ " + pn;
 
-        processData(pn);
+        // clear memory
+        URL.revokeObjectURL(imgURL);
+
+        processData(pn.toUpperCase());
 
     } catch (err) {
-        status.innerText = "❌ OCR Failed";
+        status.innerText = "❌ Failed";
         console.error(err);
     }
 }
 
-// 🔥 SMART P/N EXTRACTION (IMPORTANT)
+// 🔥 SMART P/N EXTRACTION
 function extractPN(text) {
-
-    // Remove spaces & symbols
     let cleaned = text
         .replace(/\s+/g, "")
-        .replace(/[^A-Za-z0-9\-]/g, "")
         .toUpperCase();
 
-    // Try to find realistic P/N pattern
-    let matches = cleaned.match(/[A-Z0-9\-]{4,20}/g);
+    let matches = cleaned.match(/[A-Z]{1,5}[0-9]{2,10}[A-Z0-9\-]*/g);
 
     if (!matches) return "";
 
-    // Return longest match (usually P/N)
-    let pn = matches.sort((a,b) => b.length - a.length)[0];
-
-    return pn;
+    return matches[0];
 }
 
-// STOP
+// ❌ STOP CAMERA
 function stopScanner() {
     if (html5QrCode) {
         html5QrCode.stop().then(() => location.reload());
     }
 }
 
-// PROCESS (UNCHANGED)
+// 📦 PROCESS INVENTORY
 function processData(pn) {
 
-    html5QrCode.stop().then(() => {
+    if (inventory[pn]) {
 
-        if (inventory[pn]) {
+        let qty = prompt(
+            `P/N: ${pn}\nStock: ${inventory[pn].qty}\n\nQty to ${mode}:`,
+            "1"
+        );
 
-            let qty = prompt(
-                `P/N: ${pn}\nStock: ${inventory[pn].qty}\n\nQty to ${mode}:`,
-                "1"
-            );
-
-            if (qty) {
-                if (mode === "add") inventory[pn].qty += parseInt(qty);
-                else inventory[pn].qty -= parseInt(qty);
-            }
-
-        } else {
-
-            if (mode === "add") {
-                let desc = prompt(`New Part: ${pn}\nEnter Description:`, "Component");
-
-                inventory[pn] = {
-                    desc: desc || "No Desc",
-                    qty: 1
-                };
-            } else {
-                alert("❌ Part not found!");
-            }
+        if (qty) {
+            if (mode === "add") inventory[pn].qty += parseInt(qty);
+            else inventory[pn].qty -= parseInt(qty);
         }
 
-        localStorage.setItem("full_inv", JSON.stringify(inventory));
-        location.reload();
+    } else {
 
-    });
+        if (mode === "add") {
+            let desc = prompt(`New Part: ${pn}\nEnter Description:`, "Component");
+
+            inventory[pn] = {
+                desc: desc || "No Desc",
+                qty: 1
+            };
+        } else {
+            alert("❌ Part not found!");
+        }
+    }
+
+    localStorage.setItem("full_inv", JSON.stringify(inventory));
+    location.reload();
 }
 </script>
+
+</body>
+</html>
