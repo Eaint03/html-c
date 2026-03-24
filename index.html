@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📦 Smart Inventory OCR</title>
+<title>📦 OCR Inventory Scanner</title>
 
 <script src="https://unpkg.com/html5-qrcode"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
@@ -12,59 +12,52 @@
 body {
     font-family: sans-serif;
     text-align: center;
-    padding: 20px;
     background: #1a1a1a;
     color: white;
     margin: 0;
+    padding: 20px;
 }
 
 .container { max-width: 450px; margin: auto; }
 
 button {
-    padding: 18px;
-    margin: 10px 0;
-    font-size: 16px;
-    border-radius: 12px;
-    width: 90%;
+    padding: 16px;
+    margin: 10px;
+    border-radius: 10px;
     border: none;
     font-weight: bold;
-    cursor: pointer;
+    width: 90%;
 }
 
 .btn-main { background: #007bff; color: white; }
+
 .hidden { display: none; }
 
-#scanner-wrapper {
+#reader {
     width: 100%;
-    height: 350px;
-    margin: 15px 0;
-    background: black;
     border-radius: 15px;
     overflow: hidden;
 }
 
 #status {
-    font-size: 16px;
     margin: 10px;
+    font-size: 16px;
     color: #00ffcc;
-    min-height: 24px;
 }
 
-.shutter-btn {
-    background: white;
-    border: 8px solid #555;
-    width: 85px;
-    height: 85px;
+.shutter {
+    width: 80px;
+    height: 80px;
     border-radius: 50%;
-    margin: 10px auto;
+    background: white;
+    margin: 15px auto;
 }
 
 .item-card {
-    border: 1px solid #333;
-    padding: 15px;
-    margin-top: 10px;
     background: #222;
-    border-radius: 12px;
+    padding: 10px;
+    margin: 10px;
+    border-radius: 10px;
     text-align: left;
 }
 </style>
@@ -76,23 +69,21 @@ button {
 
 <!-- HOME -->
 <div id="homePage">
-    <h2>📦 Smart Inventory OCR</h2>
-    <button class="btn-main" onclick="openScanner('add')">➕ SCAN TO ADD</button>
-    <button class="btn-main" onclick="openScanner('take')" style="background:#fd7e14;">➖ SCAN TO TAKE</button>
-    <button class="btn-main" onclick="showInventory()" style="background:#6c757d;">📋 VIEW LIST</button>
+    <h2>📦 OCR Inventory</h2>
+    <button class="btn-main" onclick="openScanner('add')">➕ Add Item</button>
+    <button class="btn-main" onclick="openScanner('take')" style="background:#fd7e14;">➖ Take Item</button>
+    <button class="btn-main" onclick="showInventory()" style="background:#6c757d;">📋 View List</button>
 </div>
 
 <!-- SCANNER -->
 <div id="scanPage" class="hidden">
-    <div id="status">📷 ALIGN P/N & TAP</div>
+    <div id="status">📷 Camera Ready</div>
 
-    <div id="scanner-wrapper">
-        <div id="reader" style="width:100%;"></div>
-    </div>
+    <div id="reader"></div>
 
-    <div class="shutter-btn" onclick="captureAndProcess()"></div>
+    <div class="shutter" onclick="captureImage()"></div>
 
-    <button onclick="stopScanner()" style="background:#444;">Cancel</button>
+    <button onclick="stopScanner()">Cancel</button>
 </div>
 
 <!-- INVENTORY -->
@@ -102,8 +93,8 @@ button {
 
 <script>
 
-let mode = "";
 let html5QrCode;
+let mode = "";
 let inventory = JSON.parse(localStorage.getItem("full_inv")) || {};
 
 // OPEN CAMERA
@@ -119,51 +110,41 @@ function openScanner(m) {
         { facingMode: "environment" },
         {
             fps: 10,
-            qrbox: { width: 300, height: 120 },
-            videoConstraints: {
-                facingMode: "environment",
-                width: { ideal: 1920 },
-                height: { ideal: 1080 }
-            }
-        }
-    );
+            qrbox: 250
+        },
+        () => {}, // no scanning
+        () => {}
+    ).catch(err => {
+        alert("Camera error: " + err);
+    });
 }
 
 // STOP CAMERA
 function stopScanner() {
     if (html5QrCode) {
         html5QrCode.stop().then(() => location.reload());
-    } else {
-        location.reload();
     }
 }
 
-// 📸 CAPTURE + OCR
-async function captureAndProcess() {
-
+// 📸 CAPTURE IMAGE
+async function captureImage() {
     const status = document.getElementById("status");
 
     try {
         status.innerText = "📸 Capturing...";
 
-        const imageFile = await html5QrCode.takePhoto();
+        const img = await html5QrCode.takePhoto();
 
-        status.innerText = "🧠 Reading P/N...";
+        status.innerText = "🧠 Reading text...";
 
-        const result = await Tesseract.recognize(
-            imageFile,
-            'eng',
-            {
-                logger: m => console.log(m)
-            }
-        );
+        const result = await Tesseract.recognize(img, 'eng');
 
-        let rawText = result.data.text;
+        let raw = result.data.text;
 
-        let pn = cleanPN(rawText);
+        let pn = cleanText(raw);
 
         if (!pn) {
-            status.innerText = "❌ Cannot read P/N";
+            status.innerText = "❌ Cannot read";
             return;
         }
 
@@ -172,26 +153,23 @@ async function captureAndProcess() {
         processData(pn);
 
     } catch (err) {
-        status.innerText = "❌ OCR FAILED";
+        status.innerText = "❌ Failed";
         console.error(err);
     }
 }
 
-// 🔥 CLEAN TEXT (IMPORTANT)
-function cleanPN(text) {
-
-    let cleaned = text
+// CLEAN TEXT
+function cleanText(text) {
+    let t = text
         .replace(/\s+/g, "")
         .replace(/[^A-Za-z0-9\-]/g, "")
         .toUpperCase();
 
-    // OPTIONAL: filter realistic P/N (length)
-    if (cleaned.length < 3) return "";
-
-    return cleaned;
+    if (t.length < 3) return "";
+    return t;
 }
 
-// INVENTORY LOGIC
+// INVENTORY
 function processData(pn) {
 
     html5QrCode.stop().then(() => {
@@ -211,16 +189,14 @@ function processData(pn) {
         } else {
 
             if (mode === "add") {
-
-                let desc = prompt(`New Part: ${pn}\nEnter Description:`, "Component");
+                let desc = prompt("New Part: " + pn);
 
                 inventory[pn] = {
                     desc: desc || "No Desc",
                     qty: 1
                 };
-
             } else {
-                alert("❌ Part not found!");
+                alert("❌ Not found");
             }
         }
 
@@ -230,16 +206,15 @@ function processData(pn) {
     });
 }
 
-// SHOW INVENTORY
+// VIEW INVENTORY
 function showInventory() {
-
-    let html = "<h3>📋 Stock</h3>";
+    let html = "<h3>📋 Inventory</h3>";
 
     for (let pn in inventory) {
         html += `
         <div class="item-card">
-            <b>P/N: ${pn}</b><br>
-            <small>${inventory[pn].desc}</small><br>
+            <b>${pn}</b><br>
+            ${inventory[pn].desc}<br>
             Qty: ${inventory[pn].qty}
         </div>`;
     }
