@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Industrial Precision Scanner</title>
+    <title>Industrial Precision Scanner v4</title>
     
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
@@ -117,7 +117,7 @@ async function captureAndScan() {
     const canvas = document.getElementById("debugCanvas");
     const ctx = canvas.getContext("2d");
 
-    status.innerText = "⏳ Cleaning Image...";
+    status.innerText = "⏳ Cleaning Geometry...";
 
     const vW = video.videoWidth;
     const vH = video.videoHeight;
@@ -130,8 +130,9 @@ async function captureAndScan() {
     canvas.height = 300;
     ctx.imageSmoothingEnabled = false;
 
-    // 🔥 MAXIMUM CONTRAST (80) to separate the hook of the 1 from the bar of the I
-    ctx.filter = 'grayscale(1) contrast(80) brightness(1.1)';
+    // 🔥 DYNAMIC FILTERING: Stronger contrast to separate 0/C and 5/S
+    // We use a specific brightness boost to keep the gaps in 'C' and 'S' white
+    ctx.filter = 'grayscale(1) contrast(90) brightness(1.2)';
     ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
 
     try {
@@ -142,16 +143,18 @@ async function captureAndScan() {
 
         let rawText = res.data.text.trim().replace(/\s/g, "");
         
-        // 🧠 AUTOMATIC CHARACTER LOGIC
+        // 🧠 INDUSTRIAL LOGIC REPAIR
         let pn = rawText.toUpperCase()
-                    .replace(/O/g, "0")       // O is almost always 0 in P/Ns
-                    .replace(/[\|\[\]I!l]/g, "1"); // 🔥 Force all "sticks" to become 1
+                    .replace(/O/g, "0")       // O to 0 (Most common fix)
+                    .replace(/[\|\[\]I!l]/g, "1") // All vertical sticks to 1
+                    .replace(/B/g, "8")       // Common loop error
+                    .replace(/S/g, "5");      // On electronics labels, S is often 5
 
         if (pn.length >= 4) {
             status.innerText = "🎯 MATCH: " + pn;
             const q = prompt(`Quantity for:\n${pn}`, "1");
             if (q && !isNaN(q)) {
-                status.innerText = "🚀 Saving...";
+                status.innerText = "🚀 Syncing...";
                 await fetch(SCRIPT_URL, {
                     method: "POST", mode: "no-cors", 
                     body: JSON.stringify([{ pn: pn, qty: parseInt(q), mode: mode, date: new Date().toLocaleString() }])
@@ -160,7 +163,7 @@ async function captureAndScan() {
                 setTimeout(() => status.innerText = "Ready", 2000);
             }
         } else {
-            status.innerText = "❌ Scan Error. Retap Focus.";
+            status.innerText = "❌ Geometry Error. Retap Focus.";
         }
     } catch (err) { status.innerText = "Error reading."; }
     processing = false;
