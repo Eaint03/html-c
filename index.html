@@ -3,107 +3,157 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>High-Accuracy Scanner</title>
+    <title>Pro Inventory Scanner</title>
+    
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+
     <style>
         :root { --blue: #007bff; --green: #28a745; --red: #dc3545; --dark: #121212; }
         body { font-family: -apple-system, sans-serif; background: var(--dark); color: white; margin: 0; text-align: center; }
         .page { padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
-        
-        /* Large, easy-to-tap buttons for warehouse use */
-        .btn { 
-            width: 90%; max-width: 400px; padding: 25px; margin: 15px 0; 
-            border-radius: 15px; border: none; font-size: 18px; font-weight: bold; 
-            cursor: pointer; display: inline-block; transition: 0.3s;
+        .hidden { display: none !important; }
+
+        button { 
+            width: 90%; max-width: 350px; padding: 18px; margin: 10px 0; 
+            border-radius: 12px; border: none; font-size: 16px; font-weight: bold; 
+            cursor: pointer; transition: 0.2s; 
         }
-        .btn-add { background: var(--blue); color: white; }
-        .btn-take { background: #333; color: white; border: 2px solid #444; }
-        
-        #status { margin: 20px; color: #00ff00; font-weight: bold; font-size: 1.2rem; min-height: 30px; }
-        #preview { width: 80%; max-width: 300px; border-radius: 10px; margin-top: 20px; border: 3px solid #333; display: none; }
-        input[type="file"] { display: none; }
+        .btn-main { background: var(--blue); color: white; }
+        .btn-secondary { background: #333; color: white; }
+        .btn-capture { background: var(--green); color: white; font-size: 18px; border: 2px solid white; }
+        .btn-danger { background: var(--red); color: white; }
+
+        #reader-container { 
+            position: relative; width: 100%; max-width: 400px; 
+            margin: 15px auto; border-radius: 15px; overflow: hidden; border: 2px solid #444;
+        }
+        #scanner-overlay {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 85%; height: 70px; border: 3px solid #00ff00;
+            box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.7); z-index: 5; pointer-events: none;
+        }
+
+        #status { margin: 10px; color: #00ff00; font-weight: bold; font-size: 1.1rem; min-height: 25px; }
+        #debugCanvas { width: 90%; max-width: 350px; background: white; border-radius: 8px; margin-top: 10px; display: none; }
     </style>
 </head>
 <body>
 
-    <div class="page">
-        <h1 style="margin-top: 30px;">📸 Pro Photo Scanner</h1>
-        <p style="color: #888;">Clearer Photo = Better Accuracy</p>
+    <div id="homePage" class="page">
+        <h1 style="margin-top: 40px;">📦 Smart Inventory</h1>
+        <button class="btn-main" onclick="goTo('scanPage', 'add')">➕ Scan to ADD</button>
+        <button class="btn-secondary" onclick="goTo('scanPage', 'take')">➖ Scan to REMOVE</button>
+    </div>
 
-        <div id="status">Ready</div>
+    <div id="scanPage" class="page hidden">
+        <h2 id="modeTitle">Scanning...</h2>
+        <div id="status">Align text in box</div>
 
-        <input type="file" id="addInput" accept="image/*" capture="environment" onchange="processImage(this, 'add')">
-        <input type="file" id="takeInput" accept="image/*" capture="environment" onchange="processImage(this, 'take')">
+        <div id="reader-container">
+            <div id="reader"></div>
+            <div id="scanner-overlay"></div>
+        </div>
 
-        <label for="addInput" class="btn btn-add">➕ Take Photo to ADD</label>
-        <label for="takeInput" class="btn btn-take">➖ Take Photo to REMOVE</label>
-
-        <img id="preview" src="">
+        <button class="btn-capture" onclick="captureAndScan()">📸 CAPTURE & SCAN</button>
+        <button class="btn-danger" onclick="goTo('homePage')">Exit</button>
         
-        <canvas id="hiddenCanvas" style="display:none;"></canvas>
+        <canvas id="debugCanvas"></canvas>
     </div>
 
     <script>
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzi3CrAiNVWJlLnR0GpUkf5r054s9AGYq3ygw0Xl7xFEFH-hh8SKm5l8hBaMAh5bv_5/exec";
+        
+        let mode = "";
+        let html5QrCode = null;
+        let processing = false;
 
-        async function processImage(input, mode) {
-            if (!input.files || !input.files[0]) return;
+        function goTo(pageId, m = "") {
+            document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+            document.getElementById(pageId).classList.remove('hidden');
 
+            if (pageId === 'scanPage') {
+                mode = m;
+                document.getElementById('modeTitle').innerText = (m === 'add' ? "Add Stock" : "Remove Stock");
+                initScanner();
+            } else {
+                killScanner();
+            }
+        }
+
+        async function initScanner() {
+            html5QrCode = new Html5Qrcode("reader");
+            const config = { fps: 20, aspectRatio: 1.0, videoConstraints: { facingMode: "environment", focusMode: "continuous" } };
+            try {
+                await html5QrCode.start({ facingMode: "environment" }, config, () => {}, () => {});
+                document.getElementById("status").innerText = "Ready to Capture";
+            } catch (e) { alert("Camera error: " + e); }
+        }
+
+        function killScanner() {
+            if (html5QrCode) html5QrCode.stop().catch(() => {});
+            document.getElementById("debugCanvas").style.display = "none";
+        }
+
+        async function captureAndScan() {
+            if (processing) return;
+            const video = document.querySelector("#reader video");
+            if (!video || video.readyState < 2) return;
+
+            processing = true;
             const status = document.getElementById("status");
-            const preview = document.getElementById("preview");
-            const canvas = document.getElementById("hiddenCanvas");
+            const canvas = document.getElementById("debugCanvas");
             const ctx = canvas.getContext("2d");
 
-            status.innerText = "⏳ Reading Image...";
-            preview.style.display = "block";
-            preview.src = URL.createObjectURL(input.files[0]);
+            status.innerText = "⏳ Capturing...";
 
-            const img = new Image();
-            img.src = preview.src;
-            img.onload = async () => {
-                // Step 1: Normalize the size (AI likes ~1500px width)
-                const scale = 1500 / img.width;
-                canvas.width = 1500;
-                canvas.height = img.height * scale;
+            // 1. Get high-res frame from video
+            const vW = video.videoWidth; const vH = video.videoHeight;
+            const cropW = vW * 0.8; const cropH = vH * 0.2;
+            const sx = (vW - cropW) / 2; const sy = (vH - cropH) / 2;
 
-                // Step 2: Aggressive Cleaning (The "Secret Sauce")
-                // We use extreme contrast to turn gray cardboard into white space
-                ctx.filter = 'grayscale(1) contrast(500%) brightness(120%)';
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            // 2. Upscale on canvas for AI clarity
+            canvas.width = 1200; canvas.height = 300;
+            canvas.style.display = "block";
 
-                try {
-                    // Step 3: Targeted OCR
-                    const result = await Tesseract.recognize(canvas, 'eng', {
-                        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-',
-                        tessedit_pageseg_mode: 3 // Search for any block of text
-                    });
+            // 3. Apply professional "Clean Ink" filter
+            ctx.filter = 'grayscale(1) contrast(8) brightness(1.1)';
+            ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
 
-                    // Step 4: Extract the Part Number (Looking for 4+ alphanumeric chars)
-                    const found = result.data.text.match(/[A-Z0-9-]{4,}/g);
+            status.innerText = "🧠 AI Reading...";
+
+            try {
+                const res = await Tesseract.recognize(canvas, 'eng', {
+                    tessedit_pageseg_mode: 7,
+                    tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-'
+                });
+
+                const pn = res.data.text.trim().replace(/[^A-Z0-9-]/g, "");
+
+                if (pn.length >= 4) {
+                    status.innerText = "✅ Found: " + pn;
+                    const q = prompt(`Confirm Part Number:\n${pn}\n\nEnter Quantity:`, "1");
                     
-                    if (found) {
-                        const pn = found.reduce((a, b) => a.length > b.length ? a : b);
-                        status.innerText = "✅ Detected: " + pn;
-
-                        const q = prompt(`Confirm Part Number:\n${pn}\n\nEnter Quantity:`, "1");
-                        if (q && !isNaN(q)) {
-                            status.innerText = "🚀 Syncing...";
-                            await fetch(SCRIPT_URL, {
-                                method: "POST",
-                                mode: "no-cors",
-                                body: JSON.stringify([{ pn: pn, qty: parseInt(q), mode: mode, date: new Date().toLocaleString() }])
-                            });
-                            status.innerText = "🎯 Saved Successfully!";
-                        } else {
-                            status.innerText = "Cancelled.";
-                        }
+                    if (q && !isNaN(q)) {
+                        status.innerText = "🚀 Saving to Sheets...";
+                        await fetch(SCRIPT_URL, {
+                            method: "POST",
+                            mode: "no-cors",
+                            body: JSON.stringify([{ pn: pn, qty: parseInt(q), mode: mode, date: new Date().toLocaleString() }])
+                        });
+                        status.innerText = "🎯 Saved Successfully!";
+                        setTimeout(() => { status.innerText = "Ready for next scan"; }, 3000);
                     } else {
-                        status.innerText = "❌ No Part Number found. Try a closer photo.";
+                        status.innerText = "Cancelled.";
                     }
-                } catch (err) {
-                    status.innerText = "Error reading photo.";
+                } else {
+                    status.innerText = "❌ Blurry. Please try again.";
                 }
-            };
+            } catch (e) {
+                status.innerText = "Scan Failed.";
+            } finally {
+                processing = false;
+            }
         }
     </script>
 </body>
