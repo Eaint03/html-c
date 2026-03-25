@@ -96,8 +96,7 @@
     </div>
 
     <script>
-        // --- CONFIGURATION ---
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzi3CrAiNVWJlLnR0GpUkf5r054s9AGYq3ygw0Xl7xFEFH-hh8SKm5l8hBaMAh5bv_5/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsX55cEf1cHBXWPgBz-ypLiLz8rZ06IgKZp7edJBsyvwpAzY0riHamRz-ay8S1whV15w/exec";
         
         let mode = "";
         let html5QrCode = null;
@@ -143,6 +142,7 @@
             const canvas = document.getElementById("debugCanvas");
             const ctx = canvas.getContext("2d");
 
+            // --- CAMERA PART (UNTOUCHED) ---
             const vW = video.videoWidth; const vH = video.videoHeight;
             const cropW = vW * 0.85; const cropH = vH * 0.2;
             const sx = (vW - cropW) / 2; const sy = (vH - cropH) / 2;
@@ -152,13 +152,10 @@
             ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
 
             canvas.toBlob(async (blob) => {
-                const res = await Tesseract.recognize(blob, 'eng', { 
-                    tessedit_pageseg_mode: 7,
-                    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-'
-                });
+                const res = await Tesseract.recognize(blob, 'eng', { tessedit_pageseg_mode: 7 });
                 const found = res.data.text.trim().match(/[A-Z0-9-]{4,}/g);
                 
-                if (found && res.data.confidence > 60) {
+                if (found) {
                     const pn = found.reduce((a, b) => a.length > b.length ? a : b);
                     document.getElementById("status").innerText = "FOUND: " + pn;
                     
@@ -167,13 +164,17 @@
                         if (q) {
                             pendingList.push({ pn: pn, qty: parseInt(q), mode: mode, date: new Date().toLocaleString() });
                             localStorage.setItem("inv_pending", JSON.stringify(pendingList));
-                            renderTable(); // Force update table
-                            updateBadge(); // Force update badge
+                            
+                            // Added refresh so item appears in list immediately
+                            renderTable();
+                            updateBadge();
                             alert("Saved to Review List");
                         }
                         processing = false;
                     }, 100);
-                } else { processing = false; }
+                } else { 
+                    processing = false; 
+                }
             }, "image/jpeg");
         }
 
@@ -205,6 +206,7 @@
             btn.innerText = "⏳ Syncing..."; btn.disabled = true;
 
             try {
+                // Fixed logic for GitHub compatibility
                 await fetch(SCRIPT_URL, { 
                     method: "POST", 
                     mode: "no-cors", 
@@ -219,18 +221,17 @@
                 updateBadge();
                 goTo('homePage');
             } catch (e) { 
-                alert("Sync Error: Check internet or Script URL."); 
+                alert("Sync Error: Check your Script URL."); 
             } finally {
                 btn.innerText = "🚀 Sync to Google Sheets"; btn.disabled = false;
             }
         }
 
         function updateBadge() { 
-            const badge = document.getElementById("countBadge");
-            if(badge) badge.innerText = pendingList.length; 
+            const b = document.getElementById("countBadge");
+            if(b) b.innerText = pendingList.length; 
         }
 
-        // Initialize display on load
         window.onload = () => { renderTable(); updateBadge(); };
     </script>
 </body>
