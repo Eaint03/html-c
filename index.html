@@ -55,7 +55,7 @@
         </div>
 
         <button class="btn-danger" onclick="goTo('homePage')">Exit Scanner</button>
-        <p style="font-size: 10px; color: #666;">AI VIEW (UPSCALED):</p>
+        <p style="font-size: 10px; color: #666;">ENHANCED AI VIEW:</p>
         <canvas id="debugCanvas"></canvas>
     </div>
 
@@ -83,9 +83,8 @@
         async function initScanner() {
             html5QrCode = new Html5Qrcode("reader");
             try {
-                // High FPS for faster detection
                 await html5QrCode.start({ facingMode: "environment" }, { fps: 20, aspectRatio: 1.0 }, () => {}, () => {});
-                document.getElementById("status").innerText = "Searching for Part Number...";
+                document.getElementById("status").innerText = "Align text inside the green box...";
                 scanTimer = setInterval(takeStep, 1000); 
             } catch (e) { alert(e); }
         }
@@ -105,20 +104,19 @@
             const ctx = canvas.getContext("2d");
 
             const vW = video.videoWidth; const vH = video.videoHeight;
-            const cropW = vW * 0.85; const cropH = vH * 0.2;
+            // Tighter crop (0.7) forces the user to be more accurate, which improves AI reading
+            const cropW = vW * 0.7; const cropH = vH * 0.15;
             const sx = (vW - cropW) / 2; const sy = (vH - cropH) / 2;
 
-            // SMART VISION: Upscale the image to 1000px wide for easier OCR reading
-            canvas.width = 1000; canvas.height = 200;
+            canvas.width = 900; canvas.height = 180;
             
-            // SUPER CONTRAST: Force text to be pure black/white
-            ctx.filter = 'grayscale(1) contrast(5) brightness(1.5) blur(0px)';
+            // ACCURACY FIX: Higher contrast (8) and slight blur removal
+            ctx.filter = 'grayscale(1) contrast(8) brightness(1.2) invert(0)';
             ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
 
             canvas.toBlob(async (blob) => {
                 const res = await Tesseract.recognize(blob, 'eng', { 
                     tessedit_pageseg_mode: 7,
-                    // WHITELIST: Only look for P/N characters
                     tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-'
                 });
 
@@ -127,37 +125,26 @@
                 
                 if (found) {
                     const pn = found.reduce((a, b) => a.length > b.length ? a : b);
-                    document.getElementById("status").innerText = "FOUND: " + pn;
+                    document.getElementById("status").innerText = "CONFIRMED: " + pn;
                     
                     setTimeout(async () => {
-                        const q = prompt(`Part: ${pn}\nQuantity:`, "1");
+                        const q = prompt(`Is this correct?\nPart: ${pn}\n\nEnter Quantity:`, "1");
                         if (q) {
-                            document.getElementById("status").innerText = "Sending to Sheet...";
-                            const payload = [{ 
-                                pn: pn, 
-                                qty: parseInt(q), 
-                                mode: mode, 
-                                date: new Date().toLocaleString() 
-                            }];
+                            document.getElementById("status").innerText = "Syncing...";
+                            const payload = [{ pn: pn, qty: parseInt(q), mode: mode, date: new Date().toLocaleString() }];
                             
                             try {
-                                await fetch(SCRIPT_URL, { 
-                                    method: "POST", 
-                                    mode: "no-cors", 
-                                    body: JSON.stringify(payload) 
-                                });
-                                document.getElementById("status").innerText = "✅ Saved!";
+                                await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(payload) });
+                                document.getElementById("status").innerText = "✅ Saved to Sheet!";
                                 setTimeout(() => { document.getElementById("status").innerText = "Searching..."; }, 2000);
-                            } catch (e) {
-                                alert("Sync Error");
-                            }
+                            } catch (e) { alert("Sync Error"); }
                         }
                         processing = false;
-                    }, 50); // Faster prompt trigger
+                    }, 50);
                 } else { 
                     processing = false; 
                 }
-            }, "image/jpeg", 0.95);
+            }, "image/jpeg", 1.0);
         }
     </script>
 </body>
