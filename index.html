@@ -49,13 +49,13 @@ button {
 <body>
 
 <div id="homePage" class="page">
-    <h1 style="margin-top: 40px;">📦 Ultra-Precision Scan</h1>
+    <h1 style="margin-top: 40px;">📦 Scan</h1>
     <button class="btn-main" onclick="goTo('scanPage', 'add')">➕ Add Stock</button>
     <button class="btn-main" style="background:#333;" onclick="goTo('scanPage', 'take')">➖ Remove Stock</button>
 </div>
 
 <div id="scanPage" class="page hidden">
-    <h2 id="modeTitle">Scanning...</h2>
+    <h2>Scanning...</h2>
     <div id="status">Ready</div>
 
     <div id="reader-container">
@@ -85,14 +85,21 @@ function goTo(pageId, m = "") {
 async function initScanner() {
     html5QrCode = new Html5Qrcode("reader");
     try {
-        await html5QrCode.start({ facingMode: "environment" }, { fps: 25, aspectRatio: 1.0 }, () => {}, () => {});
+        await html5QrCode.start(
+            { facingMode: "environment" },
+            { fps: 25, aspectRatio: 1.0 },
+            () => {},
+            () => {}
+        );
     } catch (e) { alert(e); }
 }
 
-function killScanner() { if (html5QrCode) html5QrCode.stop().catch(() => {}); }
+function killScanner() {
+    if (html5QrCode) html5QrCode.stop().catch(() => {});
+}
 
 // =========================
-// 🔥 IMPROVED OCR PIPELINE
+// 🔥 MAIN FUNCTION (UPGRADED)
 // =========================
 async function captureAndScan() {
     if (processing) return;
@@ -109,9 +116,6 @@ async function captureAndScan() {
 
     status.innerText = "⏳ Processing...";
 
-    // =========================
-    // SAME CROP (UNCHANGED)
-    // =========================
     const vW = video.videoWidth;
     const vH = video.videoHeight;
 
@@ -120,78 +124,89 @@ async function captureAndScan() {
     const sx = (vW - cropW) / 2;
     const sy = (vH - cropH) / 2;
 
-    // 🔥 HIGHER RESOLUTION
     canvas.width = 3000;
     canvas.height = 300;
 
-    // 🔥 BETTER FILTER (NOT DESTROYING TEXT)
-    ctx.filter = 'grayscale(1) contrast(6) brightness(1.3)';
-    ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
+    const filters = [
+        'grayscale(1) contrast(5) brightness(1.3)',
+        'grayscale(1) contrast(8) brightness(1.2)',
+        'grayscale(1) contrast(10) brightness(1.1)'
+    ];
 
-    try {
+    let allReads = [];
+
+    for (let f of filters) {
+        ctx.filter = f;
+        ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
+
         const res = await Tesseract.recognize(canvas, 'eng', {
             tessedit_pageseg_mode: 7,
             tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-.,'
         });
 
-        // =========================
-        // 🔥 CHARACTER-LEVEL REBUILD
-        // =========================
-        let charMap = [];
+        let text = "";
 
-        res.data.symbols.forEach((sym, i) => {
-            if (!charMap[i]) charMap[i] = [];
-
-            charMap[i].push({
-                char: sym.text,
-                conf: sym.confidence
-            });
+        res.data.symbols.forEach(sym => {
+            if (sym.confidence > 55) {
+                text += sym.text;
+            }
         });
 
+        text = text.replace(/\s/g, "");
+
+        if (text.length > 5) {
+            allReads.push(text);
+        }
+    }
+
+    function getBestConsensus(reads) {
+        if (reads.length === 0) return null;
+
+        let maxLen = Math.max(...reads.map(r => r.length));
         let final = "";
 
-        charMap.forEach(pos => {
-            if (!pos) return;
+        for (let i = 0; i < maxLen; i++) {
+            let freq = {};
 
-            let best = pos.sort((a, b) => b.conf - a.conf)[0];
+            reads.forEach(r => {
+                let c = r[i];
+                if (!c) return;
+                freq[c] = (freq[c] || 0) + 1;
+            });
 
-            if (best.conf > 60) {
-                final += best.char;
-            }
-        });
+            let bestChar = Object.keys(freq).sort((a,b)=>freq[b]-freq[a])[0];
 
-        let pn = final.replace(/\s/g, "");
-
-        // =========================
-        // SAVE FLOW (UNCHANGED)
-        // =========================
-        if (pn.length >= 4) {
-            status.innerText = "🎯 MATCH: " + pn;
-
-            const q = prompt(`Enter Quantity for:\n${pn}`, "1");
-
-            if (q && !isNaN(q)) {
-                status.innerText = "🚀 Syncing...";
-                await fetch(SCRIPT_URL, {
-                    method: "POST",
-                    mode: "no-cors",
-                    body: JSON.stringify([{
-                        pn: pn,
-                        qty: parseInt(q),
-                        mode: mode,
-                        date: new Date().toLocaleString()
-                    }])
-                });
-
-                status.innerText = "✅ Saved!";
-                setTimeout(() => status.innerText = "Ready", 3000);
-            }
-        } else {
-            status.innerText = "❌ Cannot detect";
+            if (bestChar) final += bestChar;
         }
 
-    } catch (e) {
-        status.innerText = "Error. Retry.";
+        return final;
+    }
+
+    let pn = getBestConsensus(allReads);
+
+    if (pn && pn.length >= 4) {
+        status.innerText = "🎯 MATCH: " + pn;
+
+        const q = prompt(`Enter Quantity for:\n${pn}`, "1");
+
+        if (q && !isNaN(q)) {
+            status.innerText = " Syncing...";
+            await fetch(SCRIPT_URL, {
+                method: "POST",
+                mode: "no-cors",
+                body: JSON.stringify([{
+                    pn: pn,
+                    qty: parseInt(q),
+                    mode: mode,
+                    date: new Date().toLocaleString()
+                }])
+            });
+
+            status.innerText = "✅ Saved!";
+            setTimeout(() => status.innerText = "Ready", 3000);
+        }
+    } else {
+        status.innerText = "❌ Cannot detect";
     }
 
     processing = false;
