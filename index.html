@@ -10,147 +10,186 @@
 
     <style>
         :root { --blue: #007bff; --green: #28a745; --red: #dc3545; --dark: #121212; }
-        body { font-family: -apple-system, sans-serif; background: var(--dark); color: white; margin: 0; text-align: center; }
-        .page { padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        body { font-family: -apple-system, sans-serif; background: var(--dark); color: white; margin: 0; text-align: center; overflow: hidden; }
+        .page { padding: 10px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         .hidden { display: none !important; }
 
         button { 
-            width: 95%; max-width: 380px; padding: 20px; margin: 10px 0; 
-            border-radius: 15px; border: none; font-size: 18px; font-weight: bold; 
+            width: 95%; max-width: 380px; padding: 16px; margin: 6px 0; 
+            border-radius: 12px; border: none; font-size: 17px; font-weight: bold; 
             cursor: pointer; 
         }
         .btn-main { background: var(--blue); color: white; }
         .btn-capture { 
-            background: var(--green); color: white; font-size: 24px; 
-            border: 4px solid white; box-shadow: 0 0 20px rgba(40, 167, 69, 0.6);
+            background: var(--green); color: white; font-size: 22px; 
+            border: 3px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            margin-top: 5px; /* Moved up */
         }
-        
+
         #reader-container { 
-            position: relative; width: 100%; max-width: 400px; 
-            margin: 10px auto; border-radius: 20px; overflow: hidden; border: 3px solid #444;
+            position: relative; width: 100%; max-width: 380px; 
+            margin: 5px auto; border-radius: 15px; overflow: hidden; border: 2px solid #444;
+            background: #000; touch-action: none;
         }
-        /* Very narrow box to force the user to align perfectly */
+
         #scanner-overlay {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             width: 90%; height: 35px; border: 3px solid #00ff00;
-            box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.85); z-index: 5; pointer-events: none;
+            box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.8); z-index: 5; pointer-events: none;
         }
 
-        #status { margin: 15px; color: #00ff00; font-weight: bold; font-size: 1.3rem; min-height: 35px; }
-        #debugCanvas { width: 95%; max-width: 380px; background: white; border-radius: 10px; display: block; margin: 10px auto; border: 2px solid #555; }
+        #status { margin: 8px; color: #00ff00; font-weight: bold; font-size: 1.1rem; min-height: 25px; }
+        
+        #debugCanvas { 
+            width: 90%; max-width: 340px; background: white; border-radius: 8px; 
+            display: block; margin: 5px auto; border: 1px solid #555;
+            image-rendering: pixelated; 
+        }
+        
+        h2 { font-size: 1.2rem; margin: 10px 0; }
     </style>
 </head>
+
 <body>
 
-    <div id="homePage" class="page">
-        <h1 style="margin-top: 40px;">📦 Ultra-Precision Scan</h1>
-        <button class="btn-main" onclick="goTo('scanPage', 'add')">➕ Add Stock</button>
-        <button class="btn-main" style="background:#333;" onclick="goTo('scanPage', 'take')">➖ Remove Stock</button>
+<div id="homePage" class="page">
+    <h1 style="margin-top: 40px;">📦 Inventory System</h1>
+    <button class="btn-main" onclick="goTo('scanPage', 'add')">➕ Add Stock</button>
+    <button class="btn-main" style="background:#333;" onclick="goTo('scanPage', 'take')">➖ Remove Stock</button>
+</div>
+
+<div id="scanPage" class="page hidden">
+    <div id="status">Ready (Tap to Focus)</div>
+
+    <div id="reader-container" onclick="manualFocus()">
+        <div id="reader"></div>
+        <div id="scanner-overlay"></div>
     </div>
 
-    <div id="scanPage" class="page hidden">
-        <h2 id="modeTitle">Scanning...</h2>
-        <div id="status">Ready</div>
+    <button class="btn-capture" onclick="captureAndScan()">📸 CAPTURE & SAVE</button>
+    
+    <button style="background:#cc0000; color:white; padding: 12px;" onclick="goTo('homePage')">Exit</button>
+    
+    <p style="font-size: 10px; color: #666; margin: 2px;">AI Processing View:</p>
+    <canvas id="debugCanvas"></canvas>
+</div>
 
-        <div id="reader-container">
-            <div id="reader"></div>
-            <div id="scanner-overlay"></div>
-        </div>
+<script>
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzi3CrAiNVWJlLnR0GpUkf5r054s9AGYq3ygw0Xl7xFEFH-hh8SKm5l8hBaMAh5bv_5/exec";
 
-        <button class="btn-capture" onclick="captureAndScan()">📸 CAPTURE & SAVE</button>
-        <button class="btn-main" style="background:#cc0000;" onclick="goTo('homePage')">Exit</button>
-        
-        <canvas id="debugCanvas"></canvas>
-    </div>
+let mode = "";
+let html5QrCode = null;
+let processing = false;
 
-    <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzi3CrAiNVWJlLnR0GpUkf5r054s9AGYq3ygw0Xl7xFEFH-hh8SKm5l8hBaMAh5bv_5/exec";
-        
-        let mode = "";
-        let html5QrCode = null;
-        let processing = false;
+function goTo(pageId, m = "") {
+    document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+    document.getElementById(pageId).classList.remove('hidden');
+    if (pageId === 'scanPage') { mode = m; initScanner(); } else { killScanner(); }
+}
 
-        function goTo(pageId, m = "") {
-            document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-            document.getElementById(pageId).classList.remove('hidden');
-            if (pageId === 'scanPage') { mode = m; initScanner(); } else { killScanner(); }
+async function initScanner() {
+    html5QrCode = new Html5Qrcode("reader");
+    try {
+        await html5QrCode.start({ facingMode: "environment" }, { fps: 20, aspectRatio: 1.0 }, () => {}, () => {});
+        document.getElementById("status").innerText = "Ready (Tap to Focus)";
+    } catch (e) { alert(e); }
+}
+
+async function manualFocus() {
+    const video = document.querySelector("#reader video");
+    if (!video) return;
+    const track = video.srcObject.getVideoTracks()[0];
+    const capabilities = track.getCapabilities();
+    document.getElementById("status").innerText = "⚡ Focusing...";
+    if (capabilities.focusMode) {
+        try {
+            await track.applyConstraints({ advanced: [{ focusMode: "continuous" }] });
+            setTimeout(() => { document.getElementById("status").innerText = "Focused! 🎯"; }, 500);
+        } catch (err) { document.getElementById("status").innerText = "Ready to Capture"; }
+    }
+}
+
+function killScanner() { if (html5QrCode) html5QrCode.stop().catch(() => {}); }
+
+async function captureAndScan() {
+    if (processing) return;
+    const video = document.querySelector("#reader video");
+    if (!video) return;
+
+    processing = true;
+    if (navigator.vibrate) navigator.vibrate(80);
+    const status = document.getElementById("status");
+    const canvas = document.getElementById("debugCanvas");
+    const ctx = canvas.getContext("2d");
+
+    status.innerText = "⏳ Processing Accuracy...";
+
+    const vW = video.videoWidth;
+    const vH = video.videoHeight;
+    const cropW = vW * 0.88;
+    const cropH = vH * 0.07;
+    const sx = (vW - cropW) / 2;
+    const sy = (vH - cropH) / 2;
+
+    canvas.width = 3000;
+    canvas.height = 300;
+    ctx.imageSmoothingEnabled = false;
+
+    const filters = [
+        'grayscale(1) contrast(5) brightness(1.4)',
+        'grayscale(1) contrast(8) brightness(1.2)',
+        'grayscale(1) contrast(10) brightness(1.1)',
+        'grayscale(1) contrast(12) brightness(1.0)',
+        'grayscale(1) contrast(15) brightness(0.9)'
+    ];
+
+    let allReads = [];
+
+    for (let f of filters) {
+        ctx.filter = f;
+        ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
+
+        const res = await Tesseract.recognize(canvas, 'eng', {
+            tessedit_pageseg_mode: 7,
+            tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-.'
+        });
+
+        let text = res.data.text.replace(/\s/g, "").toUpperCase();
+        if (text.length > 3) allReads.push(text);
+    }
+
+    function getBestConsensus(reads) {
+        if (reads.length === 0) return null;
+        let counts = {};
+        let maxCount = 0;
+        let best = reads[0];
+        reads.forEach(r => {
+            counts[r] = (counts[r] || 0) + 1;
+            if (counts[r] > maxCount) { maxCount = counts[r]; best = r; }
+        });
+        return best;
+    }
+
+    let pn = getBestConsensus(allReads);
+
+    if (pn) {
+        status.innerText = "🎯 MATCH: " + pn;
+        const q = prompt(`Quantity for:\n${pn}`, "1");
+        if (q && !isNaN(q)) {
+            status.innerText = "🚀 Saving...";
+            await fetch(SCRIPT_URL, {
+                method: "POST", mode: "no-cors", 
+                body: JSON.stringify([{ pn: pn, qty: parseInt(q), mode: mode, date: new Date().toLocaleString() }])
+            });
+            status.innerText = "✅ Saved!";
+            setTimeout(() => status.innerText = "Ready", 2000);
         }
+    } else {
+        status.innerText = "❌ Error. Try again.";
+    }
 
-        async function initScanner() {
-            html5QrCode = new Html5Qrcode("reader");
-            try {
-                await html5QrCode.start({ facingMode: "environment" }, { fps: 25, aspectRatio: 1.0 }, () => {}, () => {});
-            } catch (e) { alert(e); }
-        }
-
-        function killScanner() { if (html5QrCode) html5QrCode.stop().catch(() => {}); }
-
-        async function captureAndScan() {
-            if (processing) return;
-            const video = document.querySelector("#reader video");
-            if (!video) return;
-
-            processing = true;
-            if (navigator.vibrate) navigator.vibrate(80);
-            const status = document.getElementById("status");
-            const canvas = document.getElementById("debugCanvas");
-            const ctx = canvas.getContext("2d");
-
-            status.innerText = "⏳ Cleaning Image...";
-
-            // 1. TIGHTER CROP & MASSIVE SCALE (1800px width)
-            const vW = video.videoWidth; const vH = video.videoHeight;
-            const cropW = vW * 0.88; const cropH = vH * 0.07; // Only 7% height for extreme focus
-            const sx = (vW - cropW) / 2; const sy = (vH - cropH) / 2;
-
-            canvas.width = 1800; canvas.height = 180;
-
-            // 2. THE "TOTAL BLACK" FILTER
-            // We use contrast(40) to force the image into a binary state
-            ctx.filter = 'grayscale(1) contrast(40) brightness(1.1) blur(0px)';
-            ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
-
-            try {
-                const res = await Tesseract.recognize(canvas, 'eng', {
-                    tessedit_pageseg_mode: 7, 
-                    tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-'
-                });
-
-                // 3. AUTO-CLEANING (Converts common visual mistakes automatically)
-                let pn = res.data.text.trim()
-                    .replace(/\s/g, "")      // Remove spaces
-                    .replace(/\|/g, "I")     // | -> I
-                    .replace(/\[/g, "I")     // [ -> I
-                    .replace(/\]/g, "I")     // ] -> I
-                    .replace(/O/g, "0")      // O -> 0 (Common in P/Ns)
-                    .toUpperCase();
-
-                if (pn.length >= 4) {
-                    status.innerText = "🎯 MATCH: " + pn;
-                    // No Edit Step - Go straight to Quantity
-                    const q = prompt(`Enter Quantity for:\n${pn}`, "1");
-                    
-                    if (q && !isNaN(q)) {
-                        status.innerText = "🚀 Syncing...";
-                        await fetch(SCRIPT_URL, {
-                            method: "POST", 
-                            mode: "no-cors", 
-                            body: JSON.stringify([{ pn: pn, qty: parseInt(q), mode: mode, date: new Date().toLocaleString() }])
-                        });
-                        status.innerText = "✅ Saved to Google Sheets!";
-                        setTimeout(() => status.innerText = "Ready", 3000);
-                    }
-                } else {
-                    status.innerText = "❌ Blurry. Move closer.";
-                }
-            } catch (e) {
-                status.innerText = "Error. Retry.";
-            } finally {
-                processing = false;
-            }
-        }
-    </script>
+    processing = false;
+}
+</script>
 </body>
 </html>
-
-
