@@ -1,112 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>Pro Inventory - Ultra Accuracy</title>
-
-<script src="https://unpkg.com/html5-qrcode"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
-
-<style>
-:root { --blue: #007bff; --green: #28a745; --red: #dc3545; --dark: #121212; }
-body { font-family: -apple-system, sans-serif; background: var(--dark); color: white; margin: 0; text-align: center; }
-.page { padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
-.hidden { display: none !important; }
-
-button { 
-    width: 95%; max-width: 380px; padding: 20px; margin: 10px 0; 
-    border-radius: 15px; border: none; font-size: 18px; font-weight: bold; 
-    cursor: pointer; 
-}
-.btn-main { background: var(--blue); color: white; }
-.btn-capture { 
-    background: var(--green); color: white; font-size: 24px; 
-    border: 4px solid white; box-shadow: 0 0 20px rgba(40, 167, 69, 0.6);
-}
-
-#reader-container { 
-    position: relative; width: 100%; max-width: 400px; 
-    margin: 10px auto; border-radius: 20px; overflow: hidden; border: 3px solid #444;
-}
-
-#scanner-overlay {
-    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    width: 90%; height: 35px; border: 3px solid #00ff00;
-    box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.85); z-index: 5; pointer-events: none;
-}
-
-#status { margin: 15px; color: #00ff00; font-weight: bold; font-size: 1.3rem; min-height: 35px; }
-
-#debugCanvas { 
-    width: 95%; max-width: 380px; background: white; border-radius: 10px; 
-    display: block; margin: 10px auto; border: 2px solid #555; 
-}
-</style>
-</head>
-
-<body>
-
-<div id="homePage" class="page">
-    <h1 style="margin-top: 40px;">📦 Scan to do the action</h1>
-    <button class="btn-main" onclick="goTo('scanPage', 'add')">➕ Add Stock</button>
-    <button class="btn-main" style="background:#333;" onclick="goTo('scanPage', 'take')">➖ Remove Stock</button>
-</div>
-
-<div id="scanPage" class="page hidden">
-    <h2>Scanning...</h2>
-    <div id="status">Ready</div>
-
-    <div id="reader-container">
-        <div id="reader"></div>
-        <div id="scanner-overlay"></div>
-    </div>
-
-    <button class="btn-capture" onclick="captureAndScan()">📸 CAPTURE & SAVE</button>
-    <button class="btn-main" style="background:#cc0000;" onclick="goTo('homePage')">Exit</button>
-    
-    <canvas id="debugCanvas"></canvas>
-</div>
-
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzi3CrAiNVWJlLnR0GpUkf5r054s9AGYq3ygw0Xl7xFEFH-hh8SKm5l8hBaMAh5bv_5/exec";
 
-let mode = "";
-let html5QrCode = null;
-let processing = false;
-
-function goTo(pageId, m = "") {
-    document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-    document.getElementById(pageId).classList.remove('hidden');
-    if (pageId === 'scanPage') { mode = m; initScanner(); } else { killScanner(); }
-}
-
-async function initScanner() {
-    html5QrCode = new Html5Qrcode("reader");
-    await html5QrCode.start(
-        { facingMode: { exact: "environment" } },
-        {
-            fps: 15,
-            aspectRatio: 1.0,
-            videoConstraints: {
-                focusMode: "continuous",
-                zoom: 2
-            }
-        },
-        () => {},
-        () => {}
-    );
-}
-
-function killScanner() {
-    if (html5QrCode) html5QrCode.stop().catch(() => {});
-}
-
-function isValidPN(pn) {
-    return /^[A-Z0-9\-.,]{6,}$/.test(pn) && pn.includes("-");
-}
-
+// =========================
+// 🔥 MAIN FUNCTION (UPDATED)
+// =========================
 async function captureAndScan() {
     if (processing) return;
 
@@ -125,7 +21,7 @@ async function captureAndScan() {
     const vH = video.videoHeight;
 
     const cropW = vW * 0.88;
-    const cropH = vH * 0.12;
+    const cropH = vH * 0.12; // 🔥 FIXED
     const sx = (vW - cropW) / 2;
     const sy = (vH - cropH) / 2;
 
@@ -143,13 +39,13 @@ async function captureAndScan() {
     let allReads = [];
 
     for (let f of filters) {
-        ctx.filter = f + " blur(0.5px)";
+        ctx.filter = f + " blur(0.5px)"; // 🔥 ADDED
         ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
 
         const res = await Tesseract.recognize(canvas, 'eng', {
-            tessedit_pageseg_mode: 6,
+            tessedit_pageseg_mode: 6, // 🔥 UPDATED
             tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-.,',
-            tessedit_char_blacklist: 'abcdefghijklmnopqrstuvwxyz!@#$%^&*()_+=[]{}|;:\'"<>/?~`'
+            tessedit_char_blacklist: 'abcdefghijklmnopqrstuvwxyz!@#$%^&*()_+=[]{}|;:\'"<>/?~`' // 🔥 ADDED
         });
 
         let text = "";
@@ -162,7 +58,7 @@ async function captureAndScan() {
             }
         });
 
-        text = text.replace(/\s/g, "").toUpperCase();
+        text = text.replace(/\s/g, "").toUpperCase(); // 🔥 IMPORTANT
 
         let avgConf = totalConf / (text.length || 1);
 
@@ -173,15 +69,19 @@ async function captureAndScan() {
 
     function getBestConsensus(reads) {
         if (reads.length === 0) return null;
-        let best = reads[0], bestScore = 0;
+
+        let best = reads[0];
+        let bestScore = 0;
 
         reads.forEach(r => {
             let score = 0;
-            reads.forEach(o => {
-                for (let i = 0; i < Math.min(r.length, o.length); i++) {
-                    if (r[i] === o[i]) score++;
+
+            reads.forEach(other => {
+                for (let i = 0; i < Math.min(r.length, other.length); i++) {
+                    if (r[i] === other[i]) score++;
                 }
             });
+
             if (score > bestScore) {
                 bestScore = score;
                 best = r;
@@ -194,39 +94,34 @@ async function captureAndScan() {
     let pn = getBestConsensus(allReads);
 
     if (pn) {
-        pn = pn.toUpperCase().replace(/[^A-Z0-9\-.,]/g, '');
+        pn = pn.toUpperCase().replace(/[^A-Z0-9\-.,]/g, ''); // 🔥 CLEAN
     }
 
-    if (!isValidPN(pn)) {
-        status.innerText = "❌ Invalid PN";
-        processing = false;
-        return;
-    }
+    if (pn && pn.length >= 4) {
+        status.innerText = "🎯 MATCH: " + pn;
 
-    status.innerText = "🎯 MATCH: " + pn;
+        const q = prompt(`Enter Quantity for:\n${pn}`, "1");
 
-    const q = prompt(`Enter Quantity for:\n${pn}`, "1");
+        if (q && !isNaN(q)) {
+            status.innerText = " Syncing...";
+            await fetch(SCRIPT_URL, {
+                method: "POST",
+                mode: "no-cors",
+                body: JSON.stringify([{
+                    pn: pn,
+                    qty: parseInt(q),
+                    mode: mode,
+                    date: new Date().toLocaleString()
+                }])
+            });
 
-    if (q && !isNaN(q)) {
-        status.innerText = " Syncing...";
-        await fetch(SCRIPT_URL, {
-            method: "POST",
-            mode: "no-cors",
-            body: JSON.stringify([{
-                pn: pn,
-                qty: parseInt(q),
-                mode: mode,
-                date: new Date().toLocaleString()
-            }])
-        });
-
-        status.innerText = "✅ Saved!";
-        setTimeout(() => status.innerText = "Ready", 3000);
+            status.innerText = "✅ Saved!";
+            setTimeout(() => status.innerText = "Ready", 3000);
+        }
+    } else {
+        status.innerText = "❌ Cannot detect";
     }
 
     processing = false;
 }
 </script>
-
-</body>
-</html>
