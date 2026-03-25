@@ -15,12 +15,15 @@
         .hidden { display: none !important; }
 
         button { 
-            width: 95%; max-width: 380px; padding: 18px; margin: 5px 0; 
-            border-radius: 12px; border: none; font-size: 18px; font-weight: bold; cursor: pointer; 
+            width: 95%; max-width: 380px; padding: 16px; margin: 6px 0; 
+            border-radius: 12px; border: none; font-size: 17px; font-weight: bold; 
+            cursor: pointer; 
         }
+        .btn-main { background: var(--blue); color: white; }
         .btn-capture { 
-            background: var(--green); color: white; font-size: 24px; 
-            border: 4px solid white; box-shadow: 0 4px 20px rgba(0,0,0,0.6);
+            background: var(--green); color: white; font-size: 22px; 
+            border: 3px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            margin-top: 5px;
         }
 
         #reader-container { 
@@ -31,14 +34,15 @@
 
         #scanner-overlay {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 92%; height: 32px; border: 2px solid #00ff00;
-            box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.88); z-index: 5; pointer-events: none;
+            width: 90%; height: 35px; border: 2px solid #00ff00;
+            box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.8); z-index: 5; pointer-events: none;
         }
 
-        #status { margin: 10px; color: #00ff00; font-weight: bold; font-size: 1.2rem; min-height: 30px; }
+        #status { margin: 8px; color: #00ff00; font-weight: bold; font-size: 1.1rem; min-height: 25px; }
+        
         #debugCanvas { 
-            width: 95%; max-width: 360px; background: white; border-radius: 8px; 
-            display: block; margin: 10px auto; border: 1px solid #555;
+            width: 90%; max-width: 340px; background: white; border-radius: 8px; 
+            display: block; margin: 5px auto; border: 1px solid #555;
             image-rendering: pixelated; 
         }
     </style>
@@ -47,9 +51,9 @@
 <body>
 
 <div id="homePage" class="page">
-    <h1 style="margin-top: 40px;">📦 Precision Inventory</h1>
-    <button style="background:var(--blue); color:white;" onclick="goTo('scanPage', 'add')">➕ Add Stock</button>
-    <button style="background:#333; color:white;" onclick="goTo('scanPage', 'take')">➖ Remove Stock</button>
+    <h1 style="margin-top: 40px;">📦 Inventory System</h1>
+    <button class="btn-main" onclick="goTo('scanPage', 'add')">➕ Add Stock</button>
+    <button class="btn-main" style="background:#333;" onclick="goTo('scanPage', 'take')">➖ Remove Stock</button>
 </div>
 
 <div id="scanPage" class="page hidden">
@@ -61,6 +65,7 @@
     </div>
 
     <button class="btn-capture" onclick="captureAndScan()">📸 CAPTURE & SAVE</button>
+    
     <button style="background:#cc0000; color:white; padding: 12px;" onclick="goTo('homePage')">Exit</button>
     
     <canvas id="debugCanvas"></canvas>
@@ -82,7 +87,7 @@ function goTo(pageId, m = "") {
 async function initScanner() {
     html5QrCode = new Html5Qrcode("reader");
     try {
-        await html5QrCode.start({ facingMode: "environment" }, { fps: 25, aspectRatio: 1.0 }, () => {}, () => {});
+        await html5QrCode.start({ facingMode: "environment" }, { fps: 20, aspectRatio: 1.0 }, () => {}, () => {});
     } catch (e) { alert(e); }
 }
 
@@ -108,57 +113,55 @@ async function captureAndScan() {
     if (!video) return;
 
     processing = true;
-    if (navigator.vibrate) navigator.vibrate(100);
+    if (navigator.vibrate) navigator.vibrate(80);
     const status = document.getElementById("status");
     const canvas = document.getElementById("debugCanvas");
     const ctx = canvas.getContext("2d");
 
-    status.innerText = "⏳ Cleaning Pixels...";
+    status.innerText = "⏳ Reading Part Number...";
 
     const vW = video.videoWidth;
     const vH = video.videoHeight;
-    const cropW = vW * 0.90;
-    const cropH = vH * 0.05; 
+    const cropW = vW * 0.88;
+    const cropH = vH * 0.07;
     const sx = (vW - cropW) / 2;
     const sy = (vH - cropH) / 2;
 
     canvas.width = 3000;
-    canvas.height = 180;
+    canvas.height = 300;
     ctx.imageSmoothingEnabled = false;
 
-    // 🔥 MAXIMUM BINARY FILTER: grayscale + 50x Contrast
-    // This turns gray shadows into pure white space, leaving only the "ink"
+    // 🔥 HIGH-PRECISION BINARY FILTER
     ctx.filter = 'grayscale(1) contrast(50) brightness(1.1)';
     ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
 
     try {
         const res = await Tesseract.recognize(canvas, 'eng', {
-            tessedit_pageseg_mode: 7, 
+            tessedit_pageseg_mode: 7,
             tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-'
         });
 
-        // 🧠 AUTOMATIC FIXES (No User Editing Needed)
-        let raw = res.data.text.trim().replace(/\s/g, "");
+        // 🧠 AUTOMATIC DISTINCTION LOGIC
+        let rawText = res.data.text.trim().replace(/\s/g, "");
         
-        let pn = raw.toUpperCase()
-                    .replace(/O/g, "0")  // Auto-Fix: O to 0
-                    .replace(/I/g, "1")  // Auto-Fix: I to 1 (Optional, remove if you use 'I')
-                    .replace(/[\[\]\|]/g, "I"); // Auto-Fix: Pipe/Brackets to I
+        let pn = rawText.toUpperCase()
+                    .replace(/O/g, "0")  // Distinguish O as 0
+                    .replace(/[\[\]\|]/g, "1"); // Distinguish common I errors as 1
 
         if (pn.length >= 4) {
-            status.innerText = "✅ " + pn;
+            status.innerText = "🎯 MATCH: " + pn;
             const q = prompt(`Quantity for:\n${pn}`, "1");
             if (q && !isNaN(q)) {
-                status.innerText = "🚀 Syncing...";
+                status.innerText = "🚀 Saving...";
                 await fetch(SCRIPT_URL, {
                     method: "POST", mode: "no-cors", 
                     body: JSON.stringify([{ pn: pn, qty: parseInt(q), mode: mode, date: new Date().toLocaleString() }])
                 });
-                status.innerText = "🎯 Saved!";
+                status.innerText = "✅ Saved!";
                 setTimeout(() => status.innerText = "Ready", 2000);
             }
         } else {
-            status.innerText = "❌ Blurry. Tap to Focus.";
+            status.innerText = "❌ Scan Error. Retap Focus.";
         }
     } catch (err) { status.innerText = "Error reading."; }
     processing = false;
