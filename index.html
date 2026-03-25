@@ -14,7 +14,6 @@
         .page { padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         .hidden { display: none !important; }
 
-        /* Buttons */
         button { 
             width: 90%; max-width: 350px; padding: 16px; margin: 10px 0; 
             border-radius: 12px; border: none; font-size: 16px; font-weight: bold; 
@@ -26,7 +25,6 @@
         .btn-sync { background: var(--green); color: white; width: 100%; }
         .btn-danger { background: var(--red); color: white; }
 
-        /* Scanner */
         #reader-container { 
             position: relative; width: 100%; max-width: 400px; 
             margin: 15px auto; border-radius: 15px; overflow: hidden; border: 2px solid #333;
@@ -37,7 +35,6 @@
             box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.6); z-index: 5; pointer-events: none;
         }
 
-        /* Review Table */
         .review-card { background: var(--card); width: 100%; max-width: 500px; border-radius: 15px; padding: 15px; margin-top: 20px; }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #333; font-size: 14px; }
@@ -100,7 +97,7 @@
 
     <script>
         // --- CONFIGURATION ---
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzi3CrAiNVWJlLnR0GpUkf5r054s9AGYq3ygw0Xl7xFEFH-hh8SKm5l8hBaMAh5bv_5/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsX55cEf1cHBXWPgBz-ypLiLz8rZ06IgKZp7edJBsyvwpAzY0riHamRz-ay8S1whV15w/exec";
         
         let mode = "";
         let html5QrCode = null;
@@ -118,8 +115,8 @@
                 initScanner();
             } else {
                 killScanner();
-                if (pageId === 'reviewPage') renderTable();
-                if (pageId === 'homePage') updateBadge();
+                renderTable(); 
+                updateBadge();
             }
         }
 
@@ -137,7 +134,7 @@
             if (html5QrCode) html5QrCode.stop().catch(() => {});
         }
 
- async function takeStep() {
+        async function takeStep() {
             if (processing) return;
             const video = document.querySelector("#reader video");
             if (!video || video.readyState < 2) return;
@@ -155,10 +152,13 @@
             ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
 
             canvas.toBlob(async (blob) => {
-                const res = await Tesseract.recognize(blob, 'eng', { tessedit_pageseg_mode: 7 });
+                const res = await Tesseract.recognize(blob, 'eng', { 
+                    tessedit_pageseg_mode: 7,
+                    tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-'
+                });
                 const found = res.data.text.trim().match(/[A-Z0-9-]{4,}/g);
                 
-                if (found) {
+                if (found && res.data.confidence > 60) {
                     const pn = found.reduce((a, b) => a.length > b.length ? a : b);
                     document.getElementById("status").innerText = "FOUND: " + pn;
                     
@@ -167,11 +167,8 @@
                         if (q) {
                             pendingList.push({ pn: pn, qty: parseInt(q), mode: mode, date: new Date().toLocaleString() });
                             localStorage.setItem("inv_pending", JSON.stringify(pendingList));
-                            
-                            // FIX: These two lines make the item appear in your list immediately
-                            updateBadge();
-                            renderTable(); 
-                            
+                            renderTable(); // Force update table
+                            updateBadge(); // Force update badge
                             alert("Saved to Review List");
                         }
                         processing = false;
@@ -179,14 +176,16 @@
                 } else { processing = false; }
             }, "image/jpeg");
         }
+
         function renderTable() {
             const tbody = document.getElementById("reviewList");
+            if(!tbody) return;
             tbody.innerHTML = "";
             pendingList.forEach((item, i) => {
                 tbody.innerHTML += `<tr>
                     <td>${item.pn}</td>
                     <td>${item.qty}</td>
-                    <td>${item.mode.toUpperCase()}</td>
+                    <td style="color:${item.mode=='add'?'#28a745':'#dc3545'}">${item.mode.toUpperCase()}</td>
                     <td class="del-btn" onclick="removeItem(${i})">✕</td>
                 </tr>`;
             });
@@ -197,42 +196,42 @@
             pendingList.splice(i, 1);
             localStorage.setItem("inv_pending", JSON.stringify(pendingList));
             renderTable();
+            updateBadge();
         }
 
-       async function syncData() {
-    if (pendingList.length === 0) return;
-    const btn = document.getElementById("syncBtn");
-    btn.innerText = "⏳ Syncing..."; 
-    btn.disabled = true;
+        async function syncData() {
+            if (pendingList.length === 0) return;
+            const btn = document.getElementById("syncBtn");
+            btn.innerText = "⏳ Syncing..."; btn.disabled = true;
 
-    try {
-        // We use no-cors for GitHub Pages compatibility
-        await fetch(SCRIPT_URL, { 
-            method: "POST", 
-            mode: "no-cors", 
-            cache: "no-cache",
-            body: JSON.stringify(pendingList) 
-        });
+            try {
+                await fetch(SCRIPT_URL, { 
+                    method: "POST", 
+                    mode: "no-cors", 
+                    cache: "no-cache",
+                    body: JSON.stringify(pendingList) 
+                });
 
-        alert("🚀 Inventory Synced to Google Sheets!");
-        
-        // Clear the list only AFTER a successful sync
-        pendingList = [];
-        localStorage.setItem("inv_pending", JSON.stringify(pendingList));
-        
-        renderTable(); // This clears the list from your webpage
-        updateBadge();
-        goTo('homePage');
-    } catch (e) { 
-        alert("Sync Error: Please check your Internet or Script URL."); 
-    } finally {
-        btn.innerText = "🚀 Sync to Google Sheets"; 
-        btn.disabled = false;
-    }
-}
+                alert("🚀 Synced to Google Sheets!");
+                pendingList = [];
+                localStorage.setItem("inv_pending", JSON.stringify(pendingList));
+                renderTable();
+                updateBadge();
+                goTo('homePage');
+            } catch (e) { 
+                alert("Sync Error: Check internet or Script URL."); 
+            } finally {
+                btn.innerText = "🚀 Sync to Google Sheets"; btn.disabled = false;
+            }
+        }
 
-        function updateBadge() { document.getElementById("countBadge").innerText = pendingList.length; }
-        updateBadge();
+        function updateBadge() { 
+            const badge = document.getElementById("countBadge");
+            if(badge) badge.innerText = pendingList.length; 
+        }
+
+        // Initialize display on load
+        window.onload = () => { renderTable(); updateBadge(); };
     </script>
 </body>
 </html>
