@@ -100,7 +100,7 @@
 
     <script>
         // --- CONFIGURATION ---
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsX55cEf1cHBXWPgBz-ypLiLz8rZ06IgKZp7edJBsyvwpAzY0riHamRz-ay8S1whV15w/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzi3CrAiNVWJlLnR0GpUkf5r054s9AGYq3ygw0Xl7xFEFH-hh8SKm5l8hBaMAh5bv_5/exec";
         
         let mode = "";
         let html5QrCode = null;
@@ -195,35 +195,37 @@
             renderTable();
         }
 
-        async function syncData() {
-            if (pendingList.length === 0) return;
-            const btn = document.getElementById("syncBtn");
-            btn.innerText = "⏳ Syncing..."; btn.disabled = true;
+       async function syncData() {
+    if (pendingList.length === 0) return;
+    const btn = document.getElementById("syncBtn");
+    btn.innerText = "⏳ Syncing..."; 
+    btn.disabled = true;
 
-            try {
-                // FIXED: Using no-cors and removing headers that trigger security blocks on GitHub
-                await fetch(SCRIPT_URL, { 
-                    method: "POST", 
-                    mode: "no-cors", 
-                    cache: "no-cache",
-                    body: JSON.stringify(pendingList) 
-                });
+    try {
+        // We use no-cors for GitHub Pages compatibility
+        await fetch(SCRIPT_URL, { 
+            method: "POST", 
+            mode: "no-cors", 
+            cache: "no-cache",
+            body: JSON.stringify(pendingList) 
+        });
 
-                // In no-cors mode, we assume success if the fetch doesn't fail
-                alert("🚀 Synced to Google Sheets!");
-                pendingList = [];
-                localStorage.setItem("inv_pending", JSON.stringify(pendingList));
-                
-                renderTable();
-                updateBadge();
-                goTo('homePage');
-            } catch (e) { 
-                console.error(e);
-                alert("Sync Error. Please check your Script URL."); 
-            } finally {
-                btn.innerText = "🚀 Sync to Google Sheets"; btn.disabled = false;
-            }
-        }
+        alert("🚀 Inventory Synced to Google Sheets!");
+        
+        // Clear the list only AFTER a successful sync
+        pendingList = [];
+        localStorage.setItem("inv_pending", JSON.stringify(pendingList));
+        
+        renderTable(); // This clears the list from your webpage
+        updateBadge();
+        goTo('homePage');
+    } catch (e) { 
+        alert("Sync Error: Please check your Internet or Script URL."); 
+    } finally {
+        btn.innerText = "🚀 Sync to Google Sheets"; 
+        btn.disabled = false;
+    }
+}
 
         function updateBadge() { document.getElementById("countBadge").innerText = pendingList.length; }
         updateBadge();
