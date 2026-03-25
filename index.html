@@ -65,7 +65,6 @@
     </div>
 
     <button class="btn-capture" onclick="captureAndScan()">📸 CAPTURE & SAVE</button>
-    
     <button style="background:#cc0000; color:white; padding: 12px;" onclick="goTo('homePage')">Exit</button>
     
     <canvas id="debugCanvas"></canvas>
@@ -118,7 +117,7 @@ async function captureAndScan() {
     const canvas = document.getElementById("debugCanvas");
     const ctx = canvas.getContext("2d");
 
-    status.innerText = "⏳ Reading Part Number...";
+    status.innerText = "⏳ Cleaning Image...";
 
     const vW = video.videoWidth;
     const vH = video.videoHeight;
@@ -131,8 +130,8 @@ async function captureAndScan() {
     canvas.height = 300;
     ctx.imageSmoothingEnabled = false;
 
-    // 🔥 HIGH-PRECISION BINARY FILTER
-    ctx.filter = 'grayscale(1) contrast(50) brightness(1.1)';
+    // 🔥 MAXIMUM CONTRAST (80) to separate the hook of the 1 from the bar of the I
+    ctx.filter = 'grayscale(1) contrast(80) brightness(1.1)';
     ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
 
     try {
@@ -141,12 +140,12 @@ async function captureAndScan() {
             tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-'
         });
 
-        // 🧠 AUTOMATIC DISTINCTION LOGIC
         let rawText = res.data.text.trim().replace(/\s/g, "");
         
+        // 🧠 AUTOMATIC CHARACTER LOGIC
         let pn = rawText.toUpperCase()
-                    .replace(/O/g, "0")  // Distinguish O as 0
-                    .replace(/[\[\]\|]/g, "1"); // Distinguish common I errors as 1
+                    .replace(/O/g, "0")       // O is almost always 0 in P/Ns
+                    .replace(/[\|\[\]I!l]/g, "1"); // 🔥 Force all "sticks" to become 1
 
         if (pn.length >= 4) {
             status.innerText = "🎯 MATCH: " + pn;
