@@ -20,8 +20,7 @@
             cursor: pointer; transition: 0.2s; 
         }
         .btn-main { background: var(--blue); color: white; }
-        .btn-secondary { background: #333; color: white; }
-        .btn-capture { background: var(--green); color: white; font-size: 18px; border: 2px solid white; }
+        .btn-capture { background: var(--green); color: white; font-size: 20px; border: 3px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         .btn-danger { background: var(--red); color: white; }
 
         #reader-container { 
@@ -30,25 +29,25 @@
         }
         #scanner-overlay {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 85%; height: 70px; border: 3px solid #00ff00;
-            box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.7); z-index: 5; pointer-events: none;
+            width: 85%; height: 50px; border: 3px solid #00ff00;
+            box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.75); z-index: 5; pointer-events: none;
         }
 
         #status { margin: 10px; color: #00ff00; font-weight: bold; font-size: 1.1rem; min-height: 25px; }
-        #debugCanvas { width: 90%; max-width: 350px; background: white; border-radius: 8px; margin-top: 10px; display: none; }
+        #debugCanvas { width: 95%; max-width: 380px; background: white; border-radius: 8px; margin-top: 10px; border: 2px solid #555; display: none; }
     </style>
 </head>
 <body>
 
     <div id="homePage" class="page">
-        <h1 style="margin-top: 40px;">📦 Smart Inventory</h1>
+        <h1 style="margin-top: 40px;">📦 Pro Inventory</h1>
         <button class="btn-main" onclick="goTo('scanPage', 'add')">➕ Scan to ADD</button>
-        <button class="btn-secondary" onclick="goTo('scanPage', 'take')">➖ Scan to REMOVE</button>
+        <button class="btn-main" style="background:#444;" onclick="goTo('scanPage', 'take')">➖ Scan to REMOVE</button>
     </div>
 
     <div id="scanPage" class="page hidden">
         <h2 id="modeTitle">Scanning...</h2>
-        <div id="status">Align text in box</div>
+        <div id="status">Align Part Number in Green Box</div>
 
         <div id="reader-container">
             <div id="reader"></div>
@@ -58,6 +57,7 @@
         <button class="btn-capture" onclick="captureAndScan()">📸 CAPTURE & SCAN</button>
         <button class="btn-danger" onclick="goTo('homePage')">Exit</button>
         
+        <p style="font-size: 12px; color: #888; margin-top: 10px;">AI Enhanced View:</p>
         <canvas id="debugCanvas"></canvas>
     </div>
 
@@ -86,7 +86,6 @@
             const config = { fps: 20, aspectRatio: 1.0, videoConstraints: { facingMode: "environment", focusMode: "continuous" } };
             try {
                 await html5QrCode.start({ facingMode: "environment" }, config, () => {}, () => {});
-                document.getElementById("status").innerText = "Ready to Capture";
             } catch (e) { alert("Camera error: " + e); }
         }
 
@@ -100,57 +99,67 @@
             const video = document.querySelector("#reader video");
             if (!video || video.readyState < 2) return;
 
+            if (navigator.vibrate) navigator.vibrate(50);
             processing = true;
             const status = document.getElementById("status");
             const canvas = document.getElementById("debugCanvas");
             const ctx = canvas.getContext("2d");
 
-            status.innerText = "⏳ Capturing...";
+            status.innerText = "⏳ Processing...";
 
-            // 1. Get high-res frame from video
+            // 1. TIGHT CROP
             const vW = video.videoWidth; const vH = video.videoHeight;
-            const cropW = vW * 0.8; const cropH = vH * 0.2;
+            const cropW = vW * 0.85; const cropH = vH * 0.12; 
             const sx = (vW - cropW) / 2; const sy = (vH - cropH) / 2;
 
-            // 2. Upscale on canvas for AI clarity
-            canvas.width = 1200; canvas.height = 300;
+            // 2. LARGE SCALE for AI clarity
+            canvas.width = 1500; canvas.height = 250;
             canvas.style.display = "block";
 
-            // 3. Apply professional "Clean Ink" filter
-            ctx.filter = 'grayscale(1) contrast(8) brightness(1.1)';
+            // 3. IMAGE CLEANING: Extreme contrast + Greyscale + Sharpen
+            ctx.filter = 'grayscale(1) contrast(15) brightness(1.1)';
             ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
 
-            status.innerText = "🧠 AI Reading...";
+            status.innerText = "🧠 Analyzing Text...";
 
             try {
                 const res = await Tesseract.recognize(canvas, 'eng', {
-                    tessedit_pageseg_mode: 7,
+                    tessedit_pageseg_mode: 7, 
+                    // WHITELIST: Tells AI to only look for Part Number characters
                     tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-'
                 });
 
-                const pn = res.data.text.trim().replace(/[^A-Z0-9-]/g, "");
+                // Clean results: remove anything not in whitelist
+                const rawText = res.data.text.trim();
+                const pnMatch = rawText.match(/[A-Z0-9-]{4,}/g);
+                let pn = pnMatch ? pnMatch.reduce((a, b) => a.length > b.length ? a : b) : "";
 
                 if (pn.length >= 4) {
-                    status.innerText = "✅ Found: " + pn;
-                    const q = prompt(`Confirm Part Number:\n${pn}\n\nEnter Quantity:`, "1");
+                    status.innerText = "✅ Result: " + pn;
                     
-                    if (q && !isNaN(q)) {
-                        status.innerText = "🚀 Saving to Sheets...";
-                        await fetch(SCRIPT_URL, {
-                            method: "POST",
-                            mode: "no-cors",
-                            body: JSON.stringify([{ pn: pn, qty: parseInt(q), mode: mode, date: new Date().toLocaleString() }])
-                        });
-                        status.innerText = "🎯 Saved Successfully!";
-                        setTimeout(() => { status.innerText = "Ready for next scan"; }, 3000);
-                    } else {
-                        status.innerText = "Cancelled.";
+                    // Manual verification check
+                    const userCheck = prompt(`Verify Part Number:\n(Edit if incorrect)`, pn);
+                    
+                    if (userCheck) {
+                        const finalPN = userCheck.toUpperCase().trim();
+                        const q = prompt(`Quantity for ${finalPN}:`, "1");
+                        
+                        if (q && !isNaN(q)) {
+                            status.innerText = "🚀 Syncing...";
+                            await fetch(SCRIPT_URL, {
+                                method: "POST",
+                                mode: "no-cors",
+                                body: JSON.stringify([{ pn: finalPN, qty: parseInt(q), mode: mode, date: new Date().toLocaleString() }])
+                            });
+                            status.innerText = "🎯 Saved Successfully!";
+                            setTimeout(() => { status.innerText = "Ready for next scan"; }, 2000);
+                        }
                     }
                 } else {
-                    status.innerText = "❌ Blurry. Please try again.";
+                    status.innerText = "❌ No text found. Get closer.";
                 }
             } catch (e) {
-                status.innerText = "Scan Failed.";
+                status.innerText = "Error. Try again.";
             } finally {
                 processing = false;
             }
