@@ -21,8 +21,6 @@
         }
         .btn-main { background: var(--blue); color: white; }
         .btn-secondary { background: #333; color: white; }
-        .btn-review { background: #6f42c1; color: white; }
-        .btn-sync { background: var(--green); color: white; width: 100%; }
         .btn-danger { background: var(--red); color: white; }
 
         #reader-container { 
@@ -35,31 +33,18 @@
             box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.6); z-index: 5; pointer-events: none;
         }
 
-        .review-card { background: var(--card); width: 100%; max-width: 500px; border-radius: 15px; padding: 15px; margin-top: 20px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #333; font-size: 14px; }
-        th { color: #888; text-transform: uppercase; font-size: 11px; }
-        .del-btn { color: var(--red); font-weight: bold; padding: 5px; cursor: pointer; }
-
         #status { margin: 10px; color: #00ff00; font-weight: bold; height: 20px; }
         #debugCanvas { width: 100%; max-width: 350px; background: white; border-radius: 8px; margin-top: 10px; }
-        .badge { background: var(--red); padding: 2px 8px; border-radius: 10px; font-size: 12px; }
     </style>
 </head>
 <body>
 
     <div id="homePage" class="page">
         <h1 style="margin-top: 40px;">📦 Smart Inventory</h1>
-        <p style="color: #888;">Live OCR Inventory Tracker</p>
+        <p style="color: #888;">Direct-to-Sheet Scanner</p>
         
         <button class="btn-main" onclick="goTo('scanPage', 'add')">➕ Scan to ADD</button>
         <button class="btn-secondary" onclick="goTo('scanPage', 'take')">➖ Scan to REMOVE</button>
-        
-        <div style="margin: 20px 0; width: 80%; border-top: 1px solid #333;"></div>
-        
-        <button class="btn-review" onclick="goTo('reviewPage')">
-            📋 Review Scans <span id="countBadge" class="badge">0</span>
-        </button>
     </div>
 
     <div id="scanPage" class="page hidden">
@@ -75,34 +60,14 @@
         <canvas id="debugCanvas"></canvas>
     </div>
 
-    <div id="reviewPage" class="page hidden">
-        <h2>📋 Pending Scans</h2>
-        <div class="review-card">
-            <table id="reviewTable">
-                <thead>
-                    <tr>
-                        <th>Part Number</th>
-                        <th>Qty</th>
-                        <th>Mode</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody id="reviewList"></tbody>
-            </table>
-        </div>
-
-        <button class="btn-sync" id="syncBtn" onclick="syncData()">🚀 Sync to Google Sheets</button>
-        <button class="btn-secondary" onclick="goTo('homePage')">Back to Home</button>
-    </div>
-
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzsX55cEf1cHBXWPgBz-ypLiLz8rZ06IgKZp7edJBsyvwpAzY0riHamRz-ay8S1whV15w/exec";
+        // --- CONFIGURATION ---
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzi3CrAiNVWJlLnR0GpUkf5r054s9AGYq3ygw0Xl7xFEFH-hh8SKm5l8hBaMAh5bv_5/exec";
         
         let mode = "";
         let html5QrCode = null;
         let scanTimer = null;
         let processing = false;
-        let pendingList = JSON.parse(localStorage.getItem("inv_pending")) || [];
 
         function goTo(pageId, m = "") {
             document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
@@ -114,8 +79,6 @@
                 initScanner();
             } else {
                 killScanner();
-                renderTable(); 
-                updateBadge();
             }
         }
 
@@ -142,7 +105,7 @@
             const canvas = document.getElementById("debugCanvas");
             const ctx = canvas.getContext("2d");
 
-            // --- CAMERA PART (UNTOUCHED) ---
+            // --- CAMERA PART (UNCHANGED) ---
             const vW = video.videoWidth; const vH = video.videoHeight;
             const cropW = vW * 0.85; const cropH = vH * 0.2;
             const sx = (vW - cropW) / 2; const sy = (vH - cropH) / 2;
@@ -159,80 +122,35 @@
                     const pn = found.reduce((a, b) => a.length > b.length ? a : b);
                     document.getElementById("status").innerText = "FOUND: " + pn;
                     
-                    setTimeout(() => {
+                    setTimeout(async () => {
                         const q = prompt(`Part: ${pn}\nQuantity:`, "1");
                         if (q) {
-                            pendingList.push({ pn: pn, qty: parseInt(q), mode: mode, date: new Date().toLocaleString() });
-                            localStorage.setItem("inv_pending", JSON.stringify(pendingList));
+                            // DIRECT SYNC LOGIC
+                            document.getElementById("status").innerText = "Sending to Sheet...";
+                            const payload = [{ 
+                                pn: pn, 
+                                qty: parseInt(q), 
+                                mode: mode, 
+                                date: new Date().toLocaleString() 
+                            }];
                             
-                            // Added refresh so item appears in list immediately
-                            renderTable();
-                            updateBadge();
-                            alert("Saved to Review List");
+                            try {
+                                await fetch(SCRIPT_URL, { 
+                                    method: "POST", 
+                                    mode: "no-cors", 
+                                    body: JSON.stringify(payload) 
+                                });
+                                document.getElementById("status").innerText = "✅ Saved!";
+                                setTimeout(() => { document.getElementById("status").innerText = "Searching..."; }, 2000);
+                            } catch (e) {
+                                alert("Sync Error");
+                            }
                         }
                         processing = false;
                     }, 100);
-                } else { 
-                    processing = false; 
-                }
+                } else { processing = false; }
             }, "image/jpeg");
         }
-
-        function renderTable() {
-            const tbody = document.getElementById("reviewList");
-            if(!tbody) return;
-            tbody.innerHTML = "";
-            pendingList.forEach((item, i) => {
-                tbody.innerHTML += `<tr>
-                    <td>${item.pn}</td>
-                    <td>${item.qty}</td>
-                    <td style="color:${item.mode=='add'?'#28a745':'#dc3545'}">${item.mode.toUpperCase()}</td>
-                    <td class="del-btn" onclick="removeItem(${i})">✕</td>
-                </tr>`;
-            });
-            document.getElementById("syncBtn").style.display = pendingList.length ? "block" : "none";
-        }
-
-        function removeItem(i) {
-            pendingList.splice(i, 1);
-            localStorage.setItem("inv_pending", JSON.stringify(pendingList));
-            renderTable();
-            updateBadge();
-        }
-
-        async function syncData() {
-            if (pendingList.length === 0) return;
-            const btn = document.getElementById("syncBtn");
-            btn.innerText = "⏳ Syncing..."; btn.disabled = true;
-
-            try {
-                // Fixed logic for GitHub compatibility
-                await fetch(SCRIPT_URL, { 
-                    method: "POST", 
-                    mode: "no-cors", 
-                    cache: "no-cache",
-                    body: JSON.stringify(pendingList) 
-                });
-
-                alert("🚀 Synced to Google Sheets!");
-                pendingList = [];
-                localStorage.setItem("inv_pending", JSON.stringify(pendingList));
-                renderTable();
-                updateBadge();
-                goTo('homePage');
-            } catch (e) { 
-                alert("Sync Error: Check your Script URL."); 
-            } finally {
-                btn.innerText = "🚀 Sync to Google Sheets"; btn.disabled = false;
-            }
-        }
-
-        function updateBadge() { 
-            const b = document.getElementById("countBadge");
-            if(b) b.innerText = pendingList.length; 
-        }
-
-        window.onload = () => { renderTable(); updateBadge(); };
     </script>
 </body>
 </html>
