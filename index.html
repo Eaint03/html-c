@@ -1,228 +1,157 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Scanner</title>
+    
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 
-<title>Pro Inventory - Ultra Accuracy</title>
+    <style>
+        :root { --blue: #007bff; --green: #28a745; --red: #dc3545; --dark: #121212; --card: #1e1e1e; }
+        body { font-family: -apple-system, sans-serif; background: var(--dark); color: white; margin: 0; text-align: center; }
+        .page { padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        .hidden { display: none !important; }
 
-<script src="https://unpkg.com/html5-qrcode"></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+        button { 
+            width: 90%; max-width: 350px; padding: 16px; margin: 10px 0; 
+            border-radius: 12px; border: none; font-size: 16px; font-weight: bold; 
+            cursor: pointer; transition: 0.2s; 
+        }
+        .btn-main { background: var(--blue); color: white; }
+        .btn-secondary { background: #333; color: white; }
+        .btn-danger { background: var(--red); color: white; }
 
-<style>
-:root { --blue: #007bff; --green: #28a745; --red: #dc3545; --dark: #121212; }
-body { font-family: -apple-system, sans-serif; background: var(--dark); color: white; margin: 0; text-align: center; }
-.page { padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
-.hidden { display: none !important; }
+        #reader-container { 
+            position: relative; width: 100%; max-width: 400px; 
+            margin: 15px auto; border-radius: 15px; overflow: hidden; border: 2px solid #333;
+        }
+        #scanner-overlay {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 80%; height: 60px; border: 3px solid #00ff00;
+            box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.6); z-index: 5; pointer-events: none;
+        }
 
-button { 
-    width: 95%; max-width: 380px; padding: 20px; margin: 10px 0; 
-    border-radius: 15px; border: none; font-size: 18px; font-weight: bold; 
-    cursor: pointer; 
-}
-.btn-main { background: var(--blue); color: white; }
-.btn-capture { 
-    background: var(--green); color: white; font-size: 24px; 
-    border: 4px solid white; box-shadow: 0 0 20px rgba(40, 167, 69, 0.6);
-}
-
-#reader-container { 
-    position: relative; width: 100%; max-width: 400px; 
-    margin: 10px auto; border-radius: 20px; overflow: hidden; border: 3px solid #444;
-}
-
-#scanner-overlay {
-    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    width: 90%; height: 35px; border: 3px solid #00ff00;
-    box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.85); z-index: 5; pointer-events: none;
-}
-
-#status { margin: 15px; color: #00ff00; font-weight: bold; font-size: 1.3rem; min-height: 35px; }
-
-#debugCanvas { 
-    width: 95%; max-width: 380px; background: white; border-radius: 10px; 
-    display: block; margin: 10px auto; border: 2px solid #555; 
-}
-</style>
+        #status { margin: 10px; color: #00ff00; font-weight: bold; height: 20px; }
+        #debugCanvas { width: 100%; max-width: 350px; background: white; border-radius: 8px; margin-top: 10px; }
+    </style>
 </head>
-
 <body>
 
-<div id="homePage" class="page">
-    <h1 style="margin-top: 40px;">📦 Scan to do the action</h1>
-    <button class="btn-main" onclick="goTo('scanPage', 'add')">➕ Add Stock</button>
-    <button class="btn-main" style="background:#333;" onclick="goTo('scanPage', 'take')">➖ Remove Stock</button>
-</div>
-
-<div id="scanPage" class="page hidden">
-    <h2>Scanning...</h2>
-    <div id="status">Ready</div>
-
-    <div id="reader-container">
-        <div id="reader"></div>
-        <div id="scanner-overlay"></div>
+    <div id="homePage" class="page">
+        <h1 style="margin-top: 40px;">📦 Smart Inventory</h1>
+       
+        <button class="btn-main" onclick="goTo('scanPage', 'add')">➕ Scan to ADD</button>
+        <button class="btn-secondary" onclick="goTo('scanPage', 'take')">➖ Scan to REMOVE</button>
     </div>
 
-    <button class="btn-capture" onclick="captureAndScan()">📸 CAPTURE & SAVE</button>
-    <button class="btn-main" style="background:#cc0000;" onclick="goTo('homePage')">Exit</button>
-    
-    <canvas id="debugCanvas"></canvas>
-</div>
+    <div id="scanPage" class="page hidden">
+        <h2 id="modeTitle">Scanning...</h2>
+        <div id="status">Initializing...</div>
 
-<script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzi3CrAiNVWJlLnR0GpUkf5r054s9AGYq3ygw0Xl7xFEFH-hh8SKm5l8hBaMAh5bv_5/exec";
+        <div id="reader-container">
+            <div id="reader"></div>
+            <div id="scanner-overlay"></div>
+        </div>
 
-let mode = "";
-let html5QrCode = null;
-let processing = false;
+        <button class="btn-danger" onclick="goTo('homePage')">Exit Scanner</button>
+        <canvas id="debugCanvas"></canvas>
+    </div>
 
-function goTo(pageId, m = "") {
-    document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-    document.getElementById(pageId).classList.remove('hidden');
-    if (pageId === 'scanPage') { mode = m; initScanner(); } else { killScanner(); }
-}
+    <script>
+        // --- CONFIGURATION ---
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzi3CrAiNVWJlLnR0GpUkf5r054s9AGYq3ygw0Xl7xFEFH-hh8SKm5l8hBaMAh5bv_5/exec";
+        
+        let mode = "";
+        let html5QrCode = null;
+        let scanTimer = null;
+        let processing = false;
 
-async function initScanner() {
-    html5QrCode = new Html5Qrcode("reader");
-    try {
-        await html5QrCode.start(
-    {
-      facingMode: "environment"
-    },
-    {
-        fps: 15,
-        aspectRatio: 1.0,
-        videoConstraints: {
-            focusMode: "continuous",
-            zoom: 2   // try default zoom
-        }
-    },
-            () => {},
-            () => {}
-        );
-    } catch (e) { alert(e); }
-}
+        function goTo(pageId, m = "") {
+            document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+            document.getElementById(pageId).classList.remove('hidden');
 
-function killScanner() {
-    if (html5QrCode) html5QrCode.stop().catch(() => {});
-}
-
-// =========================
-// 🔥 MAIN FUNCTION (UPGRADED)
-// =========================
-async function captureAndScan() {
-    if (processing) return;
-
-    const video = document.querySelector("#reader video");
-    if (!video) return;
-
-    processing = true;
-    if (navigator.vibrate) navigator.vibrate(80);
-
-    const status = document.getElementById("status");
-    const canvas = document.getElementById("debugCanvas");
-    const ctx = canvas.getContext("2d");
-
-    status.innerText = "⏳ Processing...";
-
-    const vW = video.videoWidth;
-    const vH = video.videoHeight;
-
-    const cropW = vW * 0.88;
-    const cropH = vH * 0.07;
-    const sx = (vW - cropW) / 2;
-    const sy = (vH - cropH) / 2;
-
-    canvas.width = 3000;
-    canvas.height = 300;
-
- const filters = [
-    'grayscale(1) contrast(4) brightness(1.4)',
-    'grayscale(1) contrast(6) brightness(1.3)',
-    'grayscale(1) contrast(8) brightness(1.2)',
-    'grayscale(1) contrast(10) brightness(1.1)',
-    'grayscale(1) contrast(12) brightness(1.0)'
-];
-
-    let allReads = [];
-
-    for (let f of filters) {
-        ctx.filter = f;
-        ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
-
-        const res = await Tesseract.recognize(canvas, 'eng', {
-            tessedit_pageseg_mode: 7,
-            tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-.,'
-        });
-
-        let text = "";
-
-        res.data.symbols.forEach(sym => {
-            if (sym.confidence > 40) {
-                text += sym.text;
+            if (pageId === 'scanPage') {
+                mode = m;
+                document.getElementById('modeTitle').innerText = (m === 'add' ? "Add Stock" : "Remove Stock");
+                initScanner();
+            } else {
+                killScanner();
             }
-        });
-
-        text = text.replace(/\s/g, "");
-
-        if (text.length > 5) {
-            allReads.push(text);
         }
-    }
 
- function getBestConsensus(reads) {
-    if (reads.length === 0) return null;
-
-    let best = reads[0];
-    let bestScore = 0;
-
-    reads.forEach(r => {
-        let score = 0;
-
-        reads.forEach(other => {
-            for (let i = 0; i < Math.min(r.length, other.length); i++) {
-                if (r[i] === other[i]) score++;
-            }
-        });
-
-        if (score > bestScore) {
-            bestScore = score;
-            best = r;
+        async function initScanner() {
+            html5QrCode = new Html5Qrcode("reader");
+            try {
+                await html5QrCode.start({ facingMode: "environment" }, { fps: 10, aspectRatio: 1.0 }, () => {}, () => {});
+                document.getElementById("status").innerText = "Searching for Part Number...";
+                scanTimer = setInterval(takeStep, 1300);
+            } catch (e) { alert(e); }
         }
-    });
 
-    return best;
-}
-    let pn = getBestConsensus(allReads);
-
-    if (pn && pn.length >= 4) {
-        status.innerText = "🎯 MATCH: " + pn;
-
-        const q = prompt(`Enter Quantity for:\n${pn}`, "1");
-
-        if (q && !isNaN(q)) {
-            status.innerText = " Syncing...";
-            await fetch(SCRIPT_URL, {
-                method: "POST",
-                mode: "no-cors",
-                body: JSON.stringify([{
-                    pn: pn,
-                    qty: parseInt(q),
-                    mode: mode,
-                    date: new Date().toLocaleString()
-                }])
-            });
-
-            status.innerText = "✅ Saved!";
-            setTimeout(() => status.innerText = "Ready", 3000);
+        function killScanner() {
+            clearInterval(scanTimer);
+            if (html5QrCode) html5QrCode.stop().catch(() => {});
         }
-    } else {
-        status.innerText = "❌ Cannot detect";
-    }
 
-    processing = false;
-}
-</script>
+        async function takeStep() {
+            if (processing) return;
+            const video = document.querySelector("#reader video");
+            if (!video || video.readyState < 2) return;
 
+            processing = true;
+            const canvas = document.getElementById("debugCanvas");
+            const ctx = canvas.getContext("2d");
+
+            // --- CAMERA PART (UNCHANGED) ---
+            const vW = video.videoWidth; const vH = video.videoHeight;
+            const cropW = vW * 0.85; const cropH = vH * 0.2;
+            const sx = (vW - cropW) / 2; const sy = (vH - cropH) / 2;
+
+            canvas.width = 600; canvas.height = 150;
+            ctx.filter = 'grayscale(1) contrast(2) brightness(1.2)';
+            ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
+
+            canvas.toBlob(async (blob) => {
+                const res = await Tesseract.recognize(blob, 'eng', { tessedit_pageseg_mode: 7 });
+                const found = res.data.text.trim().match(/[A-Z0-9-]{4,}/g);
+                
+                if (found) {
+                    const pn = found.reduce((a, b) => a.length > b.length ? a : b);
+                    document.getElementById("status").innerText = "FOUND: " + pn;
+                    
+                    setTimeout(async () => {
+                        const q = prompt(`Part: ${pn}\nQuantity:`, "1");
+                        if (q) {
+                            // DIRECT SYNC LOGIC
+                            document.getElementById("status").innerText = "Sending to Sheet...";
+                            const payload = [{ 
+                                pn: pn, 
+                                qty: parseInt(q), 
+                                mode: mode, 
+                                date: new Date().toLocaleString() 
+                            }];
+                            
+                            try {
+                                await fetch(SCRIPT_URL, { 
+                                    method: "POST", 
+                                    mode: "no-cors", 
+                                    body: JSON.stringify(payload) 
+                                });
+                                document.getElementById("status").innerText = "✅ Saved!";
+                                setTimeout(() => { document.getElementById("status").innerText = "Searching..."; }, 2000);
+                            } catch (e) {
+                                alert("Sync Error");
+                            }
+                        }
+                        processing = false;
+                    }, 100);
+                } else { processing = false; }
+            }, "image/jpeg");
+        }
+    </script>
 </body>
 </html>
+
+
