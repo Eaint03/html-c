@@ -137,7 +137,7 @@
             if (html5QrCode) html5QrCode.stop().catch(() => {});
         }
 
-        async function takeStep() {
+ async function takeStep() {
             if (processing) return;
             const video = document.querySelector("#reader video");
             if (!video || video.readyState < 2) return;
@@ -167,6 +167,11 @@
                         if (q) {
                             pendingList.push({ pn: pn, qty: parseInt(q), mode: mode, date: new Date().toLocaleString() });
                             localStorage.setItem("inv_pending", JSON.stringify(pendingList));
+                            
+                            // FIX: These two lines make the item appear in your list immediately
+                            updateBadge();
+                            renderTable(); 
+                            
                             alert("Saved to Review List");
                         }
                         processing = false;
@@ -174,7 +179,6 @@
                 } else { processing = false; }
             }, "image/jpeg");
         }
-
         function renderTable() {
             const tbody = document.getElementById("reviewList");
             tbody.innerHTML = "";
