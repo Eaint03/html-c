@@ -84,32 +84,29 @@ function goTo(pageId, m = "") {
 
 async function initScanner() {
     html5QrCode = new Html5Qrcode("reader");
-    try {
-        await html5QrCode.start(
-    {
-        facingMode: { exact: "environment" }
-    },
-    {
-        fps: 15,
-        aspectRatio: 1.0,
-        videoConstraints: {
-            focusMode: "continuous",
-            zoom: 2   // try default zoom
-        }
-    },
-            () => {},
-            () => {}
-        );
-    } catch (e) { alert(e); }
+    await html5QrCode.start(
+        { facingMode: { exact: "environment" } },
+        {
+            fps: 15,
+            aspectRatio: 1.0,
+            videoConstraints: {
+                focusMode: "continuous",
+                zoom: 2
+            }
+        },
+        () => {},
+        () => {}
+    );
 }
 
 function killScanner() {
     if (html5QrCode) html5QrCode.stop().catch(() => {});
 }
 
-// =========================
-// 🔥 MAIN FUNCTION (UPGRADED)
-// =========================
+function isValidPN(pn) {
+    return /^[A-Z0-9\-.,]{6,}$/.test(pn) && pn.includes("-");
+}
+
 async function captureAndScan() {
     if (processing) return;
 
@@ -117,7 +114,6 @@ async function captureAndScan() {
     if (!video) return;
 
     processing = true;
-    if (navigator.vibrate) navigator.vibrate(80);
 
     const status = document.getElementById("status");
     const canvas = document.getElementById("debugCanvas");
@@ -129,95 +125,103 @@ async function captureAndScan() {
     const vH = video.videoHeight;
 
     const cropW = vW * 0.88;
-    const cropH = vH * 0.07;
+    const cropH = vH * 0.12;
     const sx = (vW - cropW) / 2;
     const sy = (vH - cropH) / 2;
 
     canvas.width = 3000;
     canvas.height = 300;
 
- const filters = [
-    'grayscale(1) contrast(4) brightness(1.4)',
-    'grayscale(1) contrast(6) brightness(1.3)',
-    'grayscale(1) contrast(8) brightness(1.2)',
-    'grayscale(1) contrast(10) brightness(1.1)',
-    'grayscale(1) contrast(12) brightness(1.0)'
-];
+    const filters = [
+        'grayscale(1) contrast(4) brightness(1.4)',
+        'grayscale(1) contrast(6) brightness(1.3)',
+        'grayscale(1) contrast(8) brightness(1.2)',
+        'grayscale(1) contrast(10) brightness(1.1)',
+        'grayscale(1) contrast(12) brightness(1.0)'
+    ];
 
     let allReads = [];
 
     for (let f of filters) {
-        ctx.filter = f;
+        ctx.filter = f + " blur(0.5px)";
         ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
 
         const res = await Tesseract.recognize(canvas, 'eng', {
-            tessedit_pageseg_mode: 7,
-            tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-.,'
+            tessedit_pageseg_mode: 6,
+            tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-.,',
+            tessedit_char_blacklist: 'abcdefghijklmnopqrstuvwxyz!@#$%^&*()_+=[]{}|;:\'"<>/?~`'
         });
 
         let text = "";
+        let totalConf = 0;
 
         res.data.symbols.forEach(sym => {
             if (sym.confidence > 40) {
                 text += sym.text;
+                totalConf += sym.confidence;
             }
         });
 
-        text = text.replace(/\s/g, "");
+        text = text.replace(/\s/g, "").toUpperCase();
 
-        if (text.length > 5) {
+        let avgConf = totalConf / (text.length || 1);
+
+        if (avgConf > 50 && text.length > 5) {
             allReads.push(text);
         }
     }
 
- function getBestConsensus(reads) {
-    if (reads.length === 0) return null;
+    function getBestConsensus(reads) {
+        if (reads.length === 0) return null;
+        let best = reads[0], bestScore = 0;
 
-    let best = reads[0];
-    let bestScore = 0;
-
-    reads.forEach(r => {
-        let score = 0;
-
-        reads.forEach(other => {
-            for (let i = 0; i < Math.min(r.length, other.length); i++) {
-                if (r[i] === other[i]) score++;
+        reads.forEach(r => {
+            let score = 0;
+            reads.forEach(o => {
+                for (let i = 0; i < Math.min(r.length, o.length); i++) {
+                    if (r[i] === o[i]) score++;
+                }
+            });
+            if (score > bestScore) {
+                bestScore = score;
+                best = r;
             }
         });
 
-        if (score > bestScore) {
-            bestScore = score;
-            best = r;
-        }
-    });
+        return best;
+    }
 
-    return best;
-}
     let pn = getBestConsensus(allReads);
 
-    if (pn && pn.length >= 4) {
-        status.innerText = "🎯 MATCH: " + pn;
+    if (pn) {
+        pn = pn.toUpperCase().replace(/[^A-Z0-9\-.,]/g, '');
+    }
 
-        const q = prompt(`Enter Quantity for:\n${pn}`, "1");
+    if (!isValidPN(pn)) {
+        status.innerText = "❌ Invalid PN";
+        processing = false;
+        return;
+    }
 
-        if (q && !isNaN(q)) {
-            status.innerText = " Syncing...";
-            await fetch(SCRIPT_URL, {
-                method: "POST",
-                mode: "no-cors",
-                body: JSON.stringify([{
-                    pn: pn,
-                    qty: parseInt(q),
-                    mode: mode,
-                    date: new Date().toLocaleString()
-                }])
-            });
+    status.innerText = "🎯 MATCH: " + pn;
 
-            status.innerText = "✅ Saved!";
-            setTimeout(() => status.innerText = "Ready", 3000);
-        }
-    } else {
-        status.innerText = "❌ Cannot detect";
+    const q = prompt(`Enter Quantity for:\n${pn}`, "1");
+
+    if (q && !isNaN(q)) {
+        status.innerText = " Syncing...";
+        await fetch(SCRIPT_URL, {
+            method: "POST",
+            mode: "no-cors",
+            body: JSON.stringify([{
+                pn: pn,
+                qty: parseInt(q),
+                mode: mode,
+                date: new Date().toLocaleString()
+            }])
+        });
+
+        status.innerText = "✅ Saved!";
+        setTimeout(() => status.innerText = "Ready", 3000);
     }
 
     processing = false;
