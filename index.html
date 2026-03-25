@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inventory Scanner</title>
+    <title>Pro Inventory Scanner</title>
     
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
@@ -34,14 +34,13 @@
         }
 
         #status { margin: 10px; color: #00ff00; font-weight: bold; height: 20px; }
-        #debugCanvas { width: 100%; max-width: 350px; background: white; border-radius: 8px; margin-top: 10px; }
+        #debugCanvas { width: 100%; max-width: 350px; background: white; border-radius: 8px; margin-top: 10px; border: 1px solid #555; }
     </style>
 </head>
 <body>
 
     <div id="homePage" class="page">
         <h1 style="margin-top: 40px;">📦 Smart Inventory</h1>
-       
         <button class="btn-main" onclick="goTo('scanPage', 'add')">➕ Scan to ADD</button>
         <button class="btn-secondary" onclick="goTo('scanPage', 'take')">➖ Scan to REMOVE</button>
     </div>
@@ -56,11 +55,11 @@
         </div>
 
         <button class="btn-danger" onclick="goTo('homePage')">Exit Scanner</button>
+        <p style="font-size: 10px; color: #666;">AI VIEW (UPSCALED):</p>
         <canvas id="debugCanvas"></canvas>
     </div>
 
     <script>
-        // --- CONFIGURATION ---
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzi3CrAiNVWJlLnR0GpUkf5r054s9AGYq3ygw0Xl7xFEFH-hh8SKm5l8hBaMAh5bv_5/exec";
         
         let mode = "";
@@ -84,9 +83,10 @@
         async function initScanner() {
             html5QrCode = new Html5Qrcode("reader");
             try {
-                await html5QrCode.start({ facingMode: "environment" }, { fps: 10, aspectRatio: 1.0 }, () => {}, () => {});
+                // High FPS for faster detection
+                await html5QrCode.start({ facingMode: "environment" }, { fps: 20, aspectRatio: 1.0 }, () => {}, () => {});
                 document.getElementById("status").innerText = "Searching for Part Number...";
-                scanTimer = setInterval(takeStep, 1300);
+                scanTimer = setInterval(takeStep, 1000); 
             } catch (e) { alert(e); }
         }
 
@@ -104,18 +104,26 @@
             const canvas = document.getElementById("debugCanvas");
             const ctx = canvas.getContext("2d");
 
-            // --- CAMERA PART (UNCHANGED) ---
             const vW = video.videoWidth; const vH = video.videoHeight;
             const cropW = vW * 0.85; const cropH = vH * 0.2;
             const sx = (vW - cropW) / 2; const sy = (vH - cropH) / 2;
 
-            canvas.width = 600; canvas.height = 150;
-            ctx.filter = 'grayscale(1) contrast(2) brightness(1.2)';
+            // SMART VISION: Upscale the image to 1000px wide for easier OCR reading
+            canvas.width = 1000; canvas.height = 200;
+            
+            // SUPER CONTRAST: Force text to be pure black/white
+            ctx.filter = 'grayscale(1) contrast(5) brightness(1.5) blur(0px)';
             ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
 
             canvas.toBlob(async (blob) => {
-                const res = await Tesseract.recognize(blob, 'eng', { tessedit_pageseg_mode: 7 });
-                const found = res.data.text.trim().match(/[A-Z0-9-]{4,}/g);
+                const res = await Tesseract.recognize(blob, 'eng', { 
+                    tessedit_pageseg_mode: 7,
+                    // WHITELIST: Only look for P/N characters
+                    tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-'
+                });
+
+                const text = res.data.text.trim().replace(/\s/g, ""); 
+                const found = text.match(/[A-Z0-9-]{4,}/g);
                 
                 if (found) {
                     const pn = found.reduce((a, b) => a.length > b.length ? a : b);
@@ -124,7 +132,6 @@
                     setTimeout(async () => {
                         const q = prompt(`Part: ${pn}\nQuantity:`, "1");
                         if (q) {
-                            // DIRECT SYNC LOGIC
                             document.getElementById("status").innerText = "Sending to Sheet...";
                             const payload = [{ 
                                 pn: pn, 
@@ -146,9 +153,11 @@
                             }
                         }
                         processing = false;
-                    }, 100);
-                } else { processing = false; }
-            }, "image/jpeg");
+                    }, 50); // Faster prompt trigger
+                } else { 
+                    processing = false; 
+                }
+            }, "image/jpeg", 0.95);
         }
     </script>
 </body>
