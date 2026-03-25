@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pro Inventory - Ultra Accuracy</title>
+    <title>Industrial Precision Scanner</title>
     
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
@@ -15,15 +15,12 @@
         .hidden { display: none !important; }
 
         button { 
-            width: 95%; max-width: 380px; padding: 16px; margin: 6px 0; 
-            border-radius: 12px; border: none; font-size: 17px; font-weight: bold; 
-            cursor: pointer; 
+            width: 95%; max-width: 380px; padding: 18px; margin: 5px 0; 
+            border-radius: 12px; border: none; font-size: 18px; font-weight: bold; cursor: pointer; 
         }
-        .btn-main { background: var(--blue); color: white; }
         .btn-capture { 
-            background: var(--green); color: white; font-size: 22px; 
-            border: 3px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-            margin-top: 5px; /* Moved up */
+            background: var(--green); color: white; font-size: 24px; 
+            border: 4px solid white; box-shadow: 0 4px 20px rgba(0,0,0,0.6);
         }
 
         #reader-container { 
@@ -34,28 +31,25 @@
 
         #scanner-overlay {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 90%; height: 35px; border: 3px solid #00ff00;
-            box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.8); z-index: 5; pointer-events: none;
+            width: 92%; height: 32px; border: 2px solid #00ff00;
+            box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.88); z-index: 5; pointer-events: none;
         }
 
-        #status { margin: 8px; color: #00ff00; font-weight: bold; font-size: 1.1rem; min-height: 25px; }
-        
+        #status { margin: 10px; color: #00ff00; font-weight: bold; font-size: 1.2rem; min-height: 30px; }
         #debugCanvas { 
-            width: 90%; max-width: 340px; background: white; border-radius: 8px; 
-            display: block; margin: 5px auto; border: 1px solid #555;
+            width: 95%; max-width: 360px; background: white; border-radius: 8px; 
+            display: block; margin: 10px auto; border: 1px solid #555;
             image-rendering: pixelated; 
         }
-        
-        h2 { font-size: 1.2rem; margin: 10px 0; }
     </style>
 </head>
 
 <body>
 
 <div id="homePage" class="page">
-    <h1 style="margin-top: 40px;">📦 Inventory System</h1>
-    <button class="btn-main" onclick="goTo('scanPage', 'add')">➕ Add Stock</button>
-    <button class="btn-main" style="background:#333;" onclick="goTo('scanPage', 'take')">➖ Remove Stock</button>
+    <h1 style="margin-top: 40px;">📦 Precision Inventory</h1>
+    <button style="background:var(--blue); color:white;" onclick="goTo('scanPage', 'add')">➕ Add Stock</button>
+    <button style="background:#333; color:white;" onclick="goTo('scanPage', 'take')">➖ Remove Stock</button>
 </div>
 
 <div id="scanPage" class="page hidden">
@@ -67,10 +61,8 @@
     </div>
 
     <button class="btn-capture" onclick="captureAndScan()">📸 CAPTURE & SAVE</button>
-    
     <button style="background:#cc0000; color:white; padding: 12px;" onclick="goTo('homePage')">Exit</button>
     
-    <p style="font-size: 10px; color: #666; margin: 2px;">AI Processing View:</p>
     <canvas id="debugCanvas"></canvas>
 </div>
 
@@ -90,8 +82,7 @@ function goTo(pageId, m = "") {
 async function initScanner() {
     html5QrCode = new Html5Qrcode("reader");
     try {
-        await html5QrCode.start({ facingMode: "environment" }, { fps: 20, aspectRatio: 1.0 }, () => {}, () => {});
-        document.getElementById("status").innerText = "Ready (Tap to Focus)";
+        await html5QrCode.start({ facingMode: "environment" }, { fps: 25, aspectRatio: 1.0 }, () => {}, () => {});
     } catch (e) { alert(e); }
 }
 
@@ -105,7 +96,7 @@ async function manualFocus() {
         try {
             await track.applyConstraints({ advanced: [{ focusMode: "continuous" }] });
             setTimeout(() => { document.getElementById("status").innerText = "Focused! 🎯"; }, 500);
-        } catch (err) { document.getElementById("status").innerText = "Ready to Capture"; }
+        } catch (err) { document.getElementById("status").innerText = "Ready"; }
     }
 }
 
@@ -117,77 +108,59 @@ async function captureAndScan() {
     if (!video) return;
 
     processing = true;
-    if (navigator.vibrate) navigator.vibrate(80);
+    if (navigator.vibrate) navigator.vibrate(100);
     const status = document.getElementById("status");
     const canvas = document.getElementById("debugCanvas");
     const ctx = canvas.getContext("2d");
 
-    status.innerText = "⏳ Processing Accuracy...";
+    status.innerText = "⏳ Cleaning Pixels...";
 
     const vW = video.videoWidth;
     const vH = video.videoHeight;
-    const cropW = vW * 0.88;
-    const cropH = vH * 0.07;
+    const cropW = vW * 0.90;
+    const cropH = vH * 0.05; 
     const sx = (vW - cropW) / 2;
     const sy = (vH - cropH) / 2;
 
     canvas.width = 3000;
-    canvas.height = 300;
+    canvas.height = 180;
     ctx.imageSmoothingEnabled = false;
 
-    const filters = [
-        'grayscale(1) contrast(5) brightness(1.4)',
-        'grayscale(1) contrast(8) brightness(1.2)',
-        'grayscale(1) contrast(10) brightness(1.1)',
-        'grayscale(1) contrast(12) brightness(1.0)',
-        'grayscale(1) contrast(15) brightness(0.9)'
-    ];
+    // 🔥 MAXIMUM BINARY FILTER: grayscale + 50x Contrast
+    // This turns gray shadows into pure white space, leaving only the "ink"
+    ctx.filter = 'grayscale(1) contrast(50) brightness(1.1)';
+    ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
 
-    let allReads = [];
-
-    for (let f of filters) {
-        ctx.filter = f;
-        ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
-
+    try {
         const res = await Tesseract.recognize(canvas, 'eng', {
-            tessedit_pageseg_mode: 7,
-            tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-.'
+            tessedit_pageseg_mode: 7, 
+            tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-'
         });
 
-        let text = res.data.text.replace(/\s/g, "").toUpperCase();
-        if (text.length > 3) allReads.push(text);
-    }
+        // 🧠 AUTOMATIC FIXES (No User Editing Needed)
+        let raw = res.data.text.trim().replace(/\s/g, "");
+        
+        let pn = raw.toUpperCase()
+                    .replace(/O/g, "0")  // Auto-Fix: O to 0
+                    .replace(/I/g, "1")  // Auto-Fix: I to 1 (Optional, remove if you use 'I')
+                    .replace(/[\[\]\|]/g, "I"); // Auto-Fix: Pipe/Brackets to I
 
-    function getBestConsensus(reads) {
-        if (reads.length === 0) return null;
-        let counts = {};
-        let maxCount = 0;
-        let best = reads[0];
-        reads.forEach(r => {
-            counts[r] = (counts[r] || 0) + 1;
-            if (counts[r] > maxCount) { maxCount = counts[r]; best = r; }
-        });
-        return best;
-    }
-
-    let pn = getBestConsensus(allReads);
-
-    if (pn) {
-        status.innerText = "🎯 MATCH: " + pn;
-        const q = prompt(`Quantity for:\n${pn}`, "1");
-        if (q && !isNaN(q)) {
-            status.innerText = "🚀 Saving...";
-            await fetch(SCRIPT_URL, {
-                method: "POST", mode: "no-cors", 
-                body: JSON.stringify([{ pn: pn, qty: parseInt(q), mode: mode, date: new Date().toLocaleString() }])
-            });
-            status.innerText = "✅ Saved!";
-            setTimeout(() => status.innerText = "Ready", 2000);
+        if (pn.length >= 4) {
+            status.innerText = "✅ " + pn;
+            const q = prompt(`Quantity for:\n${pn}`, "1");
+            if (q && !isNaN(q)) {
+                status.innerText = "🚀 Syncing...";
+                await fetch(SCRIPT_URL, {
+                    method: "POST", mode: "no-cors", 
+                    body: JSON.stringify([{ pn: pn, qty: parseInt(q), mode: mode, date: new Date().toLocaleString() }])
+                });
+                status.innerText = "🎯 Saved!";
+                setTimeout(() => status.innerText = "Ready", 2000);
+            }
+        } else {
+            status.innerText = "❌ Blurry. Tap to Focus.";
         }
-    } else {
-        status.innerText = "❌ Error. Try again.";
-    }
-
+    } catch (err) { status.innerText = "Error reading."; }
     processing = false;
 }
 </script>
