@@ -1,99 +1,95 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NEXWAH Inventory System</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #f0f2f5; --surface: #ffffff; --surface2: #f7f8fa; --border: #e2e6ed; --border2: #d0d5dd;
-      --accent: #1a56db; --accent-light: #ebf0ff; --accent-dark: #1240a8; --text: #111827; --muted: #6b7280;
-      --success: #0a7a3e; --success-bg: #ecfdf5; --success-border: #a7f3d0; --error: #b91c1c; --error-bg: #fef2f2;
-      --error-border: #fecaca; --warn: #92400e; --warn-bg: #fffbeb; --warn-border: #fde68a; --low-stock: #fef2f2;
-      --low-stock-text: #b91c1c; --mono: 'IBM Plex Mono', monospace; --sans: 'IBM Plex Sans', sans-serif;
-    }
-    body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; }
-    .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; align-items: center; justify-content: space-between; height: 56px; position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
-    .topbar-brand { font-family: var(--mono); font-size: 15px; font-weight: 500; color: var(--accent); letter-spacing: -0.3px; }
-    .nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; gap: 2px; overflow-x: auto; }
-    .nav-btn { font-family: var(--sans); font-size: 13px; font-weight: 500; padding: 14px 16px; border: none; background: none; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: color 0.15s, border-color 0.15s; }
-    .nav-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-    .page-wrap { max-width: 1100px; margin: 28px auto; padding: 0 20px; }
-    .page { display: none; }
-    .page.active { display: block; }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px 24px; margin-bottom: 18px; }
-    .card-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
-    .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
-    .field label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; }
-    .field input { padding: 9px 12px; border: 1px solid var(--border2); border-radius: 8px; font-size: 13px; outline: none; font-family: var(--mono); }
-    .btn { font-family: var(--sans); font-size: 13px; font-weight: 600; padding: 9px 18px; border: none; border-radius: 8px; cursor: pointer; }
-    .btn-primary { background: var(--accent); color: #fff; }
-    .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border2); }
-    .status-bar { padding: 10px 14px; border-radius: 8px; font-size: 12px; font-family: var(--mono); margin-top: 12px; border: 1px solid var(--border); background: var(--surface2); min-height: 40px; }
-    .status-bar.ok { background: var(--success-bg); color: var(--success); }
-    .status-bar.loading { background: var(--accent-light); color: var(--accent); }
-    .video-wrap { position: relative; width: 100%; border-radius: 10px; overflow: hidden; background: #000; aspect-ratio: 4/3; }
-    video { width: 100%; height: 100%; object-fit: cover; }
-    .scan-box-border { position: absolute; left: 10%; top: 15%; width: 80%; height: 70%; border: 2px solid #00d26a; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5); }
-    #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #111827; color: #fff; padding: 12px 22px; border-radius: 10px; transition: 0.3s; z-index: 999; }
-    #toast.show { transform: translateX(-50%) translateY(0); }
-    .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid #c3d9ff; border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 5px; vertical-align: middle; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-  </style>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NEXWAH Inventory System</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --bg: #f0f2f5; --surface: #ffffff; --surface2: #f7f8fa; --border: #e2e6ed; --border2: #d0d5dd;
+            --accent: #1a56db; --accent-light: #ebf0ff; --accent-dark: #1240a8; --text: #111827; --muted: #6b7280;
+            --success: #0a7a3e; --success-bg: #ecfdf5; --success-border: #a7f3d0; --error: #b91c1c; --error-bg: #fef2f2;
+            --error-border: #fecaca; --warn: #92400e; --warn-bg: #fffbeb; --warn-border: #fde68a; --low-stock: #fef2f2;
+            --low-stock-text: #b91c1c; --mono: 'IBM Plex Mono', monospace; --sans: 'IBM Plex Sans', sans-serif;
+        }
+        body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; }
+        .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; align-items: center; justify-content: space-between; height: 56px; position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+        .topbar-brand { font-family: var(--mono); font-size: 15px; font-weight: 500; color: var(--accent); letter-spacing: -0.3px; }
+        .nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; gap: 2px; overflow-x: auto; }
+        .nav-btn { font-family: var(--sans); font-size: 13px; font-weight: 500; padding: 14px 16px; border: none; background: none; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: color 0.15s, border-color 0.15s; }
+        .nav-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .page-wrap { max-width: 1100px; margin: 28px auto; padding: 0 20px; }
+        .page { display: none; }
+        .page.active { display: block; }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px 24px; margin-bottom: 18px; }
+        .card-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+        .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+        .field label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; }
+        .field input { padding: 9px 12px; border: 1px solid var(--border2); border-radius: 8px; font-size: 13px; outline: none; font-family: var(--mono); width: 100%; }
+        .btn { font-family: var(--sans); font-size: 13px; font-weight: 600; padding: 9px 18px; border: none; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border2); }
+        .btn-danger { background: var(--error-bg); color: var(--error); }
+        .status-bar { padding: 10px 14px; border-radius: 8px; font-size: 12px; font-family: var(--mono); margin-top: 12px; border: 1px solid var(--border); background: var(--surface2); min-height: 40px; }
+        .status-bar.ok { background: var(--success-bg); color: var(--success); border-color: var(--success-border); }
+        .status-bar.err { background: var(--error-bg); color: var(--error); border-color: var(--error-border); }
+        .video-wrap { position: relative; width: 100%; border-radius: 10px; overflow: hidden; background: #000; aspect-ratio: 4/3; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        .scan-box-border { position: absolute; left: 10%; top: 20%; width: 80%; height: 60%; border: 2px solid #00d26a; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5); pointer-events: none; }
+        #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #111827; color: #fff; padding: 12px 22px; border-radius: 10px; transition: 0.3s; z-index: 999; }
+        #toast.show { transform: translateX(-50%) translateY(0); }
+        .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid #c3d9ff; border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 5px; vertical-align: middle; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
 </head>
 <body>
 
 <div class="topbar"><div class="topbar-brand">NEXWAH <span>/ Inventory System</span></div></div>
 <div class="nav">
-  <button class="nav-btn active" onclick="showPage('scanner')">Scan Label</button>
-  <button class="nav-btn" onclick="showPage('inventory')">Inventory</button>
+    <button class="nav-btn active" onclick="showPage('scanner')">Scan Label</button>
+    <button class="nav-btn" onclick="showPage('inventory')">Inventory</button>
 </div>
 
 <div class="page-wrap">
-  <div id="page-scanner" class="page active">
-    <div class="card">
-      <div class="card-title">Precision MFR PN Scanner</div>
-      <div style="display:flex;gap:10px;margin-bottom:15px;">
-        <button id="btn-add" class="btn btn-primary" onclick="setMode('Add')">➕ Add Mode</button>
-        <button id="btn-take" class="btn btn-secondary" onclick="setMode('Take')">➖ Take Mode</button>
-      </div>
-      
-      <div style="display:grid;grid-template-columns: 1fr 1fr; gap:20px">
-        <div>
-          <div class="video-wrap">
-            <video id="video" autoplay playsinline muted></video>
-            <div class="scan-box-border"></div>
-          </div>
-          <div style="display:flex;gap:10px;margin-top:10px">
-            <button class="btn btn-primary" onclick="startCamera()">Start Camera</button>
-            <button class="btn btn-secondary" onclick="captureAndExtract()">⚡ Extract PN</button>
-          </div>
-          <div id="camStatus" class="status-bar">Ready.</div>
-        </div>
-        <div>
-          <div class="field"><label>Confirmed MFR Part Number</label><input type="text" id="scanMfrPn" style="color:var(--accent);font-weight:bold;font-size:18px"></div>
-          <div class="field"><label>Description</label><input type="text" id="scanDesc"></div>
-          <div class="field"><label>Quantity</label><input type="number" id="scanQty" value="1"></div>
-          <button class="btn btn-primary" style="width:100%;padding:15px" onclick="syncToSheet()">🚀 SYNC TO GOOGLE SHEET</button>
-          <img id="cropPreview" style="width:100%; margin-top:15px; border-radius:8px; border:1px solid var(--border)">
-        </div>
-      </div>
-    </div>
-  </div>
+    <div id="page-scanner" class="page active">
+        <div class="card">
+            <div class="card-title">MFR PN Precision Scanner</div>
+            <div style="display:flex;gap:10px;margin-bottom:15px;">
+                <button id="btn-add" class="btn btn-primary" onclick="setMode('Add')">➕ Add Mode</button>
+                <button id="btn-take" class="btn btn-secondary" onclick="setMode('Take')">➖ Take Mode</button>
+            </div>
 
-  <div id="page-inventory" class="page">
-    <div class="card">
-      <div class="card-title">Inventory Log</div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Time</th><th>Part Number</th><th>Desc</th><th>Qty</th><th>Mode</th></tr></thead>
-          <tbody id="invTableBody"></tbody>
-        </table>
-      </div>
+            <div style="display:grid;grid-template-columns: 1fr 1fr; gap:20px">
+                <div>
+                    <div class="video-wrap">
+                        <video id="video" autoplay playsinline muted></video>
+                        <div class="scan-box-border"></div>
+                    </div>
+                    <div style="display:flex;gap:10px;margin-top:10px">
+                        <button class="btn btn-primary" onclick="startCamera()">Start Camera</button>
+                        <button class="btn btn-secondary" onclick="captureAndExtract()">⚡ Extract MFR PN</button>
+                    </div>
+                    <div id="camStatus" class="status-bar">Ready.</div>
+                </div>
+                <div>
+                    <div class="field"><label>Confirmed MFR Part Number</label><input type="text" id="scanMfrPn" style="color:var(--accent);font-weight:bold;font-size:18px"></div>
+                    <div class="field"><label>Description</label><input type="text" id="scanDesc"></div>
+                    <div class="field"><label>Quantity</label><input type="number" id="scanQty" value="1"></div>
+                    <button class="btn btn-primary" style="width:100%;padding:15px" onclick="syncToSheet()">🚀 SYNC TO GOOGLE SHEET</button>
+                    <img id="cropPreview" style="width:100%; margin-top:15px; border-radius:8px; border:1px solid var(--border)">
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
+
+    <div id="page-inventory" class="page">
+        <div class="card">
+            <div class="card-title">Inventory Log</div>
+            <div id="invList">Loading Inventory...</div>
+        </div>
+    </div>
 </div>
 
 <div id="toast"></div>
@@ -101,129 +97,95 @@
 <canvas id="cropCanvas" style="display:none"></canvas>
 
 <script>
-// ── CONFIG ──
 const GOOGLE_API_KEY = "AIzaSyBjzZf1DVzZFuaf9tC5SW8x9bjqp1t7HQQ"; 
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzT_0t-lZbjvlLj7Qx3q8KPOtS7aEIHhNrUkVfQnuHkdtJrVov3vAPF_j8GsCOveo4m/exec";
 let currentStream = null, scanMode = "Add";
 
-// ── NAVIGATION ──
-function showPage(name) {
-  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-  document.getElementById("page-" + name).classList.add("active");
-  if(name === 'inventory') loadInventory();
+function showPage(n) {
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+    document.getElementById("page-" + n).classList.add("active");
 }
 
 function setMode(m) {
-  scanMode = m;
-  document.getElementById("btn-add").className = m === "Add" ? "btn btn-primary" : "btn btn-secondary";
-  document.getElementById("btn-take").className = m === "Take" ? "btn btn-primary" : "btn btn-secondary";
+    scanMode = m;
+    document.getElementById("btn-add").className = m === "Add" ? "btn btn-primary" : "btn btn-secondary";
+    document.getElementById("btn-take").className = m === "Take" ? "btn btn-primary" : "btn btn-secondary";
 }
 
-// ── CAMERA ──
 async function startCamera() {
-  try {
-    currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1920 } });
-    document.getElementById("video").srcObject = currentStream;
-    setCamStatus("Camera Active", "ok");
-  } catch(e) { setCamStatus("Camera Error", "err"); }
+    try {
+        currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1920 } });
+        document.getElementById("video").srcObject = currentStream;
+        setCamStatus("Camera Active", "ok");
+    } catch(e) { setCamStatus("Camera Error: " + e.message, "err"); }
 }
 
-function stopCamera() { if(currentStream) currentStream.getTracks().forEach(t => t.stop()); }
-
-// ── PRECISION SPATIAL EXTRACTION ──
 async function captureAndExtract() {
-  const video = document.getElementById("video");
-  const canvas = document.getElementById("canvas");
-  const crop = document.getElementById("cropCanvas");
-  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-  canvas.getContext("2d").drawImage(video, 0, 0);
+    const video = document.getElementById("video");
+    if (!video.srcObject) return setCamStatus("Start camera first", "err");
 
-  // Focus Crop
-  const bw = canvas.width * 0.8, bh = canvas.height * 0.7;
-  crop.width = bw; crop.height = bh;
-  crop.getContext("2d").drawImage(canvas, canvas.width*0.1, canvas.height*0.15, bw, bh, 0, 0, bw, bh);
-  
-  const dataUrl = crop.toDataURL("image/jpeg", 0.9);
-  document.getElementById("cropPreview").src = dataUrl;
-  setCamStatus('<span class="spinner"></span>Anchoring MFR PN...', "loading");
+    const canvas = document.getElementById("canvas");
+    const crop = document.getElementById("cropCanvas");
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    canvas.getContext("2d").drawImage(video, 0, 0);
 
-  try {
-    const resp = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`, {
-      method: "POST", 
-      body: JSON.stringify({ requests: [{ image: { content: dataUrl.split(',')[1] }, features: [{ type: "TEXT_DETECTION" }] }] })
-    });
-    const data = await resp.json();
-    const annotations = data.responses[0].textAnnotations; 
-    if (!annotations || annotations.length < 2) throw new Error("No text");
-
-    let mfrPn = "";
-    let anchorY = -1;
-    let anchorXEnd = -1;
-
-    // 1. SPATIAL MAPPING: Find the "MFR PN" or "MAN PN" label box
-    for (let i = 1; i < annotations.length; i++) {
-      const text = annotations[i].description.toUpperCase();
-      if (text.includes("MFR") || text.includes("MAN") || text.includes("MFG") || text === "PN") {
-        const v = annotations[i].boundingPoly.vertices;
-        anchorY = v[0].y;      
-        anchorXEnd = v[1].x;   
-        break; 
-      }
-    }
-
-    // 2. LOCK ONTO NEIGHBOR: Grab text horizontally beside the anchor
-    if (anchorY !== -1) {
-      for (let i = 1; i < annotations.length; i++) {
-        const v = annotations[i].boundingPoly.vertices;
-        const curY = v[0].y;
-        const curXStart = v[0].x;
-        const text = annotations[i].description.trim();
-
-        if (Math.abs(curY - anchorY) < 30 && curXStart > anchorXEnd) {
-          if (text.length > 3 && !text.includes(":") && !text.toUpperCase().endsWith("-ND")) {
-            mfrPn = text;
-            break;
-          }
-        }
-      }
-    }
-
-    // 3. FALLBACK: Priority Line 2 for muRata/LCSC
-    if (!mfrPn) {
-      const lines = annotations[0].description.split('\n');
-      mfrPn = (lines[1] && lines[1].length > 5) ? lines[1] : lines[0];
-    }
-
-    // Clean data (Remove LCSC brackets/spaces)
-    mfrPn = mfrPn.replace(/[\s\(\)\[\]]/g, "").toUpperCase();
-    document.getElementById("scanMfrPn").value = mfrPn;
+    // Focus Area
+    const bw = canvas.width * 0.8, bh = canvas.height * 0.6;
+    crop.width = bw; crop.height = bh;
+    crop.getContext("2d").drawImage(canvas, canvas.width*0.1, canvas.height*0.2, bw, bh, 0, 0, bw, bh);
     
-    const fullText = annotations[0].description;
-    document.getElementById("scanDesc").value = fullText.split('\n').find(l => /DIODE|IC|CAP|RES|MOS/i.test(l)) || "";
-    setCamStatus("🎯 MFR PN Anchored", "ok");
-  } catch(e) { setCamStatus("❌ Read Error. Keep label level.", "err"); }
-}
+    const dataUrl = crop.toDataURL("image/jpeg", 0.9);
+    document.getElementById("cropPreview").src = dataUrl;
+    setCamStatus('<span class="spinner"></span>Anchoring MFR Row...', "loading");
 
-async function syncToSheet() {
-  const pn = document.getElementById("scanMfrPn").value;
-  if(!pn) return;
-  const rowData = [new Date().toLocaleString("en-GB"), pn, document.getElementById("scanDesc").value, document.getElementById("scanQty").value, scanMode];
-  setCamStatus('<span class="spinner"></span>Syncing...', "loading");
-  
-  await fetch(APPS_SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(rowData) });
-  toast(`Synced ${pn}`);
-  setCamStatus("✓ Saved to Inventory", "ok");
-}
+    try {
+        const resp = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`, {
+            method: "POST", 
+            body: JSON.stringify({ requests: [{ image: { content: dataUrl.split(',')[1] }, features: [{ type: "TEXT_DETECTION" }] }] })
+        });
+        const data = await resp.json();
+        const blocks = data.responses[0].textAnnotations; 
+        if (!blocks || blocks.length < 2) throw new Error("No text detected");
 
-async function loadInventory() {
-  const resp = await fetch(`${APPS_SCRIPT_URL}?action=read&sheet=Inventory`);
-  const data = await resp.json();
-  const body = document.getElementById("invTableBody");
-  body.innerHTML = data.slice(1).reverse().map(r => `<tr><td>${r[0]}</td><td><b>${r[1]}</b></td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td></tr>`).join("");
-}
+        let mfrPn = "";
+        let anchorY = -1;
+        let anchorXEnd = -1;
 
-function setCamStatus(m, c) { const s = document.getElementById("camStatus"); s.innerHTML = m; s.className = "status-bar " + c; }
-function toast(m) { const t = document.getElementById("toast"); t.innerText = m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"), 3000); }
-</script>
-</body>
-</html>
+        // 1. SEARCH FOR "MFR" ANCHOR
+        for (let i = 1; i < blocks.length; i++) {
+            const text = blocks[i].description.toUpperCase();
+            if (text.includes("MFR") || text.includes("MAN") || text.includes("MFG") || text === "PN") {
+                const v = blocks[i].boundingPoly.vertices;
+                anchorY = v[0].y;      
+                anchorXEnd = v[1].x;   
+                break; 
+            }
+        }
+
+        // 2. EXTRACT NEIGHBOR (Same horizontal row)
+        if (anchorY !== -1) {
+            for (let i = 1; i < blocks.length; i++) {
+                const v = blocks[i].boundingPoly.vertices;
+                const curY = v[0].y;
+                const curX = v[0].x;
+                const text = blocks[i].description.trim();
+
+                if (Math.abs(curY - anchorY) < 30 && curX > anchorXEnd) {
+                    // DNA check: Ignore colons, dates (/), and DigiKey (-ND)
+                    if (text.length > 4 && !text.includes(":") && !text.includes("/") && !text.toUpperCase().endsWith("-ND")) {
+                        mfrPn = text;
+                        break;
+                    }
+                }
+            }
+        }
+
+        // 3. FALLBACK: Priority Line 2 (For muRata/LCSC bags)
+        if (!mfrPn) {
+            const lines = blocks[0].description.split('\n');
+            mfrPn = lines.find(l => /[A-Z]/.test(l) && /[0-9]/.test(l) && !l.includes('/') && l.length > 5) || lines[1] || lines[0];
+        }
+
+        const cleaned = mfrPn.replace(/[\s\(\)\[\]]/g, "").toUpperCase();
+        document.getElementById("scanMfrPn").value = cleaned;
+        document.
