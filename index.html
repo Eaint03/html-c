@@ -3,70 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Industrial Precision Scanner v10</title>
-    
+    <title>Industrial Precision v12</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
-
     <style>
         :root { --blue: #007bff; --green: #28a745; --red: #dc3545; --dark: #121212; }
-        body { font-family: -apple-system, sans-serif; background: var(--dark); color: white; margin: 0; text-align: center; overflow: hidden; }
+        body { font-family: sans-serif; background: var(--dark); color: white; margin: 0; text-align: center; overflow: hidden; }
         .page { padding: 10px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         .hidden { display: none !important; }
-
-        button { 
-            width: 95%; max-width: 380px; padding: 16px; margin: 6px 0; 
-            border-radius: 12px; border: none; font-size: 17px; font-weight: bold; 
-            cursor: pointer; 
-        }
-        .btn-main { background: var(--blue); color: white; }
-        .btn-capture { 
-            background: var(--green); color: white; font-size: 22px; 
-            border: 3px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.4);
-            margin-top: 5px;
-        }
-
-        #reader-container { 
-            position: relative; width: 100%; max-width: 380px; 
-            margin: 5px auto; border-radius: 15px; overflow: hidden; border: 2px solid #444;
-            background: #000; touch-action: none;
-        }
-
-        #scanner-overlay {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            width: 90%; height: 35px; border: 2px solid #00ff00;
-            box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.8); z-index: 5; pointer-events: none;
-        }
-
-        #status { margin: 8px; color: #00ff00; font-weight: bold; font-size: 1.1rem; min-height: 25px; }
-        
-        #debugCanvas { 
-            width: 90%; max-width: 340px; background: white; border-radius: 8px; 
-            display: block; margin: 5px auto; border: 1px solid #555;
-            image-rendering: pixelated; 
-        }
+        button { width: 95%; max-width: 380px; padding: 16px; margin: 5px 0; border-radius: 12px; border: none; font-size: 17px; font-weight: bold; cursor: pointer; }
+        .btn-capture { background: var(--green); color: white; border: 4px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        #reader-container { position: relative; width: 100%; max-width: 380px; margin: 5px auto; border-radius: 15px; overflow: hidden; border: 2px solid #444; }
+        #scanner-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; height: 26px; border: 2px solid #00ff00; box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.85); z-index: 5; pointer-events: none; }
+        #status { margin: 8px; color: #00ff00; font-weight: bold; font-size: 1.1rem; }
+        #debugCanvas { width: 90%; max-width: 340px; background: white; border-radius: 8px; display: block; margin: 5px auto; image-rendering: pixelated; }
     </style>
 </head>
-
 <body>
 
 <div id="homePage" class="page">
-    <h1 style="margin-top: 40px;">📦 Inventory Pro v10</h1>
-    <button class="btn-main" onclick="goTo('scanPage', 'add')">➕ Add Stock</button>
-    <button class="btn-main" style="background:#333;" onclick="goTo('scanPage', 'take')">➖ Remove Stock</button>
+    <h1 style="margin-top: 40px;">📦 Precision v12</h1>
+    <button style="background:var(--blue); color:white;" onclick="goTo('scanPage', 'add')">➕ Add Stock</button>
+    <button style="background:#333; color:white;" onclick="goTo('scanPage', 'take')">➖ Remove Stock</button>
 </div>
 
 <div id="scanPage" class="page hidden">
     <div id="status">Ready (Tap to Focus)</div>
-
     <div id="reader-container" onclick="manualFocus()">
         <div id="reader"></div>
         <div id="scanner-overlay"></div>
     </div>
-
-    <button class="btn-capture" onclick="captureAndScan()">📸 CAPTURE & ANALYZE</button>
-    <button style="background:#cc0000; color:white; padding: 12px;" onclick="goTo('homePage')">Exit</button>
-    
+    <button class="btn-capture" onclick="captureAndScan()">📸 CAPTURE & AUTO-FIX</button>
+    <button style="background:#cc0000; color:white; padding: 10px;" onclick="goTo('homePage')">Exit</button>
     <canvas id="debugCanvas"></canvas>
 </div>
 
@@ -82,19 +50,15 @@ function goTo(pageId, m = "") {
 
 async function initScanner() {
     html5QrCode = new Html5Qrcode("reader");
-    try {
-        await html5QrCode.start({ facingMode: "environment" }, { fps: 20, aspectRatio: 1.0 }, () => {}, () => {});
-    } catch (e) { alert(e); }
+    await html5QrCode.start({ facingMode: "environment" }, { fps: 25, aspectRatio: 1.0 }, () => {}, () => {});
 }
 
 async function manualFocus() {
     const video = document.querySelector("#reader video");
     const track = video?.srcObject?.getVideoTracks()[0];
     if (track) {
-        try {
-            await track.applyConstraints({ advanced: [{ focusMode: "continuous" }] });
-            document.getElementById("status").innerText = "🎯 Focus Locked";
-        } catch (e) { document.getElementById("status").innerText = "Ready"; }
+        await track.applyConstraints({ advanced: [{ focusMode: "continuous" }] });
+        document.getElementById("status").innerText = "🎯 Focus Locked";
     }
 }
 
@@ -106,74 +70,54 @@ async function captureAndScan() {
     if (!video) return;
 
     processing = true;
-    if (navigator.vibrate) navigator.vibrate(100);
+    if (navigator.vibrate) navigator.vibrate(80);
     const status = document.getElementById("status");
     const canvas = document.getElementById("debugCanvas");
     const ctx = canvas.getContext("2d");
 
-    status.innerText = "⏳ Comparing 3 Scan Passess...";
+    status.innerText = "⏳ Sharpening Geometry...";
 
     const vW = video.videoWidth; const vH = video.videoHeight;
-    const cropW = vW * 0.90; const cropH = vH * 0.06;
+    const cropW = vW * 0.88; const cropH = vH * 0.04;
     const sx = (vW - cropW) / 2; const sy = (vH - cropH) / 2;
 
-    canvas.width = 3200; canvas.height = 200;
+    canvas.width = 3000; canvas.height = 140;
     ctx.imageSmoothingEnabled = false;
 
-    // 🔥 TRIPLE-EXPOSURE CONSENSUS ENGINE
-    const passes = [
-        { filter: 'grayscale(1) contrast(150%) brightness(1.1)', name: 'Sharp' },
-        { filter: 'grayscale(1) contrast(100%) brightness(1.4)', name: 'Light (Hole Check)' },
-        { filter: 'grayscale(1) contrast(200%) brightness(0.9)', name: 'Dark (Edge Check)' }
-    ];
+    // 🔥 THE "INVERT" STRATEGY
+    // Inverting (invert(1)) makes the text glow, which helps the AI see gaps in 8/B/S
+    // High contrast (200%) forces 7 vs Z corners to be sharp.
+    ctx.filter = 'grayscale(1) invert(1) contrast(200%) brightness(1.1)';
+    ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
 
-    let results = [];
-    for (let pass of passes) {
-        ctx.filter = pass.filter;
-        ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
-        
-        const res = await Tesseract.recognize(canvas, 'eng', {
-            tessedit_pageseg_mode: 7,
-            tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-'
-        });
+    const res = await Tesseract.recognize(canvas, 'eng', {
+        tessedit_pageseg_mode: 7,
+        tessedit_char_whitelist: '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-'
+    });
 
-        let clean = res.data.text.trim().replace(/\s/g, "").toUpperCase();
-        if (clean.length > 3) results.push(clean);
-    }
+    let pn = res.data.text.trim().replace(/\s/g, "").toUpperCase();
 
-    // VOTE ON THE WINNER
-    function getWinner(arr) {
-        if (arr.length === 0) return null;
-        let counts = {}; let max = 0; let winner = arr[0];
-        arr.forEach(val => {
-            counts[val] = (counts[val] || 0) + 1;
-            if (counts[val] > max) { max = counts[val]; winner = val; }
-        });
-        return winner;
-    }
+    if (pn.length > 3) {
+        // 🧠 LOGICAL CONTEXT REPAIR
+        pn = pn.replace(/O/g, "0")
+               .replace(/[\|\[\]I!l]/g, "1");
 
-    let pn = getWinner(results);
+        // Electronic specific fixes
+        if (pn.includes('B') && (pn.match(/\d/g) || []).length > 2) pn = pn.replace(/B/g, "8");
+        if (pn.includes('Z') === false && pn.includes('7')) {
+             // If the label is a KOA/resistor label, we check if 7 should be Z
+             // This is a manual check you can perform during the prompt
+        }
 
-    if (pn) {
-        // 🔥 STRUCTURAL CHARACTER REPAIR
-        pn = pn.replace(/O/g, "0")              // Fix 0 vs O
-               .replace(/[\|\[\]I!l]/g, "1")    // Fix 1 vs I
-               .replace(/S/g, "5")              // Fix 5 vs S
-               .replace(/B/g, "8");             // Fix 8 vs B
-
-        status.innerText = "🎯 CONFIRMED: " + pn;
+        status.innerText = "🎯 RESULT: " + pn;
         const q = prompt(`Quantity for:\n${pn}`, "1");
-        if (q && !isNaN(q)) {
-            status.innerText = "🚀 Syncing...";
-            await fetch(SCRIPT_URL, {
-                method: "POST", mode: "no-cors", 
-                body: JSON.stringify([{ pn, qty: parseInt(q), mode, date: new Date().toLocaleString() }])
-            });
+        if (q) {
+            await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify([{ pn, qty: parseInt(q), mode, date: new Date().toLocaleString() }]) });
             status.innerText = "✅ Saved!";
             setTimeout(() => status.innerText = "Ready", 2000);
         }
     } else {
-        status.innerText = "❌ Unreliable. Adjust Distance.";
+        status.innerText = "❌ Scan Failed. Tilt for less glare.";
     }
     processing = false;
 }
