@@ -1,71 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Industrial AI Scanner (Google Vision)</title>
-    <script src="https://unpkg.com/html5-qrcode"></script>
-    <style>
-        :root { --blue: #007bff; --green: #28a745; --red: #dc3545; --dark: #121212; }
-        body { font-family: sans-serif; background: var(--dark); color: white; margin: 0; text-align: center; overflow: hidden; }
-        .page { padding: 10px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
-        .hidden { display: none !important; }
-        button { width: 95%; max-width: 380px; padding: 18px; margin: 6px 0; border-radius: 12px; border: none; font-size: 18px; font-weight: bold; cursor: pointer; }
-        .btn-capture { background: var(--green); color: white; border: 4px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        #reader-container { position: relative; width: 100%; max-width: 380px; margin: 5px auto; border-radius: 15px; overflow: hidden; border: 2px solid #444; }
-        #scanner-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; height: 30px; border: 2px solid #00ff00; box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.8); z-index: 5; pointer-events: none; }
-        #status { margin: 10px; color: #00ff00; font-weight: bold; font-size: 1.2rem; }
-        #debugCanvas { width: 90%; max-width: 340px; background: white; border-radius: 8px; display: block; margin: 10px auto; border: 1px solid #777; }
-    </style>
-</head>
-<body>
-
-<div id="homePage" class="page">
-    <h1 style="margin-top: 40px;">📦 AI Inventory Pro</h1>
-    <button style="background:var(--blue); color:white;" onclick="goTo('scanPage', 'add')">➕ Add Stock</button>
-    <button style="background:#333; color:white;" onclick="goTo('scanPage', 'take')">➖ Remove Stock</button>
-</div>
-
-<div id="scanPage" class="page hidden">
-    <div id="status">Ready (Google AI Active)</div>
-    <div id="reader-container" onclick="manualFocus()">
-        <div id="reader"></div>
-        <div id="scanner-overlay"></div>
-    </div>
-    <button class="btn-capture" onclick="captureAndScan()">📸 CAPTURE & ANALYZE</button>
-    <button style="background:#cc0000; color:white;" onclick="goTo('homePage')">Exit</button>
-    <canvas id="debugCanvas"></canvas>
-</div>
-
-<script>
-// --- CONFIGURATION ---
-const GOOGLE_API_KEY = "AIzaSyDfdutL4X4bLs3Ei4dWLzIgdsZHtLJcOPA"; 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzi3CrAiNVWJlLnR0GpUkf5r054s9AGYq3ygw0Xl7xFEFH-hh8SKm5l8hBaMAh5bv_5/exec";
-
-let mode = ""; let html5QrCode = null; let processing = false;
-
-function goTo(pageId, m = "") {
-    document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-    document.getElementById(pageId).classList.remove('hidden');
-    if (pageId === 'scanPage') { mode = m; initScanner(); } else { killScanner(); }
-}
-
-async function initScanner() {
-    html5QrCode = new Html5Qrcode("reader");
-    await html5QrCode.start({ facingMode: "environment" }, { fps: 20, aspectRatio: 1.0 }, () => {}, () => {});
-}
-
-function killScanner() { if (html5QrCode) html5QrCode.stop().catch(() => {}); }
-
-async function manualFocus() {
-    const video = document.querySelector("#reader video");
-    const track = video?.srcObject?.getVideoTracks()[0];
-    if (track) {
-        await track.applyConstraints({ advanced: [{ focusMode: "continuous" }] });
-        document.getElementById("status").innerText = "🎯 Focus Locked";
-    }
-}
-
 async function captureAndScan() {
     if (processing) return;
     const video = document.querySelector("#reader video");
@@ -77,17 +9,19 @@ async function captureAndScan() {
     const canvas = document.getElementById("debugCanvas");
     const ctx = canvas.getContext("2d");
 
-    status.innerText = "⏳ Sending to Google AI...";
+    status.innerText = "⏳ AI Reading Label Details...";
 
-    // 1. Capture the image
-    const vW = video.videoWidth; const vH = video.videoHeight;
-    const cropW = vW * 0.90; const cropH = vH * 0.10; 
-    const sx = (vW - cropW) / 2; const sy = (vH - cropH) / 2;
+    // Capture a large square for full context
+    const vW = video.videoWidth; 
+    const vH = video.videoHeight;
+    const cropSize = Math.min(vW, vH) * 0.9;
+    const sx = (vW - cropW) / 2; // Note: Ensure cropW is defined or use cropSize
+    const sy = (vH - cropH) / 2;
 
-    canvas.width = 1200; canvas.height = 160;
-    ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
+    canvas.width = 1500; 
+    canvas.height = 1500;
+    ctx.drawImage(video, (vW - cropSize)/2, (vH - cropSize)/2, cropSize, cropSize, 0, 0, canvas.width, canvas.height);
 
-    // 2. Prepare for Google
     const base64Image = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
     const GOOGLE_URL = `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`;
 
@@ -102,33 +36,61 @@ async function captureAndScan() {
         const response = await fetch(GOOGLE_URL, { method: "POST", body: JSON.stringify(requestBody) });
         const data = await response.json();
         
-        // 3. Extract Text (Google is much smarter with 8/B/Z/7)
         if (data.responses[0].textAnnotations) {
             let fullText = data.responses[0].textAnnotations[0].description;
-            // Get the first line and clean spaces
-            let pn = fullText.split('\n')[0].replace(/\s/g, "").toUpperCase();
-
-            status.innerText = "🎯 MATCH: " + pn;
-            const q = prompt(`Quantity for:\n${pn}`, "1");
+            let lines = fullText.split('\n');
             
-            if (q) {
-                status.innerText = "🚀 Saving to Sheet...";
+            // 🧠 AUTO-EXTRACTION LOGIC
+            let pn = "";
+            let desc = "";
+            let qty = "1";
+
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i].trim().toUpperCase();
+                
+                // Find Part Number (usually has '-' and numbers)
+                if (!pn && line.includes('-') && line.length > 6) {
+                    pn = line.replace(/\s/g, "");
+                }
+                
+                // Find Description (Look for keywords like DIODE, RES, CAP, ZENER)
+                if (!desc && (line.includes('DIODE') || line.includes('ZENER') || line.includes('RES ') || line.includes('CAP '))) {
+                    desc = line;
+                }
+
+                // Find Quantity (Look for the number near "Quantity")
+                if (line.includes('QUANTITY')) {
+                    qty = lines[i+1] ? lines[i+1].replace(/\D/g, "") : "1";
+                }
+            }
+
+            status.innerText = "🎯 Found: " + (pn || "Unknown");
+            
+            // Show result to user for confirmation
+            const finalInput = prompt(
+                `Check Data:\n\nPN: ${pn}\nDESC: ${desc}\nQTY: ${qty}\n\n(Edit if needed, use | to separate)`, 
+                `${pn} | ${desc} | ${qty}`
+            );
+            
+            if (finalInput) {
+                let parts = finalInput.split('|');
+                status.innerText = "🚀 Saving...";
                 await fetch(SCRIPT_URL, {
                     method: "POST", mode: "no-cors", 
-                    body: JSON.stringify([{ pn, qty: parseInt(q), mode, date: new Date().toLocaleString() }])
+                    body: JSON.stringify([{ 
+                        pn: parts[0].trim(), 
+                        desc: parts[1] ? parts[1].trim() : desc, 
+                        qty: parts[2] ? parseInt(parts[2]) : parseInt(qty), 
+                        mode: mode, 
+                        date: new Date().toLocaleString() 
+                    }])
                 });
                 status.innerText = "✅ Saved!";
                 setTimeout(() => status.innerText = "Ready", 2000);
             }
-        } else {
-            status.innerText = "❌ No Text Found";
         }
     } catch (err) {
-        status.innerText = "❌ API Error (Check Key)";
-        console.error(err);
+        status.innerText = "❌ Error reading label.";
     }
     processing = false;
 }
-</script>
-</body>
-</html>
