@@ -3,16 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Inventory v17.4 - Diagnostic</title>
+    <title>DigiKey AI Inventory v17.5</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         :root { --blue: #007bff; --green: #28a745; --red: #dc3545; --dark: #121212; }
-        body { font-family: sans-serif; background: var(--dark); color: white; margin: 0; text-align: center; overflow: hidden; }
+        body { font-family: -apple-system, sans-serif; background: var(--dark); color: white; margin: 0; text-align: center; overflow: hidden; }
         .page { padding: 10px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
         .hidden { display: none !important; }
-        button { width: 95%; max-width: 380px; padding: 18px; margin: 6px 0; border-radius: 12px; border: none; font-size: 18px; font-weight: bold; cursor: pointer; }
+        button { width: 95%; max-width: 380px; padding: 18px; margin: 6px 0; border-radius: 12px; border: none; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.1s; }
+        button:active { transform: scale(0.98); opacity: 0.8; }
         .btn-main { background: var(--blue); color: white; }
-        .btn-capture { background: var(--green); color: white; border: 4px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-top: 10px; }
+        .btn-capture { background: var(--green); color: white; font-size: 20px; border: 4px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.5); margin-top: 10px; }
         #reader-container { position: relative; width: 100%; max-width: 380px; margin: 5px auto; border-radius: 15px; overflow: hidden; border: 2px solid #444; background: #000; }
         #scanner-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 85%; height: 220px; border: 3px solid #00ff00; box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.7); z-index: 5; pointer-events: none; }
         #status { margin: 10px; color: #00ff00; font-weight: bold; font-size: 1.2rem; min-height: 30px; }
@@ -22,23 +23,24 @@
 <body>
 
 <div id="homePage" class="page">
-    <h1 style="margin-top: 40px;">📦 AI Inventory v17.4</h1>
+    <h1 style="margin-top: 40px;">📦 AI Inventory v17.5</h1>
     <button class="btn-main" onclick="goTo('scanPage', 'add')">➕ Add Stock</button>
     <button class="btn-main" style="background:#333;" onclick="goTo('scanPage', 'take')">➖ Remove Stock</button>
 </div>
 
 <div id="scanPage" class="page hidden">
-    <div id="status">Ready</div>
-    <div id="reader-container">
+    <div id="status">Ready (Center Full Label)</div>
+    <div id="reader-container" onclick="manualFocus()">
         <div id="reader"></div>
         <div id="scanner-overlay"></div>
     </div>
-    <button class="btn-capture" onclick="captureAndScan()">📸 SCAN LABEL</button>
+    <button class="btn-capture" onclick="captureAndScan()">📸 SCAN FULL LABEL</button>
     <button style="background:#cc0000; color:white;" onclick="goTo('homePage')">Exit</button>
     <canvas id="debugCanvas" class="hidden"></canvas>
 </div>
 
 <script>
+// --- CONFIGURATION ---
 const GOOGLE_API_KEY = "AIzaSyBjzZf1DVzZFuaf9tC5SW8x9bjqp1t7HQQ"; 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyzOLEIsa7GxDLCmWHdVTiYuHfyvXT95wU62PKlXBpVGfhR2L5rgK_yZ4b37Np6VjY7/exec";
 
@@ -52,10 +54,21 @@ function goTo(pageId, m = "") {
 
 async function initScanner() {
     html5QrCode = new Html5Qrcode("reader");
-    try { await html5QrCode.start({ facingMode: "environment" }, { fps: 20, aspectRatio: 1.0 }, () => {}, () => {}); } catch (e) { alert("Camera: " + e); }
+    try {
+        await html5QrCode.start({ facingMode: "environment" }, { fps: 20, aspectRatio: 1.0 }, () => {}, () => {});
+    } catch (e) { alert("Camera Error: " + e); }
 }
 
 function killScanner() { if (html5QrCode) html5QrCode.stop().catch(() => {}); }
+
+async function manualFocus() {
+    const video = document.querySelector("#reader video");
+    const track = video?.srcObject?.getVideoTracks()[0];
+    if (track) {
+        try { await track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }); } catch(e){}
+        document.getElementById("status").innerText = "🎯 Focus Locked";
+    }
+}
 
 async function captureAndScan() {
     if (processing) return;
@@ -67,12 +80,17 @@ async function captureAndScan() {
     const canvas = document.getElementById("debugCanvas");
     const ctx = canvas.getContext("2d");
 
-    status.innerText = "🔍 Contacting Google...";
+    status.innerText = "🔍 AI Reading Label...";
 
-    const vW = video.videoWidth; const vH = video.videoHeight;
+    const vW = video.videoWidth; 
+    const vH = video.videoHeight;
     const cropSize = Math.min(vW, vH) * 0.95; 
-    canvas.width = 1200; canvas.height = 1200;
-    ctx.drawImage(video, (vW-cropSize)/2, (vH-cropSize)/2, cropSize, cropSize, 0, 0, 1200, 1200);
+    const sx = (vW - cropSize) / 2;
+    const sy = (vH - cropSize) / 2;
+
+    canvas.width = 1200; 
+    canvas.height = 1200;
+    ctx.drawImage(video, sx, sy, cropSize, cropSize, 0, 0, 1200, 1200);
 
     const base64Image = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
     const GOOGLE_URL = `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`;
@@ -87,9 +105,8 @@ async function captureAndScan() {
         
         const data = await response.json();
         
-        // --- DIAGNOSTIC CHECK ---
         if (data.error) {
-            alert("GOOGLE ERROR CODE " + data.error.code + ":\n" + data.error.message);
+            alert("Google API Error: " + data.error.message);
             status.innerText = "❌ API Reject";
             processing = false;
             return;
@@ -98,21 +115,38 @@ async function captureAndScan() {
         if (data.responses[0].textAnnotations) {
             let fullText = data.responses[0].textAnnotations[0].description;
             let lines = fullText.split('\n');
-            let pn = lines[0] || "N/A";
             
-            const finalInput = prompt("AI Found:\n" + pn + "\n\nEdit if needed:", pn);
+            // --- SMART LOGIC FOR DIGIKEY LABELS ---
+            let pn = lines.find(line => line.includes('-') && line.length > 8) || lines[0];
+            let desc = lines.find(line => line.includes('DIODE') || line.includes('ZENER') || line.includes('SOD') || line.includes('RES')) || "Check Desc";
+            let qty = lines.find(line => (line === "100" || line === "50" || line === "1000")) || "1";
+
+            status.innerText = "🎯 Found: " + pn;
+            
+            const finalInput = prompt(`Verify Data:\nPN: ${pn}\nDESC: ${desc}\nQTY: ${qty}\n\nFormat: PN | DESC | QTY`, `${pn} | ${desc} | ${qty}`);
+            
             if (finalInput) {
-                status.innerText = "🚀 Saving...";
-                await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify([{ pn: finalInput, qty: 1, mode: mode, date: new Date().toLocaleString() }]) });
+                let parts = finalInput.split('|');
+                status.innerText = "🚀 Saving to Sheet...";
+                await fetch(SCRIPT_URL, {
+                    method: "POST", mode: "no-cors", 
+                    body: JSON.stringify([{ 
+                        pn: parts[0]?.trim() || pn, 
+                        desc: parts[1]?.trim() || desc, 
+                        qty: parts[2]?.trim() || qty, 
+                        mode: mode, 
+                        date: new Date().toLocaleString() 
+                    }])
+                });
                 status.innerText = "✅ Saved!";
                 setTimeout(() => status.innerText = "Ready", 2000);
             }
         } else {
-            status.innerText = "❌ No Text Found";
+            status.innerText = "❌ No text found";
         }
     } catch (err) {
-        alert("CRITICAL CONNECTION ERROR:\n" + err);
-        status.innerText = "❌ Connection Failed";
+        status.innerText = "❌ AI Connection Error";
+        alert("System Error: " + err);
     }
     processing = false;
 }
