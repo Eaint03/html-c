@@ -1,246 +1,57 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>NEXWAH Inventory System</title>
-
-<style>
-body { font-family: Arial; background:#f2f2f2; padding:20px; }
-.card { background:white; padding:20px; border-radius:10px; }
-.video-wrap { position:relative; width:100%; max-width:500px; }
-video { width:100%; }
-.scan-box-border {
-  position:absolute;
-  left:10%; top:25%;
-  width:80%; height:50%;
-  border:2px solid lime;
-}
-.status-bar { margin-top:10px; padding:10px; background:#eee; }
-.status-bar.ok { background:#d4ffd4; }
-.status-bar.err { background:#ffd4d4; }
-.status-bar.loading { background:#fff3cd; }
-</style>
-</head>
-
-<body>
-
-<div class="card">
-<h2>Scan Label</h2>
-
-<div class="video-wrap">
-  <video id="video" autoplay playsinline></video>
-  <div class="scan-box-border"></div>
-</div>
-
-<br>
-
-<button onclick="startCamera()">Start</button>
-<button onclick="captureAndExtract()">⚡ Extract PN Beside Label</button>
-
-<div id="camStatus" class="status-bar">Ready</div>
-
-<br>
-
-<label>MFR PN</label>
-<input id="scanMfrPn" style="width:100%;font-size:20px;"><br><br>
-
-<label>Description</label>
-<input id="scanDesc" style="width:100%;"><br><br>
-
-<label>Quantity</label>
-<input id="scanQty" type="number" value="1"><br><br>
-
-<button onclick="syncToSheet()">🚀 Sync to Sheet</button>
-
-<img id="cropPreview" style="width:100%;margin-top:10px;">
-</div>
-
-<canvas id="canvas" style="display:none"></canvas>
-<canvas id="cropCanvas" style="display:none"></canvas>
-
-<script>
-
-const GOOGLE_API_KEY = "YOUR_API_KEY";
-const APPS_SCRIPT_URL = "YOUR_SCRIPT_URL";
-
-let currentStream = null;
-
-// CAMERA
-async function startCamera() {
-  currentStream = await navigator.mediaDevices.getUserMedia({
-    video: { facingMode: "environment", width: 1920 }
-  });
-  document.getElementById("video").srcObject = currentStream;
-}
-
-// 🔥 MAIN FUNCTION (FIXED)
 async function captureAndExtract() {
-
-  const video = document.getElementById("video");
-  const canvas = document.getElementById("canvas");
-  const crop = document.getElementById("cropCanvas");
-
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  canvas.getContext("2d").drawImage(video, 0, 0);
-
-  const bw = canvas.width * 0.8;
-  const bh = canvas.height * 0.6;
-
-  crop.width = bw;
-  crop.height = bh;
-
-  crop.getContext("2d").drawImage(
-    canvas,
-    canvas.width * 0.1,
-    canvas.height * 0.2,
-    bw,
-    bh,
-    0,
-    0,
-    bw,
-    bh
-  );
-
-  document.getElementById("cropPreview").src = crop.toDataURL("image/jpeg");
-
-  const base64 = crop.toDataURL("image/jpeg").split(',')[1];
-
-  setCamStatus("🔍 Reading...", "loading");
-
+  // ... (Your existing camera and canvas setup) ...
+  
   try {
-
     const resp = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`, {
-      method: "POST",
-      body: JSON.stringify({
-        requests: [{
-          image: { content: base64 },
-          features: [{ type: "TEXT_DETECTION" }]
-        }]
+      method: "POST", 
+      body: JSON.stringify({ 
+        requests: [{ image: { content: base64 }, features: [{ type: "TEXT_DETECTION" }] }] 
       })
     });
-
+    
     const data = await resp.json();
-    const annotations = data.responses[0].textAnnotations;
+    const annotations = data.responses[0].textAnnotations; 
+    if (!annotations) throw new Error("No text found");
 
-    if (!annotations) throw "No text";
-
+    let mfrPnValue = "";
     let anchorY = -1;
     let anchorXEnd = -1;
 
-    // ✅ STRICT "MFR PN" DETECTION
-    for (let i = 1; i < annotations.length - 1; i++) {
-      const w1 = annotations[i].description.toUpperCase();
-      const w2 = annotations[i + 1].description.toUpperCase();
-
-      if (w1 === "MFR" && w2 === "PN") {
-        anchorY = annotations[i].boundingPoly.vertices[0].y;
-        anchorXEnd = annotations[i + 1].boundingPoly.vertices[1].x;
-        break;
-      }
-    }
-
-    let candidates = [];
-
-    // ✅ GET RIGHT SIDE
-    if (anchorY !== -1) {
-      for (let i = 1; i < annotations.length; i++) {
-        const v = annotations[i].boundingPoly.vertices;
-        const txt = annotations[i].description.trim().toUpperCase();
-
-        if (
-          Math.abs(v[0].y - anchorY) < 25 &&
-          v[0].x > anchorXEnd
-        ) {
-          candidates.push(txt);
+    // 1. HUNT FOR THE ANCHOR
+    // We look at individual word blocks (annotations[1] and up)
+    for (let i = 1; i < annotations.length; i++) {
+        const word = annotations[i].description.toUpperCase();
+        if (word.includes("MFR") || word.includes("MAN") || word.includes("MFG")) {
+            const v = annotations[i].boundingPoly.vertices;
+            anchorY = v[0].y;      // This is our horizontal "lane"
+            anchorXEnd = v[1].x;   // This is where the label ends
+            break; 
         }
-      }
     }
 
-    // ✅ FILTER
-    function isValid(t) {
-      return (
-        t.length >= 6 &&
-        /[A-Z]/.test(t) &&
-        /[0-9]/.test(t) &&
-        !t.includes("ROHS") &&
-        !t.includes("COMP") &&
-        !t.includes("USA") &&
-        !t.includes("LOT") &&
-        !t.includes("CODE") &&
-        !t.includes(":") &&
-        !t.endsWith("-ND") &&
-        !t.startsWith("1727")
-      );
+    // 2. GRAB THE NEIGHBOR
+    if (anchorY !== -1) {
+        for (let i = 1; i < annotations.length; i++) {
+            const v = annotations[i].boundingPoly.vertices;
+            const currentY = v[0].y;
+            const currentXStart = v[0].x;
+            const text = annotations[i].description.trim();
+
+            // Check: Is it on the same row (+/- 30px) AND to the right of the anchor?
+            if (Math.abs(currentY - anchorY) < 30 && currentXStart > anchorXEnd) {
+                // Ignore colons or distributor "noise" like -ND
+                if (text.length > 4 && !text.includes(":") && !text.toUpperCase().endsWith("-ND")) {
+                    mfrPnValue = text;
+                    break; // Found it!
+                }
+            }
+        }
     }
 
-    let mfrPn = "";
-
-    const valid = candidates.filter(isValid);
-
-    if (valid.length > 0) {
-      mfrPn = valid.sort((a,b)=>b.length-a.length)[0];
-    }
-
-    // ✅ FALLBACK
-    if (!mfrPn) {
-      const lines = annotations[0].description.split('\n');
-      mfrPn = lines.find(l => isValid(l.toUpperCase())) || "";
-    }
-
-    // CLEAN
-    mfrPn = mfrPn.replace(/[\s\(\)\[\]]/g, "");
-
-    document.getElementById("scanMfrPn").value = mfrPn;
-
-    document.getElementById("scanDesc").value =
-      annotations[0].description.split('\n').find(l => /DIO|ZEN|CAP|RES|IC/i.test(l)) || "";
-
-    setCamStatus(mfrPn ? "🎯 MFR PN LOCKED" : "❌ Not found", mfrPn ? "ok" : "err");
-
-  } catch (e) {
-    setCamStatus("❌ Error", "err");
+    // 3. APPLY TO UI
+    document.getElementById("scanMfrPn").value = mfrPnValue.replace(/[\s\(\)\[\]]/g, "").toUpperCase();
+    
+  } catch(e) {
+    console.error("Extraction error", e);
   }
 }
-
-// SAVE
-async function syncToSheet() {
-
-  const pn = document.getElementById("scanMfrPn").value;
-  const desc = document.getElementById("scanDesc").value;
-  const qty = document.getElementById("scanQty").value;
-
-  if (!pn) return;
-
-  const rowData = [
-    new Date().toLocaleString(),
-    pn,
-    desc,
-    qty
-  ];
-
-  setCamStatus("Saving...", "loading");
-
-  await fetch(APPS_SCRIPT_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(rowData)
-  });
-
-  setCamStatus("✅ Saved", "ok");
-}
-
-// STATUS
-function setCamStatus(msg, type) {
-  const s = document.getElementById("camStatus");
-  s.innerText = msg;
-  s.className = "status-bar " + type;
-}
-
-</script>
-
-</body>
-</html>
