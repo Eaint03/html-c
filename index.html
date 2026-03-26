@@ -9,17 +9,14 @@ async function captureAndScan() {
     const canvas = document.getElementById("debugCanvas");
     const ctx = canvas.getContext("2d");
 
-    status.innerText = "⏳ AI Reading Label Details...";
+    status.innerText = "🔍 AI Analyzing Full Label...";
 
-    // Capture a large square for full context
     const vW = video.videoWidth; 
     const vH = video.videoHeight;
-    const cropSize = Math.min(vW, vH) * 0.9;
-    const sx = (vW - cropW) / 2; // Note: Ensure cropW is defined or use cropSize
-    const sy = (vH - cropH) / 2;
+    const cropSize = Math.min(vW, vH) * 0.95; 
 
-    canvas.width = 1500; 
-    canvas.height = 1500;
+    canvas.width = 1600; 
+    canvas.height = 1600;
     ctx.drawImage(video, (vW - cropSize)/2, (vH - cropSize)/2, cropSize, cropSize, 0, 0, canvas.width, canvas.height);
 
     const base64Image = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
@@ -40,57 +37,68 @@ async function captureAndScan() {
             let fullText = data.responses[0].textAnnotations[0].description;
             let lines = fullText.split('\n');
             
-            // 🧠 AUTO-EXTRACTION LOGIC
             let pn = "";
             let desc = "";
-            let qty = "1";
+            let qty = "";
 
+            // --- DEEP ANALYSIS ENGINE ---
             for (let i = 0; i < lines.length; i++) {
                 let line = lines[i].trim().toUpperCase();
                 
-                // Find Part Number (usually has '-' and numbers)
-                if (!pn && line.includes('-') && line.length > 6) {
-                    pn = line.replace(/\s/g, "");
+                // 1. FIND PART NUMBER (Look for specific patterns)
+                // If it starts with 'BZT' or has many dashes/numbers
+                if (!pn && line.includes('-') && line.length > 8 && !line.includes(' ')) {
+                    pn = line;
                 }
                 
-                // Find Description (Look for keywords like DIODE, RES, CAP, ZENER)
-                if (!desc && (line.includes('DIODE') || line.includes('ZENER') || line.includes('RES ') || line.includes('CAP '))) {
+                // 2. FIND DESCRIPTION
+                // Looking for words that describe electronics components
+                if (!desc && (line.includes('DIODE') || line.includes('ZENER') || line.includes('SOD') || line.includes('RESISTOR'))) {
                     desc = line;
                 }
 
-                // Find Quantity (Look for the number near "Quantity")
-                if (line.includes('QUANTITY')) {
-                    qty = lines[i+1] ? lines[i+1].replace(/\D/g, "") : "1";
+                // 3. FIND QUANTITY
+                // On DigiKey labels, 100 usually appears near the bottom or after 'Quantity'
+                if (line === "100" || line === "50" || line === "25" || line === "1000") {
+                    qty = line;
                 }
             }
 
-            status.innerText = "🎯 Found: " + (pn || "Unknown");
+            // Fallback if logic missed them
+            if (!pn) pn = lines[3] || "Check Label"; 
+            if (!desc) desc = lines.find(l => l.length > 15) || "Check Desc";
+
+            status.innerText = "🎯 Scan Complete";
             
-            // Show result to user for confirmation
+            // Clean up the Prompt for a professional look
             const finalInput = prompt(
-                `Check Data:\n\nPN: ${pn}\nDESC: ${desc}\nQTY: ${qty}\n\n(Edit if needed, use | to separate)`, 
+                `DIGIKEY DATA DETECTED:\n\n` +
+                `PART #: ${pn}\n` +
+                `DESC:  ${desc}\n` +
+                `QTY:   ${qty}\n\n` +
+                `Edit below if wrong (Format: PN | DESC | QTY):`, 
                 `${pn} | ${desc} | ${qty}`
             );
             
             if (finalInput) {
                 let parts = finalInput.split('|');
-                status.innerText = "🚀 Saving...";
+                status.innerText = "🚀 Syncing to Sheet...";
                 await fetch(SCRIPT_URL, {
                     method: "POST", mode: "no-cors", 
                     body: JSON.stringify([{ 
                         pn: parts[0].trim(), 
                         desc: parts[1] ? parts[1].trim() : desc, 
-                        qty: parts[2] ? parseInt(parts[2]) : parseInt(qty), 
+                        qty: parts[2] ? parts[2].trim() : qty, 
                         mode: mode, 
                         date: new Date().toLocaleString() 
                     }])
                 });
-                status.innerText = "✅ Saved!";
+                status.innerText = "✅ Saved Successfully!";
                 setTimeout(() => status.innerText = "Ready", 2000);
             }
         }
     } catch (err) {
-        status.innerText = "❌ Error reading label.";
+        status.innerText = "❌ AI Error. Check connection.";
     }
     processing = false;
 }
