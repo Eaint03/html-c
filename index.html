@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Industrial Precision Scanner v5</title>
+    <title>Industrial Precision Scanner v10</title>
     
     <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
@@ -51,7 +51,7 @@
 <body>
 
 <div id="homePage" class="page">
-    <h1 style="margin-top: 40px;">📦 Inventory Pro v5</h1>
+    <h1 style="margin-top: 40px;">📦 Inventory Pro v10</h1>
     <button class="btn-main" onclick="goTo('scanPage', 'add')">➕ Add Stock</button>
     <button class="btn-main" style="background:#333;" onclick="goTo('scanPage', 'take')">➖ Remove Stock</button>
 </div>
@@ -64,7 +64,7 @@
         <div id="scanner-overlay"></div>
     </div>
 
-    <button class="btn-capture" onclick="captureAndScan()">📸 CAPTURE & SAVE</button>
+    <button class="btn-capture" onclick="captureAndScan()">📸 CAPTURE & ANALYZE</button>
     <button style="background:#cc0000; color:white; padding: 12px;" onclick="goTo('homePage')">Exit</button>
     
     <canvas id="debugCanvas"></canvas>
@@ -72,10 +72,7 @@
 
 <script>
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzi3CrAiNVWJlLnR0GpUkf5r054s9AGYq3ygw0Xl7xFEFH-hh8SKm5l8hBaMAh5bv_5/exec";
-
-let mode = "";
-let html5QrCode = null;
-let processing = false;
+let mode = ""; let html5QrCode = null; let processing = false;
 
 function goTo(pageId, m = "") {
     document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
@@ -92,15 +89,12 @@ async function initScanner() {
 
 async function manualFocus() {
     const video = document.querySelector("#reader video");
-    if (!video) return;
-    const track = video.srcObject.getVideoTracks()[0];
-    const capabilities = track.getCapabilities();
-    document.getElementById("status").innerText = "⚡ Focusing...";
-    if (capabilities.focusMode) {
+    const track = video?.srcObject?.getVideoTracks()[0];
+    if (track) {
         try {
             await track.applyConstraints({ advanced: [{ focusMode: "continuous" }] });
-            setTimeout(() => { document.getElementById("status").innerText = "Focused! 🎯"; }, 500);
-        } catch (err) { document.getElementById("status").innerText = "Ready"; }
+            document.getElementById("status").innerText = "🎯 Focus Locked";
+        } catch (e) { document.getElementById("status").innerText = "Ready"; }
     }
 }
 
@@ -117,28 +111,23 @@ async function captureAndScan() {
     const canvas = document.getElementById("debugCanvas");
     const ctx = canvas.getContext("2d");
 
-    status.innerText = "⏳ Multi-Pass Analysis...";
+    status.innerText = "⏳ Comparing 3 Scan Passess...";
 
-    const vW = video.videoWidth;
-    const vH = video.videoHeight;
-    const cropW = vW * 0.90;
-    const cropH = vH * 0.06; 
-    const sx = (vW - cropW) / 2;
-    const sy = (vH - cropH) / 2;
+    const vW = video.videoWidth; const vH = video.videoHeight;
+    const cropW = vW * 0.90; const cropH = vH * 0.06;
+    const sx = (vW - cropW) / 2; const sy = (vH - cropH) / 2;
 
-    canvas.width = 3200;
-    canvas.height = 200;
+    canvas.width = 3200; canvas.height = 200;
     ctx.imageSmoothingEnabled = false;
 
-    // We run 3 different "looks" at the part number to find the truth
+    // 🔥 TRIPLE-EXPOSURE CONSENSUS ENGINE
     const passes = [
-        { name: 'sharp', filter: 'grayscale(1) contrast(100) brightness(1.2)' },
-        { name: 'thin', filter: 'grayscale(1) contrast(80) brightness(1.5)' },
-        { name: 'bold', filter: 'grayscale(1) contrast(120) brightness(1.0)' }
+        { filter: 'grayscale(1) contrast(150%) brightness(1.1)', name: 'Sharp' },
+        { filter: 'grayscale(1) contrast(100%) brightness(1.4)', name: 'Light (Hole Check)' },
+        { filter: 'grayscale(1) contrast(200%) brightness(0.9)', name: 'Dark (Edge Check)' }
     ];
 
     let results = [];
-
     for (let pass of passes) {
         ctx.filter = pass.filter;
         ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
@@ -149,52 +138,42 @@ async function captureAndScan() {
         });
 
         let clean = res.data.text.trim().replace(/\s/g, "").toUpperCase();
-        if (clean.length > 4) results.push(clean);
+        if (clean.length > 3) results.push(clean);
     }
 
-    // Logic: Find the most frequent result among the passes
-    function findConsensus(arr) {
+    // VOTE ON THE WINNER
+    function getWinner(arr) {
         if (arr.length === 0) return null;
-        let modeMap = {};
-        let maxEl = arr[0], maxCount = 1;
-        for (let i = 0; i < arr.length; i++) {
-            let el = arr[i];
-            if (modeMap[el] == null) modeMap[el] = 1;
-            else modeMap[el]++;
-            if (modeMap[el] > maxCount) {
-                maxEl = el;
-                maxCount = modeMap[el];
-            }
-        }
-        return maxEl;
+        let counts = {}; let max = 0; let winner = arr[0];
+        arr.forEach(val => {
+            counts[val] = (counts[val] || 0) + 1;
+            if (counts[val] > max) { max = counts[val]; winner = val; }
+        });
+        return winner;
     }
 
-    let pn = findConsensus(results);
+    let pn = getWinner(results);
 
     if (pn) {
-        // 🔥 INDUSTRIAL LOGIC CLEANUP
-        pn = pn.replace(/O/g, "0")
-               .replace(/[I|l\[\]]/g, "1")
-               .replace(/S/g, "5");
-        
-        // Custom 8 vs B fix: If it contains 'B' but is mostly numbers, it's an '8'
-        if (pn.includes('B') && (pn.match(/\d/g) || []).length > pn.length / 2) {
-            pn = pn.replace(/B/g, "8");
-        }
+        // 🔥 STRUCTURAL CHARACTER REPAIR
+        pn = pn.replace(/O/g, "0")              // Fix 0 vs O
+               .replace(/[\|\[\]I!l]/g, "1")    // Fix 1 vs I
+               .replace(/S/g, "5")              // Fix 5 vs S
+               .replace(/B/g, "8");             // Fix 8 vs B
 
-        status.innerText = "🎯 MATCH: " + pn;
+        status.innerText = "🎯 CONFIRMED: " + pn;
         const q = prompt(`Quantity for:\n${pn}`, "1");
         if (q && !isNaN(q)) {
             status.innerText = "🚀 Syncing...";
             await fetch(SCRIPT_URL, {
                 method: "POST", mode: "no-cors", 
-                body: JSON.stringify([{ pn: pn, qty: parseInt(q), mode: mode, date: new Date().toLocaleString() }])
+                body: JSON.stringify([{ pn, qty: parseInt(q), mode, date: new Date().toLocaleString() }])
             });
             status.innerText = "✅ Saved!";
             setTimeout(() => status.innerText = "Ready", 2000);
         }
     } else {
-        status.innerText = "❌ Scan Unreliable. Adjust Distance.";
+        status.innerText = "❌ Unreliable. Adjust Distance.";
     }
     processing = false;
 }
