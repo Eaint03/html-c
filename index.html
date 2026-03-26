@@ -1,216 +1,246 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NEXWAH Inventory System</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #f0f2f5; --surface: #ffffff; --surface2: #f7f8fa; --border: #e2e6ed; --border2: #d0d5dd;
-      --accent: #1a56db; --accent-light: #ebf0ff; --accent-dark: #1240a8; --text: #111827; --muted: #6b7280;
-      --success: #0a7a3e; --success-bg: #ecfdf5; --success-border: #a7f3d0; --error: #b91c1c; --error-bg: #fef2f2;
-      --error-border: #fecaca; --mono: 'IBM Plex Mono', monospace; --sans: 'IBM Plex Sans', sans-serif;
-    }
-    body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; }
-    .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; align-items: center; justify-content: space-between; height: 56px; position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
-    .topbar-brand { font-family: var(--mono); font-size: 15px; font-weight: 500; color: var(--accent); letter-spacing: -0.3px; }
-    .nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; gap: 2px; }
-    .nav-btn { font-size: 13px; font-weight: 500; padding: 14px 16px; border: none; background: none; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; }
-    .nav-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-    .page-wrap { max-width: 1100px; margin: 28px auto; padding: 0 20px; }
-    .page { display: none; }
-    .page.active { display: block; }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px 24px; margin-bottom: 18px; }
-    .card-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
-    .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
-    .field label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; }
-    .field input { padding: 9px 12px; border: 1px solid var(--border2); border-radius: 8px; font-size: 13px; outline: none; font-family: var(--mono); width: 100%; }
-    .btn { font-family: var(--sans); font-size: 13px; font-weight: 600; padding: 9px 18px; border: none; border-radius: 8px; cursor: pointer; }
-    .btn-primary { background: var(--accent); color: #fff; }
-    .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border2); }
-    .status-bar { padding: 10px 14px; border-radius: 8px; font-size: 12px; font-family: var(--mono); margin-top: 12px; border: 1px solid var(--border); background: var(--surface2); min-height: 40px; }
-    .status-bar.ok { background: var(--success-bg); color: var(--success); border-color: var(--success-border); }
-    .video-wrap { position: relative; width: 100%; border-radius: 10px; overflow: hidden; background: #000; aspect-ratio: 4/3; }
-    video { width: 100%; height: 100%; object-fit: cover; }
-    .scan-box-border { position: absolute; left: 10%; top: 20%; width: 80%; height: 60%; border: 2px solid #00d26a; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5); pointer-events: none; }
-    #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #111827; color: #fff; padding: 12px 22px; border-radius: 10px; transition: 0.3s; z-index: 999; }
-    #toast.show { transform: translateX(-50%) translateY(0); }
-    .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid #c3d9ff; border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 5px; vertical-align: middle; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NEXWAH Inventory System</title>
+
+<style>
+body { font-family: Arial; background:#f2f2f2; padding:20px; }
+.card { background:white; padding:20px; border-radius:10px; }
+.video-wrap { position:relative; width:100%; max-width:500px; }
+video { width:100%; }
+.scan-box-border {
+  position:absolute;
+  left:10%; top:25%;
+  width:80%; height:50%;
+  border:2px solid lime;
+}
+.status-bar { margin-top:10px; padding:10px; background:#eee; }
+.status-bar.ok { background:#d4ffd4; }
+.status-bar.err { background:#ffd4d4; }
+.status-bar.loading { background:#fff3cd; }
+</style>
 </head>
+
 <body>
 
-<div class="topbar"><div class="topbar-brand">NEXWAH <span>/ Inventory System</span></div></div>
-<div class="nav">
-  <button class="nav-btn active" onclick="showPage('scanner')">Scan Label</button>
-  <button class="nav-btn" onclick="showPage('inventory')">Inventory</button>
+<div class="card">
+<h2>Scan Label</h2>
+
+<div class="video-wrap">
+  <video id="video" autoplay playsinline></video>
+  <div class="scan-box-border"></div>
 </div>
 
-<div class="page-wrap">
-  <div id="page-scanner" class="page active">
-    <div class="card">
-      <div class="card-title">Precision MFR PN Search</div>
-      <div style="display:flex;gap:10px;margin-bottom:15px;">
-        <button id="btn-add" class="btn btn-primary" onclick="setMode('Add')">➕ Add Mode</button>
-        <button id="btn-take" class="btn btn-secondary" onclick="setMode('Take')">➖ Take Mode</button>
-      </div>
+<br>
 
-      <div style="display:grid;grid-template-columns: 1fr 1fr; gap:20px">
-        <div>
-          <div class="video-wrap">
-            <video id="video" autoplay playsinline muted></video>
-            <div class="scan-box-border"></div>
-          </div>
-          <div style="display:flex;gap:10px;margin-top:10px">
-            <button class="btn btn-primary" onclick="startCamera()">Start</button>
-            <button class="btn btn-secondary" onclick="captureAndExtract()">⚡ Extract PN Beside Label</button>
-          </div>
-          <div id="camStatus" class="status-bar">Ready.</div>
-        </div>
-        <div>
-          <div class="field"><label>MFR Part Number (Beside Label)</label><input type="text" id="scanMfrPn" style="font-weight:bold; font-size:18px; color:var(--accent)"></div>
-          <div class="field"><label>Description</label><input type="text" id="scanDesc"></div>
-          <div class="field"><label>Quantity</label><input type="number" id="scanQty" value="1"></div>
-          <button class="btn btn-primary" style="width:100%;padding:15px" onclick="syncToSheet()">🚀 SYNC TO SHEET</button>
-          <img id="cropPreview" style="width:100%; border-radius:8px; border:1px solid var(--border); margin-top:10px;">
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <div id="page-inventory" class="page">
-    <div class="card"><div class="card-title">Inventory Log</div><p>Logs appear in Google Sheets.</p></div>
-  </div>
+<button onclick="startCamera()">Start</button>
+<button onclick="captureAndExtract()">⚡ Extract PN Beside Label</button>
+
+<div id="camStatus" class="status-bar">Ready</div>
+
+<br>
+
+<label>MFR PN</label>
+<input id="scanMfrPn" style="width:100%;font-size:20px;"><br><br>
+
+<label>Description</label>
+<input id="scanDesc" style="width:100%;"><br><br>
+
+<label>Quantity</label>
+<input id="scanQty" type="number" value="1"><br><br>
+
+<button onclick="syncToSheet()">🚀 Sync to Sheet</button>
+
+<img id="cropPreview" style="width:100%;margin-top:10px;">
 </div>
 
-<div id="toast"></div>
 <canvas id="canvas" style="display:none"></canvas>
 <canvas id="cropCanvas" style="display:none"></canvas>
 
 <script>
-const GOOGLE_API_KEY = "AIzaSyBjzZf1DVzZFuaf9tC5SW8x9bjqp1t7HQQ"; 
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzT_0t-lZbjvlLj7Qx3q8KPOtS7aEIHhNrUkVfQnuHkdtJrVov3vAPF_j8GsCOveo4m/exec";
-let currentStream = null, scanMode = "Add";
 
-function showPage(n) {
-  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-  document.getElementById("page-" + n).classList.add("active");
-}
+const GOOGLE_API_KEY = "YOUR_API_KEY";
+const APPS_SCRIPT_URL = "YOUR_SCRIPT_URL";
 
-function setMode(m) {
-  scanMode = m;
-  document.getElementById("btn-add").className = m === "Add" ? "btn btn-primary" : "btn btn-secondary";
-  document.getElementById("btn-take").className = m === "Take" ? "btn btn-primary" : "btn btn-secondary";
-}
+let currentStream = null;
 
+// CAMERA
 async function startCamera() {
-  currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1920 } });
+  currentStream = await navigator.mediaDevices.getUserMedia({
+    video: { facingMode: "environment", width: 1920 }
+  });
   document.getElementById("video").srcObject = currentStream;
 }
 
-// ── THE PRECISION SPATIAL ANCHOR ENGINE ──
-  async function captureAndExtract() {
+// 🔥 MAIN FUNCTION (FIXED)
+async function captureAndExtract() {
+
   const video = document.getElementById("video");
   const canvas = document.getElementById("canvas");
   const crop = document.getElementById("cropCanvas");
-  
-  // 1. MAX RESOLUTION - Critical for tiny MFR text
-  canvas.width = 1920; canvas.height = 1080;
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
   canvas.getContext("2d").drawImage(video, 0, 0);
 
-  // 2. TIGHT CROP - Focus on the center where MFR info usually sits
-  const bw = canvas.width * 0.7, bh = canvas.height * 0.5;
-  crop.width = bw; crop.height = bh;
-  crop.getContext("2d").drawImage(canvas, canvas.width*0.15, canvas.height*0.25, bw, bh, 0, 0, bw, bh);
-  
-  const base64 = crop.toDataURL("image/jpeg", 1.0).split(',')[1];
+  const bw = canvas.width * 0.8;
+  const bh = canvas.height * 0.6;
+
+  crop.width = bw;
+  crop.height = bh;
+
+  crop.getContext("2d").drawImage(
+    canvas,
+    canvas.width * 0.1,
+    canvas.height * 0.2,
+    bw,
+    bh,
+    0,
+    0,
+    bw,
+    bh
+  );
+
   document.getElementById("cropPreview").src = crop.toDataURL("image/jpeg");
-  setCamStatus('<span class="spinner"></span>Filtering Distributor Noise...', "loading");
+
+  const base64 = crop.toDataURL("image/jpeg").split(',')[1];
+
+  setCamStatus("🔍 Reading...", "loading");
 
   try {
+
     const resp = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`, {
-      method: "POST", 
-      body: JSON.stringify({ requests: [{ image: { content: base64 }, features: [{ type: "TEXT_DETECTION" }] }] })
+      method: "POST",
+      body: JSON.stringify({
+        requests: [{
+          image: { content: base64 },
+          features: [{ type: "TEXT_DETECTION" }]
+        }]
+      })
     });
+
     const data = await resp.json();
-    const blocks = data.responses[0].textAnnotations; 
-    if (!blocks || blocks.length < 2) throw new Error("No text");
+    const annotations = data.responses[0].textAnnotations;
 
-    const fullText = blocks[0].description;
-    const lines = fullText.split('\n').map(l => l.trim().toUpperCase());
+    if (!annotations) throw "No text";
 
-    let finalMfrPn = "";
-
-    // --- STEP 1: FIND THE ROW ANCHOR (Beside the label) ---
     let anchorY = -1;
     let anchorXEnd = -1;
-    for (let i = 1; i < blocks.length; i++) {
-      const txt = blocks[i].description.toUpperCase();
-      if (txt.includes("MFR") || txt.includes("MAN") || txt.includes("MFG") || txt === "PN") {
-        anchorY = blocks[i].boundingPoly.vertices[0].y;
-        anchorXEnd = blocks[i].boundingPoly.vertices[1].x;
-        break; 
+
+    // ✅ STRICT "MFR PN" DETECTION
+    for (let i = 1; i < annotations.length - 1; i++) {
+      const w1 = annotations[i].description.toUpperCase();
+      const w2 = annotations[i + 1].description.toUpperCase();
+
+      if (w1 === "MFR" && w2 === "PN") {
+        anchorY = annotations[i].boundingPoly.vertices[0].y;
+        anchorXEnd = annotations[i + 1].boundingPoly.vertices[1].x;
+        break;
       }
     }
 
+    let candidates = [];
+
+    // ✅ GET RIGHT SIDE
     if (anchorY !== -1) {
-      for (let i = 1; i < blocks.length; i++) {
-        const v = blocks[i].boundingPoly.vertices;
-        const txt = blocks[i].description.trim().toUpperCase();
-        // Look in the same horizontal row (+/- 30 pixels)
-        if (Math.abs(v[0].y - anchorY) < 30 && v[0].x > anchorXEnd) {
-          // REJECT DISTRIBUTOR DNA: Skip if ends in -ND or is too short
-          if (txt.length > 4 && !txt.endsWith("-ND") && !txt.includes(":") && !txt.includes("/")) {
-            finalMfrPn = txt;
-            break;
-          }
+      for (let i = 1; i < annotations.length; i++) {
+        const v = annotations[i].boundingPoly.vertices;
+        const txt = annotations[i].description.trim().toUpperCase();
+
+        if (
+          Math.abs(v[0].y - anchorY) < 25 &&
+          v[0].x > anchorXEnd
+        ) {
+          candidates.push(txt);
         }
       }
     }
 
-    // --- STEP 2: DNA FALLBACK (If the anchor "MFR" text wasn't seen) ---
-    if (!finalMfrPn) {
-      // Look for the most "Complex" string that isn't a distributor PN
-      finalMfrPn = lines.find(l => 
-        l.length > 6 && 
-        /[0-9]/.test(l) && 
-        /[A-Z]/.test(l) && 
-        !l.endsWith("-ND") && 
-        !l.includes("/") &&
-        !l.includes(":")
-      ) || "";
+    // ✅ FILTER
+    function isValid(t) {
+      return (
+        t.length >= 6 &&
+        /[A-Z]/.test(t) &&
+        /[0-9]/.test(t) &&
+        !t.includes("ROHS") &&
+        !t.includes("COMP") &&
+        !t.includes("USA") &&
+        !t.includes("LOT") &&
+        !t.includes("CODE") &&
+        !t.includes(":") &&
+        !t.endsWith("-ND") &&
+        !t.startsWith("1727")
+      );
     }
 
-    // Clean brackets often picked up from LCSC/muRata
-    const cleaned = finalMfrPn.replace(/[\s\(\)\[\]]/g, "");
-    
-    document.getElementById("scanMfrPn").value = cleaned;
-    document.getElementById("scanDesc").value = lines.find(l => /DIO|ZEN|CAP|RES|IC|MOS/i.test(l)) || "";
-    
-    if (cleaned) {
-        setCamStatus("🎯 MFR PN LOCKED", "ok");
-    } else {
-        setCamStatus("❌ Could not find MFR PN. Try moving closer.", "err");
+    let mfrPn = "";
+
+    const valid = candidates.filter(isValid);
+
+    if (valid.length > 0) {
+      mfrPn = valid.sort((a,b)=>b.length-a.length)[0];
     }
 
-  } catch(e) { setCamStatus("❌ API Error", "err"); }
+    // ✅ FALLBACK
+    if (!mfrPn) {
+      const lines = annotations[0].description.split('\n');
+      mfrPn = lines.find(l => isValid(l.toUpperCase())) || "";
+    }
+
+    // CLEAN
+    mfrPn = mfrPn.replace(/[\s\(\)\[\]]/g, "");
+
+    document.getElementById("scanMfrPn").value = mfrPn;
+
+    document.getElementById("scanDesc").value =
+      annotations[0].description.split('\n').find(l => /DIO|ZEN|CAP|RES|IC/i.test(l)) || "";
+
+    setCamStatus(mfrPn ? "🎯 MFR PN LOCKED" : "❌ Not found", mfrPn ? "ok" : "err");
+
+  } catch (e) {
+    setCamStatus("❌ Error", "err");
+  }
 }
 
+// SAVE
 async function syncToSheet() {
+
   const pn = document.getElementById("scanMfrPn").value;
-  if(!pn) return;
-  const rowData = [new Date().toLocaleString("en-GB"), pn, document.getElementById("scanDesc").value, document.getElementById("scanQty").value, scanMode];
-  setCamStatus('<span class="spinner"></span>Syncing...', "loading");
-  await fetch(APPS_SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(rowData) });
-  toast("Synced to Inventory!");
-  setCamStatus("✓ Saved Successfully", "ok");
+  const desc = document.getElementById("scanDesc").value;
+  const qty = document.getElementById("scanQty").value;
+
+  if (!pn) return;
+
+  const rowData = [
+    new Date().toLocaleString(),
+    pn,
+    desc,
+    qty
+  ];
+
+  setCamStatus("Saving...", "loading");
+
+  await fetch(APPS_SCRIPT_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(rowData)
+  });
+
+  setCamStatus("✅ Saved", "ok");
 }
 
-function setCamStatus(m, c) { const s = document.getElementById("camStatus"); s.innerHTML = m; s.className = "status-bar " + c; }
-function toast(m) { const t = document.getElementById("toast"); t.innerText = m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"), 3000); }
+// STATUS
+function setCamStatus(msg, type) {
+  const s = document.getElementById("camStatus");
+  s.innerText = msg;
+  s.className = "status-bar " + type;
+}
+
 </script>
+
 </body>
 </html>
