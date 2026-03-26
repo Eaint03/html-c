@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hybrid MFR Scanner v25</title>
+    <title>Aggressive MFR Scanner v26</title>
     <script src="https://unpkg.com/html5-qrcode"></script>
     <style>
         :root { --blue: #007bff; --green: #28a745; --dark: #121212; }
@@ -12,7 +12,7 @@
         .hidden { display: none !important; }
         button { width: 95%; max-width: 380px; padding: 18px; margin: 6px 0; border-radius: 12px; border: none; font-size: 18px; font-weight: bold; cursor: pointer; }
         #reader-container { position: relative; width: 100%; max-width: 380px; margin: 5px auto; border-radius: 15px; overflow: hidden; border: 2px solid #444; }
-        #scanner-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; height: 220px; border: 3px solid #00ff00; box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.7); z-index: 5; pointer-events: none; }
+        #scanner-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; height: 240px; border: 3px solid #00ff00; box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.7); z-index: 5; pointer-events: none; }
         #result-card { background: #1e1e1e; border: 1px solid #444; padding: 20px; border-radius: 15px; width: 90%; max-width: 380px; margin-top: 15px; text-align: left; }
         .input-group { margin-bottom: 12px; }
         label { color: #888; font-size: 0.7rem; display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
@@ -23,7 +23,7 @@
 <body>
 
 <div id="homePage" class="page">
-    <h1 style="margin-top: 40px;">📦 Hybrid AI Scanner v25</h1>
+    <h1 style="margin-top: 40px;">📦 Aggressive AI v26</h1>
     <button style="background:var(--blue); color:white;" onclick="goTo('scanPage', 'add')">➕ INCOMING</button>
     <button style="background:#333; color:white;" onclick="goTo('scanPage', 'take')">➖ OUTGOING</button>
 </div>
@@ -90,14 +90,15 @@ async function captureAndScan() {
     if (!video) return;
 
     processing = true;
-    document.getElementById("status").innerText = "🧠 Analyzing Hybrid Layout...";
+    document.getElementById("status").innerText = "🧠 Deep Scanning...";
 
     const canvas = document.getElementById("debugCanvas");
     const ctx = canvas.getContext("2d");
-    canvas.width = 1600; canvas.height = 1600;
-    ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight, 0, 0, 1600, 1600);
+    // High res capture for tiny text
+    canvas.width = 2000; canvas.height = 2000;
+    ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight, 0, 0, 2000, 2000);
 
-    const base64Image = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+    const base64Image = canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
 
     try {
         const response = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`, {
@@ -109,37 +110,50 @@ async function captureAndScan() {
         
         let mfrPn = ""; let description = "";
 
-        // --- HYBRID LOGIC ENGINE ---
+        // --- NEW "AGGRESSIVE" FILTER LOGIC ---
         
-        // 1. FIRST PRIORITY: Landmark Hunter (DigiKey/Mouser)
+        // 1. First, try to find by LandMark (DigiKey/Mouser style)
         for (let i = 0; i < lines.length; i++) {
             let line = lines[i].toUpperCase();
-            if (line.includes("MFR PN") || line.includes("MFG P/N") || line === "MFR" || line === "MPN" || line.includes("MFR#")) {
+            if (line.includes("MFR PN") || line.includes("MFG P/N") || line.includes("MFR#") || line.includes("PART NO")) {
                 mfrPn = (line.includes(":")) ? line.split(":")[1].trim() : (lines[i+1] || "");
-                break;
+                if (mfrPn) break;
             }
         }
 
-        // 2. SECOND PRIORITY: muRata/Infineon Patterns
+        // 2. Second, search for specific prefixes (muRata/Infineon/LCSC)
         if (!mfrPn) {
-            mfrPn = lines.find(l => /^(GRM|LQH|GJM|GCM|IPD|IPP|BSC|TLE|BTS)/i.test(l)) || "";
+            // LCSC parts often start with C followed by digits
+            mfrPn = lines.find(l => /^(GRM|LQH|GJM|GCM|IPD|IPP|BSC|TLE|BTS|C\d{4,6})/.test(l.toUpperCase())) || "";
         }
 
-        // 3. THIRD PRIORITY: Line 2 Specialist (muRata/LCSC default)
+        // 3. THIRD PRIORITY: Line 2 is the "Gold Standard" for muRata/LCSC
         if (!mfrPn && lines[1] && lines[1].length > 4) {
             mfrPn = lines[1];
         }
 
-        // --- FINAL CLEANUP ---
-        if (mfrPn.endsWith("-ND")) mfrPn = mfrPn.replace("-ND", ""); // DigiKey Filter
-        mfrPn = mfrPn.replace(/\s/g, "").replace(/[()]/g, "");
+        // 4. LAST RESORT: Garbage Collection
+        // Find the most "Part Number-like" string that isn't a date or order number
+        if (!mfrPn) {
+            mfrPn = lines.find(l => 
+                l.length > 5 && 
+                !l.includes('/') && // Not a date
+                !l.includes(':') && // Not a label
+                !l.includes('DIGIKEY') && 
+                !l.endsWith('-ND') &&
+                !/^\d{4}-\d{2}-\d{2}/.test(l) // Not ISO date
+            ) || lines[0];
+        }
 
-        // Description Search
-        description = lines.find(l => /DIODE|ZENER|EEPROM|CAP|RES|MOSFET|SPI|OHM|UF|VOLT|256K/i.test(l)) || "";
+        // Cleanup symbols often picked up by AI
+        mfrPn = mfrPn.replace(/[\(\)\[\]]/g, "").replace(/\s/g, "").toUpperCase();
 
-        document.getElementById("resPN").value = mfrPn.toUpperCase();
+        // Improved Description Hunter
+        description = lines.find(l => /DIODE|ZENER|EEPROM|CAP|RES|MOSFET|SPI|OHM|UF|VOLT|IC|256K|FLASH/i.test(l)) || "";
+
+        document.getElementById("resPN").value = mfrPn;
         document.getElementById("resDesc").value = description;
-        document.getElementById("status").innerText = "✅ Scan Complete";
+        document.getElementById("status").innerText = "🎯 Scan Result Ready";
         document.getElementById("result-area").classList.remove("hidden");
         document.getElementById("capBtn").classList.add("hidden");
 
