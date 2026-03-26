@@ -90,70 +90,79 @@ async function captureAndScan() {
     if (!video) return;
 
     processing = true;
-    document.getElementById("status").innerText = "🧠 Deep Scanning...";
+    document.getElementById("status").innerText = "🧠 Analyzing Geometry...";
 
     const canvas = document.getElementById("debugCanvas");
     const ctx = canvas.getContext("2d");
-    // High res capture for tiny text
     canvas.width = 2000; canvas.height = 2000;
     ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight, 0, 0, 2000, 2000);
 
-    const base64Image = canvas.toDataURL('image/jpeg', 0.9).split(',')[1];
+    const base64Image = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
 
     try {
         const response = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`, {
-            method: "POST", body: JSON.stringify({ requests: [{ image: { content: base64Image }, features: [{ type: "TEXT_DETECTION" }] }] })
+            method: "POST", 
+            body: JSON.stringify({ 
+                requests: [{ 
+                    image: { content: base64Image }, 
+                    features: [{ type: "TEXT_DETECTION" }] 
+                }] 
+            })
         });
         const data = await response.json();
-        const fullText = data.responses[0].textAnnotations[0].description;
-        const lines = fullText.split('\n').map(l => l.trim());
         
-        let mfrPn = ""; let description = "";
+        // This is the "Magic" - we look at the individual text blocks and their positions
+        const items = data.responses[0].textAnnotations;
+        if (!items || items.length < 2) throw new Error("No text found");
 
-        // --- NEW "AGGRESSIVE" FILTER LOGIC ---
+        let mfrPn = "";
+        let description = "";
         
-        // 1. First, try to find by LandMark (DigiKey/Mouser style)
-        for (let i = 0; i < lines.length; i++) {
-            let line = lines[i].toUpperCase();
-            if (line.includes("MFR PN") || line.includes("MFG P/N") || line.includes("MFR#") || line.includes("PART NO")) {
-                mfrPn = (line.includes(":")) ? line.split(":")[1].trim() : (lines[i+1] || "");
-                if (mfrPn) break;
+        // 1. Find the "Landmark" box (MFR, MFG, MPN, PART NO)
+        let landmarkIndex = -1;
+        for (let i = 1; i < items.length; i++) {
+            let txt = items[i].description.toUpperCase();
+            if (txt.includes("MFR") || txt.includes("MFG") || txt.includes("MPN") || txt === "PN") {
+                landmarkIndex = i;
+                break;
             }
         }
 
-        // 2. Second, search for specific prefixes (muRata/Infineon/LCSC)
-        if (!mfrPn) {
-            // LCSC parts often start with C followed by digits
-            mfrPn = lines.find(l => /^(GRM|LQH|GJM|GCM|IPD|IPP|BSC|TLE|BTS|C\d{4,6})/.test(l.toUpperCase())) || "";
+        // 2. Grab the text block that is most likely the Part Number
+        if (landmarkIndex !== -1) {
+            // Usually the Part Number is within the next 3 detected blocks
+            for (let j = landmarkIndex + 1; j <= landmarkIndex + 5 && j < items.length; j++) {
+                let candidate = items[j].description.trim();
+                // Logic: A real MFR PN usually has letters AND numbers, and is > 5 chars
+                if (candidate.length > 5 && /[A-Z]/.test(candidate) && /[0-9]/.test(candidate)) {
+                    // Ignore common distributor noise
+                    if (!candidate.endsWith("-ND") && !candidate.includes("DIGI") && !candidate.includes("MOUSER")) {
+                        mfrPn = candidate;
+                        break;
+                    }
+                }
+            }
         }
 
-        // 3. THIRD PRIORITY: Line 2 is the "Gold Standard" for muRata/LCSC
-        if (!mfrPn && lines[1] && lines[1].length > 4) {
-            mfrPn = lines[1];
-        }
-
-        // 4. LAST RESORT: Garbage Collection
-        // Find the most "Part Number-like" string that isn't a date or order number
+        // 3. Fallback: If Landmark failed, find the most "Complex" string on the label
         if (!mfrPn) {
+            const lines = items[0].description.split('\n');
             mfrPn = lines.find(l => 
-                l.length > 5 && 
-                !l.includes('/') && // Not a date
-                !l.includes(':') && // Not a label
-                !l.includes('DIGIKEY') && 
-                !l.endsWith('-ND') &&
-                !/^\d{4}-\d{2}-\d{2}/.test(l) // Not ISO date
+                l.length > 8 && 
+                l.includes('-') && 
+                !l.endsWith('-ND') && 
+                !l.includes(':')
             ) || lines[0];
         }
 
-        // Cleanup symbols often picked up by AI
-        mfrPn = mfrPn.replace(/[\(\)\[\]]/g, "").replace(/\s/g, "").toUpperCase();
+        // 4. Description Search (Keywords)
+        description = items[0].description.split('\n').find(l => 
+            /DIODE|ZENER|MOSFET|CAP|RES|EEPROM|FLASH|SPI/i.test(l)
+        ) || "";
 
-        // Improved Description Hunter
-        description = lines.find(l => /DIODE|ZENER|EEPROM|CAP|RES|MOSFET|SPI|OHM|UF|VOLT|IC|256K|FLASH/i.test(l)) || "";
-
-        document.getElementById("resPN").value = mfrPn;
-        document.getElementById("resDesc").value = description;
-        document.getElementById("status").innerText = "🎯 Scan Result Ready";
+        document.getElementById("resPN").value = mfrPn.replace(/\s/g, "").toUpperCase();
+        document.getElementById("resDesc").value = description.trim();
+        document.getElementById("status").innerText = "✅ Identify Complete";
         document.getElementById("result-area").classList.remove("hidden");
         document.getElementById("capBtn").classList.add("hidden");
 
