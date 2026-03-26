@@ -67,7 +67,16 @@ let html5QrCode = null;
 let processing = false;
 
 
-// 🔥 SMART PN DETECTION (ADDED ONLY)
+// 🔥 OCR FIX (added only)
+function cleanOCR(line) {
+    return line
+        .replace(/O/g, "0")
+        .replace(/I/g, "1")
+        .replace(/Z/g, "2")
+        .replace(/S/g, "5");
+}
+
+// 🔥 SCORING (same style)
 function scorePN(line) {
     let score = 0;
 
@@ -84,23 +93,38 @@ function scorePN(line) {
     return score;
 }
 
+// 🔥 IMPROVED DETECTION
 function extractBestPN(fullText) {
     const lines = fullText.split('\n')
         .map(l => l.replace(/\s/g, "").toUpperCase())
         .filter(l => l.length > 3);
 
-    let best = "";
-    let bestScore = -999;
+    let candidates = [];
 
     for (let line of lines) {
-        let s = scorePN(line);
-        if (s > bestScore) {
-            bestScore = s;
-            best = line;
+
+        let fixed = cleanOCR(line);
+        let score = scorePN(fixed);
+
+        if (
+            fixed.length >= 6 &&
+            /[A-Z]/.test(fixed) &&
+            /[0-9]/.test(fixed) &&
+            !fixed.endsWith("-ND") &&
+            !fixed.includes("DIGI") &&
+            !fixed.includes("MOUSER") &&
+            !fixed.includes("LOT") &&
+            !fixed.includes("DATE")
+        ) {
+            candidates.push({ text: fixed, score });
         }
     }
 
-    return best;
+    if (candidates.length === 0) return lines[0] || "";
+
+    candidates.sort((a, b) => b.score - a.score);
+
+    return candidates[0].text;
 }
 
 
