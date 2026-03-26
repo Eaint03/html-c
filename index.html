@@ -23,10 +23,6 @@
     .page-wrap { max-width: 1100px; margin: 28px auto; padding: 0 20px; }
     .page { display: none; }
     .page.active { display: block; }
-    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 24px; }
-    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
-    .stat-card .label { font-size: 11px; font-weight: 600; text-transform: uppercase; color: var(--muted); }
-    .stat-card .value { font-family: var(--mono); font-size: 28px; font-weight: 500; color: var(--accent); margin-top: 4px; }
     .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px 24px; margin-bottom: 18px; }
     .card-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
     .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
@@ -57,18 +53,9 @@
 </div>
 
 <div class="page-wrap">
-  <div id="page-dashboard" class="page active">
-    <div class="stat-grid">
-      <div class="stat-card"><div class="label">Total Parts</div><div class="value" id="stat-parts">—</div></div>
-      <div class="stat-card"><div class="label">Total Stock</div><div class="value" id="stat-qty">—</div></div>
-      <div class="stat-card"><div class="label">Low Stock</div><div class="value" id="stat-low">—</div></div>
-    </div>
-    <div class="card"><div class="card-title">Welcome back, NEXWAH</div><p style="font-size:13px; color:var(--muted)">Scan a label to begin.</p></div>
-  </div>
-
-  <div id="page-scanner" class="page">
+  <div id="page-scanner" class="page active">
     <div class="card">
-      <div class="card-title">Precision AI Scanner</div>
+      <div class="card-title">Precision MFR PN Scanner</div>
       <div style="display:flex;gap:10px;margin-bottom:15px;">
         <button id="btn-add" class="btn btn-primary" onclick="setMode('Add')">➕ Add Mode</button>
         <button id="btn-take" class="btn btn-secondary" onclick="setMode('Take')">➖ Take Mode</button>
@@ -82,12 +69,12 @@
           </div>
           <div style="display:flex;gap:10px;margin-top:10px">
             <button class="btn btn-primary" onclick="startCamera()">Start</button>
-            <button class="btn btn-secondary" onclick="captureAndExtract()">⚡ Extract</button>
+            <button class="btn btn-secondary" onclick="captureAndExtract()">⚡ Extract MFR PN</button>
           </div>
-          <div id="camStatus" class="status-bar">Camera Ready.</div>
+          <div id="camStatus" class="status-bar">Ready.</div>
         </div>
         <div>
-          <div class="field"><label>MFR Part Number</label><input type="text" id="scanMfrPn" style="font-weight:bold; color:var(--accent)"></div>
+          <div class="field"><label>Actual MFR Part Number</label><input type="text" id="scanMfrPn" style="font-weight:bold; font-size:18px; color:var(--accent)"></div>
           <div class="field"><label>Description</label><input type="text" id="scanDesc"></div>
           <div class="field"><label>Qty</label><input type="number" id="scanQty" value="1"></div>
           <button class="btn btn-primary" style="width:100%;padding:15px" onclick="syncToSheet()">🚀 SYNC TO SHEET</button>
@@ -96,12 +83,12 @@
       </div>
     </div>
   </div>
-
+  
+  <div id="page-dashboard" class="page">
+    <div class="card"><div class="card-title">Stats</div><p>Welcome to NEXWAH.</p></div>
+  </div>
   <div id="page-inventory" class="page">
-    <div class="card">
-      <div class="card-title">Inventory Data</div>
-      <div id="invTable">Fetch from Google Sheet...</div>
-    </div>
+    <div class="card"><div class="card-title">Inventory Data</div><p>Log into Google Sheets to see data.</p></div>
   </div>
 </div>
 
@@ -114,7 +101,6 @@ const GOOGLE_API_KEY = "AIzaSyBjzZf1DVzZFuaf9tC5SW8x9bjqp1t7HQQ";
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzT_0t-lZbjvlLj7Qx3q8KPOtS7aEIHhNrUkVfQnuHkdtJrVov3vAPF_j8GsCOveo4m/exec";
 let currentStream = null, scanMode = "Add";
 
-// ── NAVIGATION ──
 function showPage(n) {
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
   document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
@@ -127,13 +113,12 @@ function setMode(m) {
   document.getElementById("btn-take").className = m === "Take" ? "btn btn-primary" : "btn btn-secondary";
 }
 
-// ── CAMERA ──
 async function startCamera() {
   currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1920 } });
   document.getElementById("video").srcObject = currentStream;
 }
 
-// ── PRECISION GOOGLE VISION EXTRACTION ──
+// ── PRECISION ENGINE: TARGETING MFR PN SPECIFICALLY ──
 async function captureAndExtract() {
   const video = document.getElementById("video");
   const canvas = document.getElementById("canvas");
@@ -141,13 +126,12 @@ async function captureAndExtract() {
   canvas.width = video.videoWidth; canvas.height = video.videoHeight;
   canvas.getContext("2d").drawImage(video, 0, 0);
 
-  // Focus Crop
   const bw = canvas.width * 0.8, bh = canvas.height * 0.6;
   crop.width = bw; crop.height = bh;
   crop.getContext("2d").drawImage(canvas, canvas.width*0.1, canvas.height*0.2, bw, bh, 0, 0, bw, bh);
   
   const base64 = crop.toDataURL("image/jpeg", 0.9).split(',')[1];
-  setCamStatus('<span class="spinner"></span>Anchoring MFR PN...', "loading");
+  setCamStatus('<span class="spinner"></span>Strict MFR PN Search...', "loading");
 
   try {
     const resp = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`, {
@@ -158,11 +142,11 @@ async function captureAndExtract() {
     const blocks = data.responses[0].textAnnotations; 
     if (!blocks || blocks.length < 2) throw new Error("No text");
 
-    let mfrPn = "";
+    let mfrPnCandidate = "";
     let anchorY = -1;
     let anchorXEnd = -1;
 
-    // STEP 1: Find the Anchor (MFR PN / MAN PN)
+    // 1. SPATIAL SEARCH: Find words like "MFR", "MAN", "MFG"
     for (let i = 1; i < blocks.length; i++) {
       const txt = blocks[i].description.toUpperCase();
       if (txt.includes("MFR") || txt.includes("MAN") || txt.includes("MFG") || txt === "PN") {
@@ -172,46 +156,27 @@ async function captureAndExtract() {
       }
     }
 
-    // STEP 2: Find text in the same row
+    // 2. EXTRACTION LOGIC: Grab the neighbor but filter out the "Distributor PN"
     if (anchorY !== -1) {
       for (let i = 1; i < blocks.length; i++) {
         const v = blocks[i].boundingPoly.vertices;
-        if (Math.abs(v[0].y - anchorY) < 30 && v[0].x > anchorXEnd) {
-          const txt = blocks[i].description;
-          // DNA Filter: Reject colons, slashes, and DigiKey suffixes
-          if (txt.length > 4 && !txt.includes(":") && !txt.includes("/") && !txt.toUpperCase().endsWith("-ND")) {
-            mfrPn = txt; break;
+        if (Math.abs(v[0].y - anchorY) < 35 && v[0].x > anchorXEnd) {
+          const txt = blocks[i].description.trim();
+          
+          // CRITICAL FILTER: Reject if it looks like a Distributor PN (Ends in -ND or too simple)
+          if (txt.length > 4 && !txt.includes(":") && !txt.toUpperCase().endsWith("-ND") && !txt.includes("/")) {
+            mfrPnCandidate = txt;
+            break;
           }
         }
       }
     }
 
-    // STEP 3: Fallback (Line 2 for muRata/LCSC)
-    if (!mfrPn) {
+    // 3. DNA FALLBACK: If no label found, find the most complex string that isn't a date or distributor code
+    if (!mfrPnCandidate) {
       const lines = blocks[0].description.split('\n');
-      mfrPn = lines.find(l => /[A-Z]/.test(l) && /[0-9]/.test(l) && l.length > 5) || lines[1];
-    }
-
-    const final = mfrPn.replace(/[\s\(\)\[\]]/g, "").toUpperCase();
-    document.getElementById("scanMfrPn").value = final;
-    document.getElementById("scanDesc").value = blocks[0].description.split('\n').find(l => /DIO|ZEN|RES|CAP|IC/i.test(l)) || "";
-    setCamStatus("✓ Anchored Successfully", "ok");
-    
-  } catch(e) { setCamStatus("❌ Scan Error", "err"); }
-}
-
-async function syncToSheet() {
-  const pn = document.getElementById("scanMfrPn").value;
-  if(!pn) return;
-  const rowData = [new Date().toLocaleString("en-GB"), pn, document.getElementById("scanDesc").value, document.getElementById("scanQty").value, scanMode];
-  setCamStatus('<span class="spinner"></span>Syncing...', "loading");
-  await fetch(APPS_SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(rowData) });
-  toast("Synced!");
-  setCamStatus("✓ Saved", "ok");
-}
-
-function setCamStatus(m, c) { const s = document.getElementById("camStatus"); s.innerHTML = m; s.className = "status-bar " + c; }
-function toast(m) { const t = document.getElementById("toast"); t.innerText = m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"), 3000); }
-</script>
-</body>
-</html>
+      mfrPnCandidate = lines.find(l => 
+        l.length > 6 && 
+        /[0-9]/.test(l) && 
+        /[A-Z]/.test(l.toUpperCase()) && 
+        !l.toUpperCase
