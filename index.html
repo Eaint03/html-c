@@ -1,3 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DigiKey AI Inventory v17.1</title>
+    
+    <script src="https://unpkg.com/html5-qrcode"></script>
+
+    <style>
+        :root { --blue: #007bff; --green: #28a745; --red: #dc3545; --dark: #121212; }
+        body { font-family: -apple-system, sans-serif; background: var(--dark); color: white; margin: 0; text-align: center; overflow: hidden; }
+        .page { padding: 10px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
+        .hidden { display: none !important; }
+
+        button { 
+            width: 95%; max-width: 380px; padding: 18px; margin: 6px 0; 
+            border-radius: 12px; border: none; font-size: 18px; font-weight: bold; 
+            cursor: pointer; transition: 0.1s;
+        }
+        button:active { transform: scale(0.98); opacity: 0.8; }
+        .btn-main { background: var(--blue); color: white; }
+        .btn-capture { 
+            background: var(--green); color: white; font-size: 20px; 
+            border: 4px solid white; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            margin-top: 10px;
+        }
+
+        #reader-container { 
+            position: relative; width: 100%; max-width: 380px; 
+            margin: 5px auto; border-radius: 15px; overflow: hidden; border: 2px solid #444;
+            background: #000; touch-action: none;
+        }
+
+        #scanner-overlay {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 85%; height: 220px; border: 3px solid #00ff00;
+            box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.7); z-index: 5; pointer-events: none;
+        }
+
+        #status { margin: 10px; color: #00ff00; font-weight: bold; font-size: 1.2rem; min-height: 30px; }
+        #debugCanvas { width: 90%; max-width: 340px; background: white; border-radius: 8px; display: block; margin: 10px auto; border: 1px solid #777; }
+    </style>
+</head>
+
+<body>
+
+<div id="homePage" class="page">
+    <h1 style="margin-top: 40px;">📦 AI Inventory v17.1</h1>
+    <button class="btn-main" onclick="goTo('scanPage', 'add')">➕ Add Stock</button>
+    <button class="btn-main" style="background:#333;" onclick="goTo('scanPage', 'take')">➖ Remove Stock</button>
+</div>
+
+<div id="scanPage" class="page hidden">
+    <div id="status">Ready (Center Full Label)</div>
+
+    <div id="reader-container" onclick="manualFocus()">
+        <div id="reader"></div>
+        <div id="scanner-overlay"></div>
+    </div>
+
+    <button class="btn-capture" onclick="captureAndScan()">📸 SCAN FULL LABEL</button>
+    <button style="background:#cc0000; color:white;" onclick="goTo('homePage')">Exit</button>
+    
+    <canvas id="debugCanvas"></canvas>
+</div>
+
+<script>
+// --- CONFIGURATION ---
+const GOOGLE_API_KEY = "AIzaSyDfdutL4X4bLs3Ei4dWLzIgdsZHtLJcOPA"; 
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyzOLEIsa7GxDLCmWHdVTiYuHfyvXT95wU62PKlXBpVGfhR2L5rgK_yZ4b37Np6VjY7/exec";
+
+let mode = ""; let html5QrCode = null; let processing = false;
+
+function goTo(pageId, m = "") {
+    document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
+    document.getElementById(pageId).classList.remove('hidden');
+    if (pageId === 'scanPage') { mode = m; initScanner(); } else { killScanner(); }
+}
+
+async function initScanner() {
+    html5QrCode = new Html5Qrcode("reader");
+    try {
+        await html5QrCode.start({ facingMode: "environment" }, { fps: 20, aspectRatio: 1.0 }, () => {}, () => {});
+    } catch (e) { alert(e); }
+}
+
+function killScanner() { if (html5QrCode) html5QrCode.stop().catch(() => {}); }
+
+async function manualFocus() {
+    const video = document.querySelector("#reader video");
+    const track = video?.srcObject?.getVideoTracks()[0];
+    if (track) {
+        await track.applyConstraints({ advanced: [{ focusMode: "continuous" }] });
+        document.getElementById("status").innerText = "🎯 Focus Locked";
+    }
+}
+
 async function captureAndScan() {
     if (processing) return;
     const video = document.querySelector("#reader video");
@@ -9,15 +107,14 @@ async function captureAndScan() {
     const canvas = document.getElementById("debugCanvas");
     const ctx = canvas.getContext("2d");
 
-    status.innerText = "🔍 AI Analyzing Full Label...";
+    status.innerText = "⏳ AI Reading Label...";
 
-    const vW = video.videoWidth; 
-    const vH = video.videoHeight;
-    const cropSize = Math.min(vW, vH) * 0.95; 
+    const vW = video.videoWidth; const vH = video.videoHeight;
+    const cropW = vW * 0.90; const cropH = vH * 0.65; 
+    const sx = (vW - cropW) / 2; const sy = (vH - cropH) / 2;
 
-    canvas.width = 1600; 
-    canvas.height = 1600;
-    ctx.drawImage(video, (vW - cropSize)/2, (vH - cropSize)/2, cropSize, cropSize, 0, 0, canvas.width, canvas.height);
+    canvas.width = 1600; canvas.height = 1100;
+    ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, canvas.width, canvas.height);
 
     const base64Image = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
     const GOOGLE_URL = `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`;
@@ -37,52 +134,29 @@ async function captureAndScan() {
             let fullText = data.responses[0].textAnnotations[0].description;
             let lines = fullText.split('\n');
             
-            let pn = "";
-            let desc = "";
-            let qty = "";
+            let pn = ""; let desc = ""; let qty = "";
 
-            // --- DEEP ANALYSIS ENGINE ---
             for (let i = 0; i < lines.length; i++) {
                 let line = lines[i].trim().toUpperCase();
-                
-                // 1. FIND PART NUMBER (Look for specific patterns)
-                // If it starts with 'BZT' or has many dashes/numbers
-                if (!pn && line.includes('-') && line.length > 8 && !line.includes(' ')) {
-                    pn = line;
-                }
-                
-                // 2. FIND DESCRIPTION
-                // Looking for words that describe electronics components
-                if (!desc && (line.includes('DIODE') || line.includes('ZENER') || line.includes('SOD') || line.includes('RESISTOR'))) {
-                    desc = line;
-                }
-
-                // 3. FIND QUANTITY
-                // On DigiKey labels, 100 usually appears near the bottom or after 'Quantity'
-                if (line === "100" || line === "50" || line === "25" || line === "1000") {
-                    qty = line;
-                }
+                // PN Logic (contains - and numbers)
+                if (!pn && line.includes('-') && line.length > 8 && !line.includes(' ')) pn = line;
+                // Desc Logic (Keywords)
+                if (!desc && (line.includes('DIODE') || line.includes('ZENER') || line.includes('RES') || line.includes('CAP'))) desc = line;
+                // Qty Logic (Search for common pack sizes)
+                if (line === "100" || line === "50" || line === "1000") qty = line;
             }
 
-            // Fallback if logic missed them
-            if (!pn) pn = lines[3] || "Check Label"; 
-            if (!desc) desc = lines.find(l => l.length > 15) || "Check Desc";
+            if (!pn) pn = lines[3] || "N/A";
+            if (!desc) desc = lines.find(l => l.length > 15) || "N/A";
+            if (!qty) qty = lines.find(l => !isNaN(l) && l.length <= 4) || "1";
 
             status.innerText = "🎯 Scan Complete";
             
-            // Clean up the Prompt for a professional look
-            const finalInput = prompt(
-                `DIGIKEY DATA DETECTED:\n\n` +
-                `PART #: ${pn}\n` +
-                `DESC:  ${desc}\n` +
-                `QTY:   ${qty}\n\n` +
-                `Edit below if wrong (Format: PN | DESC | QTY):`, 
-                `${pn} | ${desc} | ${qty}`
-            );
+            const finalInput = prompt(`Verify Data:\nPN: ${pn}\nDESC: ${desc}\nQTY: ${qty}\n\nFormat: PN | DESC | QTY`, `${pn} | ${desc} | ${qty}`);
             
             if (finalInput) {
                 let parts = finalInput.split('|');
-                status.innerText = "🚀 Syncing to Sheet...";
+                status.innerText = "🚀 Syncing...";
                 await fetch(SCRIPT_URL, {
                     method: "POST", mode: "no-cors", 
                     body: JSON.stringify([{ 
@@ -93,12 +167,15 @@ async function captureAndScan() {
                         date: new Date().toLocaleString() 
                     }])
                 });
-                status.innerText = "✅ Saved Successfully!";
+                status.innerText = "✅ Saved!";
                 setTimeout(() => status.innerText = "Ready", 2000);
             }
         }
     } catch (err) {
-        status.innerText = "❌ AI Error. Check connection.";
+        status.innerText = "❌ AI Error";
     }
     processing = false;
 }
+</script>
+</body>
+</html>
