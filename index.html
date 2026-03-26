@@ -1,229 +1,219 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Aggressive MFR Scanner v26</title>
-<script src="https://unpkg.com/html5-qrcode"></script>
-
-<style>
-:root { --blue:#007bff; --green:#28a745; --dark:#121212; }
-body { font-family:-apple-system; background:var(--dark); color:white; margin:0; text-align:center; }
-.page { padding:10px; display:flex; flex-direction:column; align-items:center; min-height:100vh; }
-.hidden { display:none!important; }
-button { width:95%; max-width:380px; padding:18px; margin:6px 0; border-radius:12px; border:none; font-size:18px; font-weight:bold; cursor:pointer; }
-#reader-container { position:relative; width:100%; max-width:380px; margin:5px auto; border-radius:15px; overflow:hidden; border:2px solid #444; }
-#scanner-overlay { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:90%; height:240px; border:3px solid #00ff00; box-shadow:0 0 0 1000px rgba(0,0,0,0.7); }
-#result-card { background:#1e1e1e; border:1px solid #444; padding:20px; border-radius:15px; width:90%; max-width:380px; margin-top:15px; text-align:left; }
-.input-group { margin-bottom:12px; }
-label { color:#888; font-size:0.7rem; display:block; margin-bottom:4px; text-transform:uppercase; }
-input { width:100%; background:#2a2a2a; border:1px solid #444; color:#fff; padding:12px; border-radius:8px; font-family:monospace; }
-#status { margin:10px; color:#00ff00; font-weight:bold; height:24px; }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEXWAH Inventory System</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f0f2f5; --surface: #ffffff; --surface2: #f7f8fa; --border: #e2e6ed; --border2: #d0d5dd;
+      --accent: #1a56db; --accent-light: #ebf0ff; --accent-dark: #1240a8; --text: #111827; --muted: #6b7280;
+      --success: #0a7a3e; --success-bg: #ecfdf5; --success-border: #a7f3d0; --error: #b91c1c; --error-bg: #fef2f2;
+      --error-border: #fecaca; --warn: #92400e; --warn-bg: #fffbeb; --warn-border: #fde68a; --low-stock: #fef2f2;
+      --low-stock-text: #b91c1c; --mono: 'IBM Plex Mono', monospace; --sans: 'IBM Plex Sans', sans-serif;
+    }
+    body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; }
+    .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; align-items: center; justify-content: space-between; height: 56px; position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+    .topbar-brand { font-family: var(--mono); font-size: 15px; font-weight: 500; color: var(--accent); letter-spacing: -0.3px; }
+    .topbar-brand span { color: var(--muted); font-weight: 400; }
+    .nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; gap: 2px; overflow-x: auto; }
+    .nav-btn { font-family: var(--sans); font-size: 13px; font-weight: 500; padding: 14px 16px; border: none; background: none; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: color 0.15s, border-color 0.15s; }
+    .nav-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .page-wrap { max-width: 1100px; margin: 28px auto; padding: 0 20px; }
+    .page { display: none; }
+    .page.active { display: block; }
+    .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 24px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; }
+    .stat-card .label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+    .stat-card .value { font-family: var(--mono); font-size: 28px; font-weight: 500; color: var(--accent); margin-top: 4px; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px 24px; margin-bottom: 18px; }
+    .card-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media(max-width:600px){ .form-grid { grid-template-columns: 1fr; } }
+    .field { display: flex; flex-direction: column; gap: 5px; }
+    .field label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; }
+    .field input, .field select { padding: 9px 12px; border: 1px solid var(--border2); border-radius: 8px; font-size: 13px; outline: none; }
+    .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+    .btn { font-family: var(--sans); font-size: 13px; font-weight: 600; padding: 9px 18px; border: none; border-radius: 8px; cursor: pointer; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border2); }
+    .btn-danger { background: var(--error-bg); color: var(--error); border: 1px solid var(--error-border); }
+    .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: var(--surface2); padding: 10px 14px; text-align: left; font-size: 11px; color: var(--muted); border-bottom: 1px solid var(--border); }
+    td { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+    .mono { font-family: var(--mono); }
+    .video-wrap { position: relative; width: 100%; border-radius: 10px; overflow: hidden; background: #111; aspect-ratio: 4/3; }
+    video { width: 100%; height: 100%; object-fit: cover; }
+    .scan-box-border { position: absolute; left: 10%; top: 15%; width: 80%; height: 70%; border: 2px solid #00d26a; box-shadow: 0 0 0 9999px rgba(0,0,0,0.4); }
+    .status-bar { padding: 10px 14px; border-radius: 8px; font-size: 12px; font-family: var(--mono); margin-top: 12px; border: 1px solid var(--border); background: var(--surface2); min-height: 40px; }
+    .status-bar.ok { background: var(--success-bg); color: var(--success); }
+    .status-bar.err { background: var(--error-bg); color: var(--error); }
+    #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #111827; color: #fff; padding: 12px 22px; border-radius: 10px; transition: 0.3s; z-index: 999; }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+    .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid #c3d9ff; border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 5px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
 </head>
-
 <body>
 
-<div id="homePage" class="page">
-<h1 style="margin-top:40px;">📦 Aggressive AI v26</h1>
-<button style="background:var(--blue);color:white;" onclick="goTo('scanPage','add')">➕ INCOMING</button>
-<button style="background:#333;color:white;" onclick="goTo('scanPage','take')">➖ OUTGOING</button>
+<div class="topbar">
+  <div class="topbar-brand">NEXWAH <span>/ Inventory System</span></div>
+  <div id="topbarStatus" style="font-size:12px;font-family:var(--mono)">—</div>
 </div>
 
-<div id="scanPage" class="page hidden">
-<div id="status">Ready</div>
-
-<div id="reader-container">
-<div id="reader"></div>
-<div id="scanner-overlay"></div>
+<div class="nav">
+  <button class="nav-btn active" onclick="showPage('dashboard')">Dashboard</button>
+  <button class="nav-btn" onclick="showPage('scanner')">Scan Label</button>
+  <button class="nav-btn" onclick="showPage('inventory')">Inventory</button>
+  <button class="nav-btn" onclick="showPage('transactions')">History</button>
 </div>
 
-<button id="capBtn" style="background:var(--blue);color:white;" onclick="captureAndScan()">📸 CAPTURE LABEL</button>
+<div class="page-wrap">
+  <div id="page-dashboard" class="page active">
+    <div class="stat-grid">
+      <div class="stat-card"><div class="label">Parts</div><div class="value" id="stat-parts">—</div></div>
+      <div class="stat-card"><div class="label">Total Qty</div><div class="value" id="stat-qty">—</div></div>
+      <div class="stat-card"><div class="label">Transactions</div><div class="value" id="stat-tx">—</div></div>
+    </div>
+    <div class="card"><div class="card-title">Low Stock Alerts</div><div id="lowStockList">No alerts.</div></div>
+  </div>
 
-<div id="result-area" class="hidden">
-<div id="result-card">
+  <div id="page-scanner" class="page">
+    <div class="card">
+      <div class="card-title">Label AI Scanner</div>
+      <div style="display:flex;gap:10px;margin-bottom:15px;">
+        <button id="btn-add" class="btn btn-primary" onclick="setMode('Add')">➕ Add Mode</button>
+        <button id="btn-take" class="btn btn-secondary" onclick="setMode('Take')">➖ Take Mode</button>
+      </div>
+      <div id="scanModeLabel" style="font-size:12px;color:var(--muted);margin-bottom:10px">Current: <b>Add</b></div>
+      
+      <div style="display:grid;grid-template-columns: 1fr 1fr; gap:20px">
+        <div>
+          <div class="video-wrap">
+            <video id="video" autoplay playsinline muted></video>
+            <div class="scan-box-border"></div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="startCamera()">Start</button>
+            <button class="btn btn-secondary" onclick="captureAndExtract()">⚡ Scan Label</button>
+            <button class="btn btn-danger" onclick="stopCamera()">Stop</button>
+          </div>
+          <div id="camStatus" class="status-bar">Camera Ready.</div>
+        </div>
+        <div>
+          <img id="cropPreview" style="width:100%; border-radius:8px; border:1px solid var(--border); margin-bottom:10px;" />
+          <div class="field"><label>MFR Part Number</label><input type="text" id="scanMfrPn" class="mono"></div>
+          <div class="field" style="margin-top:10px"><label>Description</label><input type="text" id="scanDesc"></div>
+          <div class="field" style="margin-top:10px"><label>Qty</label><input type="number" id="scanQty" value="1"></div>
+          <button class="btn btn-primary" style="width:100%;margin-top:15px;" onclick="syncToSheet()">🚀 Sync to Google Sheet</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-<div class="input-group">
-<label>Manufacturer Part Number</label>
-<input type="text" id="resPN">
+  <div id="page-inventory" class="page">
+    <div class="card">
+        <div class="card-title">Inventory Data</div>
+        <div class="table-wrap">
+            <table><thead><tr><th>Date</th><th>Part Number</th><th>Desc</th><th>Qty</th><th>Mode</th></tr></thead>
+            <tbody id="invTableBody"></tbody></table>
+        </div>
+    </div>
+  </div>
 </div>
 
-<div class="input-group">
-<label>Description</label>
-<input type="text" id="resDesc">
-</div>
-
-<div class="input-group">
-<label>Quantity</label>
-<input type="number" id="resQty" value="1">
-</div>
-
-<button style="background:var(--green);color:white;width:100%;" onclick="syncToSheet()">🚀 SYNC TO SHEET</button>
-<button style="background:transparent;color:#888;width:100%;" onclick="resetScan()">← Try Again</button>
-
-</div>
-</div>
-
-<button style="background:#cc0000;color:white;margin-top:20px;" onclick="goTo('homePage')">Exit</button>
-<canvas id="debugCanvas" class="hidden"></canvas>
-
-</div>
+<div id="toast"></div>
+<canvas id="canvas" style="display:none"></canvas>
+<canvas id="cropCanvas" style="display:none"></canvas>
 
 <script>
-const GOOGLE_API_KEY = "AIzaSyBjzZf1DVzZFuaf9tC5SW8x9bjqp1t7HQQ";
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyzOLEIsa7GxDLCmWHdVTiYuHfyvXT95wU62PKlXBpVGfhR2L5rgK_yZ4b37Np6VjY7/exec";
+const GOOGLE_API_KEY = "AIzaSyBjzZf1DVzZFuaf9tC5SW8x9bjqp1t7HQQ"; 
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyzOLEIsa7GxDLCmWHdVTiYuHfyvXT95wU62PKlXBpVGfhR2L5rgK_yZ4b37Np6VjY7/exec";
+let currentStream = null, scanMode = "Add", currentScan = null;
 
-let mode="", html5QrCode=null, processing=false;
-
-// 🔥 OCR CLEAN
-function cleanOCR(t){
-return t.replace(/O/g,"0").replace(/I/g,"1").replace(/S/g,"5").replace(/Z/g,"2");
+function showPage(name) {
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+    document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+    document.getElementById("page-" + name).classList.add("active");
+    if(name === 'inventory') loadInventory();
 }
 
-// 🔥 CLAUDE-STYLE EXTRACTION
-function extractPNAdvanced(text){
-
-let lines=text.split('\n')
-.map(l=>cleanOCR(l.replace(/\s+/g,"")).toUpperCase())
-.filter(l=>l.length>3);
-
-// 1️⃣ CONTEXT (BEST)
-for(let i=0;i<lines.length;i++){
-let l=lines[i];
-
-if(l.includes("MFR")||l.includes("MFG")||l.includes("MPN")||l.includes("PARTNO")||l==="PN"){
-
-for(let j=i+1;j<=i+3 && j<lines.length;j++){
-let c=lines[j];
-
-if(
-c.length>=6 &&
-/[A-Z]/.test(c) &&
-/[0-9]/.test(c) &&
-!c.endsWith("-ND") &&
-!c.includes("LOT") &&
-!c.includes("DATE")
-){
-return c;
-}
-}
-}
+function setMode(m) { 
+    scanMode = m; 
+    document.getElementById("scanModeLabel").innerHTML = `Current: <b>${m}</b>`;
+    document.getElementById("btn-add").className = m === "Add" ? "btn btn-primary" : "btn btn-secondary";
+    document.getElementById("btn-take").className = m === "Take" ? "btn btn-primary" : "btn btn-secondary";
 }
 
-// 2️⃣ STRONG PATTERN
-let strong=lines.filter(l=>
-l.length>=6 &&
-/[A-Z]/.test(l) &&
-/[0-9]/.test(l) &&
-l.includes("-") &&
-!l.endsWith("-ND") &&
-!l.includes("DIGI") &&
-!l.includes("MOUSER") &&
-!l.includes("LOT")
-);
-
-if(strong.length>0) return strong[0];
-
-// 3️⃣ LAST FALLBACK
-for(let l of lines){
-if(/[A-Z]/.test(l)&&/[0-9]/.test(l)) return l;
+async function startCamera() {
+    currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+    document.getElementById("video").srcObject = currentStream;
 }
 
-return "";
+function stopCamera() { if(currentStream) currentStream.getTracks().forEach(t => t.stop()); }
+
+async function captureAndExtract() {
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+    const crop = document.getElementById("cropCanvas");
+    canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    canvas.getContext("2d").drawImage(video, 0, 0);
+
+    const bw = canvas.width * 0.8, bh = canvas.height * 0.7;
+    crop.width = bw; crop.height = bh;
+    crop.getContext("2d").drawImage(canvas, canvas.width*0.1, canvas.height*0.15, bw, bh, 0, 0, bw, bh);
+    
+    const dataUrl = crop.toDataURL("image/jpeg");
+    document.getElementById("cropPreview").src = dataUrl;
+    setCamStatus('<span class="spinner"></span>Analyzing with AI...', "loading");
+
+    try {
+        const resp = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`, {
+            method: "POST", body: JSON.stringify({ requests: [{ image: { content: dataUrl.split(',')[1] }, features: [{ type: "TEXT_DETECTION" }] }] })
+        });
+        const data = await resp.json();
+        const lines = data.responses[0].textAnnotations[0].description.split('\n');
+        
+        // --- HYBRID INTELLIGENCE: Mouser/DigiKey Landmark vs muRata/LCSC Line 2 ---
+        let pn = "";
+        for (let i = 0; i < lines.length; i++) {
+            let l = lines[i].toUpperCase();
+            if (l.includes("MFR PN") || l.includes("MFG P/N") || l.includes("PART NO")) {
+                pn = lines[i+1] || lines[i].split(":")[1]; break;
+            }
+        }
+        if (!pn && lines[1]) pn = lines[1]; // Fallback to Line 2 for muRata
+
+        document.getElementById("scanMfrPn").value = pn.replace(/\s/g, "").toUpperCase();
+        document.getElementById("scanDesc").value = lines.find(l => /DIODE|ZENER|MOSFET|CAP|RES/i.test(l)) || "";
+        setCamStatus("✓ Identify Complete", "ok");
+    } catch(e) { setCamStatus("❌ Read Error", "err"); }
 }
 
-function goTo(page,m=""){
-document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
-document.getElementById(page).classList.remove('hidden');
-if(page==='scanPage'){mode=m;initScanner();resetScan();} else killScanner();
+async function syncToSheet() {
+    const pn = document.getElementById("scanMfrPn").value;
+    const desc = document.getElementById("scanDesc").value;
+    const qty = document.getElementById("scanQty").value;
+    const date = new Date().toLocaleString();
+
+    const row = [date, pn, desc, qty, scanMode];
+    setCamStatus('<span class="spinner"></span>Syncing...', "loading");
+    
+    await fetch(APPS_SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(row) });
+    toast("Sync Successful!");
+    setCamStatus("✓ Saved to Inventory", "ok");
 }
 
-async function initScanner(){
-html5QrCode=new Html5Qrcode("reader");
-await html5QrCode.start({facingMode:"environment"},{fps:25},()=>{},()=>{});
-}
+function toast(m) { const t = document.getElementById("toast"); t.innerText = m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"), 3000); }
+function setCamStatus(m, c) { const s = document.getElementById("camStatus"); s.innerHTML = m; s.className = "status-bar " + c; }
 
-function killScanner(){ if(html5QrCode) html5QrCode.stop(); }
-
-function resetScan(){
-document.getElementById("result-area").classList.add("hidden");
-document.getElementById("capBtn").classList.remove("hidden");
-document.getElementById("status").innerText="Ready";
-processing=false;
-}
-
-async function captureAndScan(){
-
-if(processing) return;
-
-const video=document.querySelector("#reader video");
-if(!video) return;
-
-processing=true;
-document.getElementById("status").innerText="Analyzing...";
-
-const canvas=document.getElementById("debugCanvas");
-const ctx=canvas.getContext("2d");
-
-canvas.width=2000;
-canvas.height=2000;
-
-ctx.drawImage(video,0,0,2000,2000);
-
-const base64=canvas.toDataURL("image/jpeg").split(',')[1];
-
-try{
-
-const res=await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`,{
-method:"POST",
-body:JSON.stringify({
-requests:[{
-image:{content:base64},
-features:[{type:"TEXT_DETECTION"}]
-}]
-})
-});
-
-const data=await res.json();
-const items=data.responses[0].textAnnotations;
-
-if(!items) throw new Error();
-
-let full=items[0].description
-.replace(/[^A-Za-z0-9\-\n]/g," ");
-
-let mfr=extractPNAdvanced(full);
-
-let desc=items[0].description.split('\n').find(l=>
-/DIODE|MOSFET|CAP|RES|IC|EEPROM|FLASH/i.test(l)
-)||"";
-
-document.getElementById("resPN").value=mfr;
-document.getElementById("resDesc").value=desc;
-
-document.getElementById("status").innerText="Done";
-document.getElementById("result-area").classList.remove("hidden");
-document.getElementById("capBtn").classList.add("hidden");
-
-}catch(e){
-document.getElementById("status").innerText="Scan Failed";
-processing=false;
-}
-}
-
-async function syncToSheet(){
-const pn=resPN.value;
-const desc=resDesc.value;
-const qty=resQty.value;
-
-await fetch(SCRIPT_URL,{
-method:"POST",
-mode:"no-cors",
-body:JSON.stringify([{pn,desc,qty}])
-});
-
-document.getElementById("status").innerText="Saved";
-setTimeout(resetScan,1500);
+async function loadInventory() {
+    const resp = await fetch(`${APPS_SCRIPT_URL}?action=read&sheet=Inventory`);
+    const data = await resp.json();
+    document.getElementById("invTableBody").innerHTML = data.slice(1).reverse().map(r => `<tr><td>${r[0]}</td><td class="mono">${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td>${r[4]}</td></tr>`).join("");
 }
 </script>
 </body>
