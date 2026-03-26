@@ -112,20 +112,23 @@ async function startCamera() {
 }
 
 // ── THE PRECISION SPATIAL ANCHOR ENGINE ──
-async function captureAndExtract() {
+  async function captureAndExtract() {
   const video = document.getElementById("video");
   const canvas = document.getElementById("canvas");
   const crop = document.getElementById("cropCanvas");
-  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+  
+  // 1. MAX RESOLUTION - Critical for tiny MFR text
+  canvas.width = 1920; canvas.height = 1080;
   canvas.getContext("2d").drawImage(video, 0, 0);
 
-  const bw = canvas.width * 0.8, bh = canvas.height * 0.6;
+  // 2. TIGHT CROP - Focus on the center where MFR info usually sits
+  const bw = canvas.width * 0.7, bh = canvas.height * 0.5;
   crop.width = bw; crop.height = bh;
-  crop.getContext("2d").drawImage(canvas, canvas.width*0.1, canvas.height*0.2, bw, bh, 0, 0, bw, bh);
+  crop.getContext("2d").drawImage(canvas, canvas.width*0.15, canvas.height*0.25, bw, bh, 0, 0, bw, bh);
   
-  const base64 = crop.toDataURL("image/jpeg", 0.9).split(',')[1];
+  const base64 = crop.toDataURL("image/jpeg", 1.0).split(',')[1];
   document.getElementById("cropPreview").src = crop.toDataURL("image/jpeg");
-  setCamStatus('<span class="spinner"></span>Locating MFR Label Row...', "loading");
+  setCamStatus('<span class="spinner"></span>Filtering Distributor Noise...', "loading");
 
   try {
     const resp = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`, {
@@ -133,55 +136,67 @@ async function captureAndExtract() {
       body: JSON.stringify({ requests: [{ image: { content: base64 }, features: [{ type: "TEXT_DETECTION" }] }] })
     });
     const data = await resp.json();
-    const annotations = data.responses[0].textAnnotations; 
-    if (!annotations || annotations.length < 2) throw new Error("No text");
+    const blocks = data.responses[0].textAnnotations; 
+    if (!blocks || blocks.length < 2) throw new Error("No text");
 
-    let mfrPn = "";
+    const fullText = blocks[0].description;
+    const lines = fullText.split('\n').map(l => l.trim().toUpperCase());
+
+    let finalMfrPn = "";
+
+    // --- STEP 1: FIND THE ROW ANCHOR (Beside the label) ---
     let anchorY = -1;
     let anchorXEnd = -1;
-
-    // 1. SEARCH FOR SPATIAL ANCHOR (Look for words MFR, MAN, MFG, or PN)
-    for (let i = 1; i < annotations.length; i++) {
-        const word = annotations[i].description.toUpperCase();
-        if (word.includes("MFR") || word.includes("MAN") || word.includes("MFG") || word === "PN") {
-            const vertices = annotations[i].boundingPoly.vertices;
-            anchorY = vertices[0].y;      // Row Baseline
-            anchorXEnd = vertices[1].x;   // Horizontal End of label
-            break; 
-        }
+    for (let i = 1; i < blocks.length; i++) {
+      const txt = blocks[i].description.toUpperCase();
+      if (txt.includes("MFR") || txt.includes("MAN") || txt.includes("MFG") || txt === "PN") {
+        anchorY = blocks[i].boundingPoly.vertices[0].y;
+        anchorXEnd = blocks[i].boundingPoly.vertices[1].x;
+        break; 
+      }
     }
 
-    // 2. SPATIAL GRAB: Find text strictly to the RIGHT of the label on the SAME ROW
     if (anchorY !== -1) {
-        for (let i = 1; i < annotations.length; i++) {
-            const v = annotations[i].boundingPoly.vertices;
-            const currentY = v[0].y;
-            const currentXStart = v[0].x;
-            const text = annotations[i].description.trim();
-
-            // Same vertical line (within 25px) AND physically located after the label
-            if (Math.abs(currentY - anchorY) < 30 && currentXStart > anchorXEnd) {
-                // Ignore colons and distributor "-ND" tags
-                if (text.length > 4 && !text.includes(":") && !text.toUpperCase().endsWith("-ND")) {
-                    mfrPn = text;
-                    break;
-                }
-            }
+      for (let i = 1; i < blocks.length; i++) {
+        const v = blocks[i].boundingPoly.vertices;
+        const txt = blocks[i].description.trim().toUpperCase();
+        // Look in the same horizontal row (+/- 30 pixels)
+        if (Math.abs(v[0].y - anchorY) < 30 && v[0].x > anchorXEnd) {
+          // REJECT DISTRIBUTOR DNA: Skip if ends in -ND or is too short
+          if (txt.length > 4 && !txt.endsWith("-ND") && !txt.includes(":") && !txt.includes("/")) {
+            finalMfrPn = txt;
+            break;
+          }
         }
+      }
     }
 
-    // 3. CLEANUP & FALLBACK
-    if (!mfrPn) {
-        const fullLines = annotations[0].description.split('\n');
-        mfrPn = fullLines[1] || fullLines[0]; // Fallback to line 2
+    // --- STEP 2: DNA FALLBACK (If the anchor "MFR" text wasn't seen) ---
+    if (!finalMfrPn) {
+      // Look for the most "Complex" string that isn't a distributor PN
+      finalMfrPn = lines.find(l => 
+        l.length > 6 && 
+        /[0-9]/.test(l) && 
+        /[A-Z]/.test(l) && 
+        !l.endsWith("-ND") && 
+        !l.includes("/") &&
+        !l.includes(":")
+      ) || "";
     }
 
-    const cleanedPn = mfrPn.replace(/[\s\(\)\[\]]/g, "").toUpperCase();
-    document.getElementById("scanMfrPn").value = cleanedPn;
-    document.getElementById("scanDesc").value = annotations[0].description.split('\n').find(l => /DIO|ZEN|CAP|RES|IC/i.test(l)) || "";
+    // Clean brackets often picked up from LCSC/muRata
+    const cleaned = finalMfrPn.replace(/[\s\(\)\[\]]/g, "");
     
-    setCamStatus(cleanedPn ? "🎯 Anchor Lock Successful" : "⚠ No PN beside label", cleanedPn ? "ok" : "err");
-  } catch(e) { setCamStatus("❌ Geometry Read Error", "err"); }
+    document.getElementById("scanMfrPn").value = cleaned;
+    document.getElementById("scanDesc").value = lines.find(l => /DIO|ZEN|CAP|RES|IC|MOS/i.test(l)) || "";
+    
+    if (cleaned) {
+        setCamStatus("🎯 MFR PN LOCKED", "ok");
+    } else {
+        setCamStatus("❌ Could not find MFR PN. Try moving closer.", "err");
+    }
+
+  } catch(e) { setCamStatus("❌ API Error", "err"); }
 }
 
 async function syncToSheet() {
