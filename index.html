@@ -1,221 +1,229 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aggressive MFR Scanner v26</title>
-    <script src="https://unpkg.com/html5-qrcode"></script>
-    <style>
-        :root { --blue: #007bff; --green: #28a745; --dark: #121212; }
-        body { font-family: -apple-system, sans-serif; background: var(--dark); color: white; margin: 0; text-align: center; }
-        .page { padding: 10px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
-        .hidden { display: none !important; }
-        button { width: 95%; max-width: 380px; padding: 18px; margin: 6px 0; border-radius: 12px; border: none; font-size: 18px; font-weight: bold; cursor: pointer; }
-        #reader-container { position: relative; width: 100%; max-width: 380px; margin: 5px auto; border-radius: 15px; overflow: hidden; border: 2px solid #444; }
-        #scanner-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; height: 240px; border: 3px solid #00ff00; box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0.7); z-index: 5; pointer-events: none; }
-        #result-card { background: #1e1e1e; border: 1px solid #444; padding: 20px; border-radius: 15px; width: 90%; max-width: 380px; margin-top: 15px; text-align: left; }
-        .input-group { margin-bottom: 12px; }
-        label { color: #888; font-size: 0.7rem; display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
-        input { width: 100%; background: #2a2a2a; border: 1px solid #444; color: #fff; padding: 12px; border-radius: 8px; font-size: 1.1rem; box-sizing: border-box; font-family: monospace; }
-        #status { margin: 10px; color: #00ff00; font-weight: bold; height: 24px; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aggressive MFR Scanner v26</title>
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+:root { --blue:#007bff; --green:#28a745; --dark:#121212; }
+body { font-family:-apple-system; background:var(--dark); color:white; margin:0; text-align:center; }
+.page { padding:10px; display:flex; flex-direction:column; align-items:center; min-height:100vh; }
+.hidden { display:none!important; }
+button { width:95%; max-width:380px; padding:18px; margin:6px 0; border-radius:12px; border:none; font-size:18px; font-weight:bold; cursor:pointer; }
+#reader-container { position:relative; width:100%; max-width:380px; margin:5px auto; border-radius:15px; overflow:hidden; border:2px solid #444; }
+#scanner-overlay { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:90%; height:240px; border:3px solid #00ff00; box-shadow:0 0 0 1000px rgba(0,0,0,0.7); }
+#result-card { background:#1e1e1e; border:1px solid #444; padding:20px; border-radius:15px; width:90%; max-width:380px; margin-top:15px; text-align:left; }
+.input-group { margin-bottom:12px; }
+label { color:#888; font-size:0.7rem; display:block; margin-bottom:4px; text-transform:uppercase; }
+input { width:100%; background:#2a2a2a; border:1px solid #444; color:#fff; padding:12px; border-radius:8px; font-family:monospace; }
+#status { margin:10px; color:#00ff00; font-weight:bold; height:24px; }
+</style>
 </head>
+
 <body>
 
 <div id="homePage" class="page">
-    <h1 style="margin-top: 40px;">📦 Aggressive AI v26</h1>
-    <button style="background:var(--blue); color:white;" onclick="goTo('scanPage', 'add')">➕ INCOMING</button>
-    <button style="background:#333; color:white;" onclick="goTo('scanPage', 'take')">➖ OUTGOING</button>
+<h1 style="margin-top:40px;">📦 Aggressive AI v26</h1>
+<button style="background:var(--blue);color:white;" onclick="goTo('scanPage','add')">➕ INCOMING</button>
+<button style="background:#333;color:white;" onclick="goTo('scanPage','take')">➖ OUTGOING</button>
 </div>
 
 <div id="scanPage" class="page hidden">
-    <div id="status">Ready</div>
-    <div id="reader-container">
-        <div id="reader"></div>
-        <div id="scanner-overlay"></div>
-    </div>
-    <button id="capBtn" style="background:var(--blue); color:white;" onclick="captureAndScan()">📸 CAPTURE LABEL</button>
+<div id="status">Ready</div>
 
-    <div id="result-area" class="hidden">
-        <div id="result-card">
-            <div class="input-group">
-                <label>Manufacturer Part Number</label>
-                <input type="text" id="resPN">
-            </div>
-            <div class="input-group">
-                <label>Description</label>
-                <input type="text" id="resDesc">
-            </div>
-            <div class="input-group">
-                <label>Quantity</label>
-                <input type="number" id="resQty" value="1" onclick="this.select()">
-            </div>
-            <button style="background:var(--green); color:white; width:100%; padding:15px; border-radius:10px; border:none; font-weight:bold;" onclick="syncToSheet()">🚀 SYNC TO SHEET</button>
-            <button style="background:transparent; color:#888; width:100%; font-size: 13px; margin-top:12px; border:none;" onclick="resetScan()">← Try Again</button>
-        </div>
-    </div>
-    <button style="background:#cc0000; color:white; margin-top:20px; border:none; border-radius:12px; padding:10px 40px;" onclick="goTo('homePage')">Exit</button>
-    <canvas id="debugCanvas" class="hidden"></canvas>
+<div id="reader-container">
+<div id="reader"></div>
+<div id="scanner-overlay"></div>
+</div>
+
+<button id="capBtn" style="background:var(--blue);color:white;" onclick="captureAndScan()">📸 CAPTURE LABEL</button>
+
+<div id="result-area" class="hidden">
+<div id="result-card">
+
+<div class="input-group">
+<label>Manufacturer Part Number</label>
+<input type="text" id="resPN">
+</div>
+
+<div class="input-group">
+<label>Description</label>
+<input type="text" id="resDesc">
+</div>
+
+<div class="input-group">
+<label>Quantity</label>
+<input type="number" id="resQty" value="1">
+</div>
+
+<button style="background:var(--green);color:white;width:100%;" onclick="syncToSheet()">🚀 SYNC TO SHEET</button>
+<button style="background:transparent;color:#888;width:100%;" onclick="resetScan()">← Try Again</button>
+
+</div>
+</div>
+
+<button style="background:#cc0000;color:white;margin-top:20px;" onclick="goTo('homePage')">Exit</button>
+<canvas id="debugCanvas" class="hidden"></canvas>
+
 </div>
 
 <script>
-const GOOGLE_API_KEY = "AIzaSyBjzZf1DVzZFuaf9tC5SW8x9bjqp1t7HQQ"; 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyzOLEIsa7GxDLCmWHdVTiYuHfyvXT95wU62PKlXBpVGfhR2L5rgK_yZ4b37Np6VjY7/exec";
+const GOOGLE_API_KEY = "YOUR_KEY";
+const SCRIPT_URL = "YOUR_SCRIPT";
 
-let mode = ""; 
-let html5QrCode = null; 
-let processing = false;
+let mode="", html5QrCode=null, processing=false;
 
-
-// 🔥 OCR FIX (added only)
-function cleanOCR(line) {
-    return line
-        .replace(/O/g, "0")
-        .replace(/I/g, "1")
-        .replace(/Z/g, "2")
-        .replace(/S/g, "5");
+// 🔥 OCR CLEAN
+function cleanOCR(t){
+return t.replace(/O/g,"0").replace(/I/g,"1").replace(/S/g,"5").replace(/Z/g,"2");
 }
 
-// 🔥 SCORING (same style)
-function scorePN(line) {
-    let score = 0;
+// 🔥 CLAUDE-STYLE EXTRACTION
+function extractPNAdvanced(text){
 
-    if (line.length >= 6 && line.length <= 25) score += 2;
-    if (/[A-Z]/.test(line) && /[0-9]/.test(line)) score += 3;
-    if (line.includes("-")) score += 1;
+let lines=text.split('\n')
+.map(l=>cleanOCR(l.replace(/\s+/g,"")).toUpperCase())
+.filter(l=>l.length>3);
 
-    if (line.endsWith("-ND")) score -= 5;
-    if (line.includes("DIGI") || line.includes("MOUSER")) score -= 5;
-    if (line.includes("LOT") || line.includes("DATE")) score -= 3;
-    if (line.includes(":")) score -= 2;
-    if (/^[0-9]+$/.test(line)) score -= 3;
+// 1️⃣ CONTEXT (BEST)
+for(let i=0;i<lines.length;i++){
+let l=lines[i];
 
-    return score;
+if(l.includes("MFR")||l.includes("MFG")||l.includes("MPN")||l.includes("PARTNO")||l==="PN"){
+
+for(let j=i+1;j<=i+3 && j<lines.length;j++){
+let c=lines[j];
+
+if(
+c.length>=6 &&
+/[A-Z]/.test(c) &&
+/[0-9]/.test(c) &&
+!c.endsWith("-ND") &&
+!c.includes("LOT") &&
+!c.includes("DATE")
+){
+return c;
+}
+}
+}
 }
 
-// 🔥 IMPROVED DETECTION
-function extractBestPN(fullText) {
-    const lines = fullText.split('\n')
-        .map(l => l.replace(/\s/g, "").toUpperCase())
-        .filter(l => l.length > 3);
+// 2️⃣ STRONG PATTERN
+let strong=lines.filter(l=>
+l.length>=6 &&
+/[A-Z]/.test(l) &&
+/[0-9]/.test(l) &&
+l.includes("-") &&
+!l.endsWith("-ND") &&
+!l.includes("DIGI") &&
+!l.includes("MOUSER") &&
+!l.includes("LOT")
+);
 
-    let candidates = [];
+if(strong.length>0) return strong[0];
 
-    for (let line of lines) {
-
-        let fixed = cleanOCR(line);
-        let score = scorePN(fixed);
-
-        if (
-            fixed.length >= 6 &&
-            /[A-Z]/.test(fixed) &&
-            /[0-9]/.test(fixed) &&
-            !fixed.endsWith("-ND") &&
-            !fixed.includes("DIGI") &&
-            !fixed.includes("MOUSER") &&
-            !fixed.includes("LOT") &&
-            !fixed.includes("DATE")
-        ) {
-            candidates.push({ text: fixed, score });
-        }
-    }
-
-    if (candidates.length === 0) return lines[0] || "";
-
-    candidates.sort((a, b) => b.score - a.score);
-
-    return candidates[0].text;
+// 3️⃣ LAST FALLBACK
+for(let l of lines){
+if(/[A-Z]/.test(l)&&/[0-9]/.test(l)) return l;
 }
 
-
-function goTo(pageId, m = "") {
-    document.querySelectorAll('.page').forEach(p => p.classList.add('hidden'));
-    document.getElementById(pageId).classList.remove('hidden');
-    if (pageId === 'scanPage') { mode = m; initScanner(); resetScan(); } else { killScanner(); }
+return "";
 }
 
-async function initScanner() {
-    html5QrCode = new Html5Qrcode("reader");
-    try { await html5QrCode.start({ facingMode: "environment" }, { fps: 25, aspectRatio: 1.0 }, () => {}, () => {}); } catch (e) { alert(e); }
+function goTo(page,m=""){
+document.querySelectorAll('.page').forEach(p=>p.classList.add('hidden'));
+document.getElementById(page).classList.remove('hidden');
+if(page==='scanPage'){mode=m;initScanner();resetScan();} else killScanner();
 }
 
-function killScanner() { if (html5QrCode) html5QrCode.stop().catch(() => {}); }
-
-function resetScan() {
-    document.getElementById("result-area").classList.add("hidden");
-    document.getElementById("capBtn").classList.remove("hidden");
-    document.getElementById("status").innerText = "Ready";
-    processing = false;
+async function initScanner(){
+html5QrCode=new Html5Qrcode("reader");
+await html5QrCode.start({facingMode:"environment"},{fps:25},()=>{},()=>{});
 }
 
-async function captureAndScan() {
-    if (processing) return;
-    const video = document.querySelector("#reader video");
-    if (!video) return;
+function killScanner(){ if(html5QrCode) html5QrCode.stop(); }
 
-    processing = true;
-    document.getElementById("status").innerText = "🧠 Analyzing Geometry...";
-
-    const canvas = document.getElementById("debugCanvas");
-    const ctx = canvas.getContext("2d");
-    canvas.width = 2000; 
-    canvas.height = 2000;
-
-    ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight, 0, 0, 2000, 2000);
-
-    const base64Image = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
-
-    try {
-        const response = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`, {
-            method: "POST",
-            body: JSON.stringify({
-                requests: [{
-                    image: { content: base64Image },
-                    features: [{ type: "TEXT_DETECTION" }]
-                }]
-            })
-        });
-
-        const data = await response.json();
-
-        const items = data.responses[0].textAnnotations;
-        if (!items || items.length < 1) throw new Error("No text found");
-
-        const fullTextClean = items[0].description
-            .replace(/[^A-Za-z0-9\-\n]/g, " ")
-            .toUpperCase();
-
-        let mfrPn = extractBestPN(fullTextClean);
-
-        let description = items[0].description.split('\n').find(l =>
-            /DIODE|ZENER|MOSFET|CAP|RES|EEPROM|FLASH|SPI/i.test(l)
-        ) || "";
-
-        document.getElementById("resPN").value = mfrPn.replace(/\s/g, "");
-        document.getElementById("resDesc").value = description.trim();
-
-        document.getElementById("status").innerText = "✅ Identify Complete";
-        document.getElementById("result-area").classList.remove("hidden");
-        document.getElementById("capBtn").classList.add("hidden");
-
-    } catch (err) {
-        console.error(err);
-        document.getElementById("status").innerText = "❌ Scan Failed";
-        processing = false;
-    }
+function resetScan(){
+document.getElementById("result-area").classList.add("hidden");
+document.getElementById("capBtn").classList.remove("hidden");
+document.getElementById("status").innerText="Ready";
+processing=false;
 }
 
-async function syncToSheet() {
-    const pn = document.getElementById("resPN").value;
-    const desc = document.getElementById("resDesc").value;
-    const qty = document.getElementById("resQty").value;
-    document.getElementById("status").innerText = "🚀 Syncing...";
-    await fetch(SCRIPT_URL, { 
-        method: "POST", mode: "no-cors", 
-        body: JSON.stringify([{ pn, desc, qty, mode, date: new Date().toLocaleString() }]) 
-    });
-    document.getElementById("status").innerText = "✅ Saved!";
-    setTimeout(resetScan, 2000);
+async function captureAndScan(){
+
+if(processing) return;
+
+const video=document.querySelector("#reader video");
+if(!video) return;
+
+processing=true;
+document.getElementById("status").innerText="Analyzing...";
+
+const canvas=document.getElementById("debugCanvas");
+const ctx=canvas.getContext("2d");
+
+canvas.width=2000;
+canvas.height=2000;
+
+ctx.drawImage(video,0,0,2000,2000);
+
+const base64=canvas.toDataURL("image/jpeg").split(',')[1];
+
+try{
+
+const res=await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`,{
+method:"POST",
+body:JSON.stringify({
+requests:[{
+image:{content:base64},
+features:[{type:"TEXT_DETECTION"}]
+}]
+})
+});
+
+const data=await res.json();
+const items=data.responses[0].textAnnotations;
+
+if(!items) throw new Error();
+
+let full=items[0].description
+.replace(/[^A-Za-z0-9\-\n]/g," ");
+
+let mfr=extractPNAdvanced(full);
+
+let desc=items[0].description.split('\n').find(l=>
+/DIODE|MOSFET|CAP|RES|IC|EEPROM|FLASH/i.test(l)
+)||"";
+
+document.getElementById("resPN").value=mfr;
+document.getElementById("resDesc").value=desc;
+
+document.getElementById("status").innerText="Done";
+document.getElementById("result-area").classList.remove("hidden");
+document.getElementById("capBtn").classList.add("hidden");
+
+}catch(e){
+document.getElementById("status").innerText="Scan Failed";
+processing=false;
+}
+}
+
+async function syncToSheet(){
+const pn=resPN.value;
+const desc=resDesc.value;
+const qty=resQty.value;
+
+await fetch(SCRIPT_URL,{
+method:"POST",
+mode:"no-cors",
+body:JSON.stringify([{pn,desc,qty}])
+});
+
+document.getElementById("status").innerText="Saved";
+setTimeout(resetScan,1500);
 }
 </script>
 </body>
