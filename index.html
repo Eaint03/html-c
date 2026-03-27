@@ -70,52 +70,61 @@ async function startCamera() {
   document.getElementById("video").srcObject = stream;
 }
 
-// 🧽 STEP 3: THE "MFR DNA" FILTER
+
+
+   // 🧽 STEP 3: THE "IRON-Clad" MFR FILTER
 function filterNoise(text) {
-  // Convert messy text into clean lines
-  const lines = text.split('\n').map(l => l.trim().toUpperCase());
+  // 1. Split into lines and remove internal symbols like : , ; ( ) [ ]
+  // This stops "PN: RK73" from bypassing the filter
+  const lines = text.split('\n').map(l => 
+    l.toUpperCase().replace(/[:;,\(\)\[\]\s]/g, "").trim()
+  );
   
-  // 🚫 BLOCK LIST: Immediate deletion if line contains these
-  const blockList = ["INV", "SO", "PO", "DATE", "LOT", "QTY", "SHIP", "CUST", "ORDER", "PACK", "BILL", "REF"];
+  // 🚫 THE "BLOCK LIST" (Aggressive)
+  const blockList = ["INV", "SO", "PO", "DATE", "LOT", "QTY", "SHIP", "CUST", "ORDER", "PACK", "BILL", "REF", "ADVICE"];
 
   return lines.filter(l => {
-    // 1. Length Check: MFR PNs are almost never shorter than 6 or longer than 25
+    // RULE A: Must be between 6 and 25 chars (Kills "QTY: 5" or "CHINA")
     if (l.length < 6 || l.length > 25) return false; 
     
-    // 2. Business Block: Kill anything starting with or containing blockList words
+    // RULE B: Strict "Business" Word Block
     if (blockList.some(bad => l.includes(bad))) return false;
 
-    // 3. Symbol Block: Dates and Orders use slashes (/) or colons (:). MFR PNs do not.
-    if (l.includes("/") || l.includes(":") || l.includes("\\")) return false;
+    // RULE C: The "Date/Order" Slash Killer
+    // If it has a slash / or backslash \, it is NOT a Manufacturer Part Number.
+    if (l.includes("/") || l.includes("\\")) return false;
 
-    // 4. DNA Check: A real MFR PN MUST have both Letters AND Numbers
-    // This instantly kills pure numeric Batch IDs or pure alpha words
+    // RULE D: The Alphanumeric DNA Test
+    // MFR PNs MUST have both Letters and Numbers. 
+    // This kills pure numeric Batch IDs (1234567) and pure words (RESISTOR).
     const hasLetters = /[A-Z]/.test(l);
     const hasNumbers = /[0-9]/.test(l);
     if (!hasLetters || !hasNumbers) return false;
 
-    // 5. Formatting: MFR PNs usually start with a Letter (e.g., SN74..., GRM...)
-    // If it starts with a number, it's often a Batch/Date code - we deprioritize these
     return true;
   });
 }
 
-// ⭐ STEP 4: RANKING ENGINE (Focus on MFR structure)
+// ⭐ STEP 4: MFR PN RANKING (Focus on Structure)
 function getTopCandidates(lines) {
   return lines.map(l => {
     let s = 0;
     
-    // Massive boost for common electronics prefixes (Update this as you find more)
-    if (/^(SN|GRM|BZT|MAX|LM|AT|CC|RK|ERJ|CST|RC)/.test(l)) s += 50; 
+    // Alphanumeric mix is the base DNA of an MPN
+    s += 20; 
+
+    // Massive boost for common electronics prefixes
+    // Add your specific brands here (e.g., GRM for Murata, RC for Yageo)
+    if (/^(SN|GRM|BZT|MAX|LM|AT|CC|RK|ERJ|CST|RC|511|BSS)/.test(l)) s += 50; 
     
     // Electronics parts often use dashes (e.g., RK73Z-1HTTC)
     if (l.includes("-")) s += 10;
 
-    // Penalize strings ending in -ND (DigiKey internal)
-    if (l.endsWith("-ND")) s -= 40; 
+    // PENALTY: If it starts with a number, it's usually a warehouse code
+    if (/^[0-9]/.test(l)) s -= 30;
 
-    // Penalize strings starting with numbers (Usually internal warehouse codes)
-    if (/^[0-9]/.test(l)) s -= 20;
+    // PENALTY: If it ends in -ND (DigiKey Internal), kill it
+    if (l.endsWith("-ND")) s -= 50; 
 
     return { val: l, score: s };
   }).sort((a, b) => b.score - a.score).slice(0, 3).map(c => c.val);
