@@ -1,198 +1,196 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Inventory Scanner</title>
-
-<style>
-body { font-family: Arial; background:#111; color:white; text-align:center; }
-button { padding:10px; margin:5px; }
-input { width:90%; padding:10px; margin:5px; }
-video { width:90%; }
-</style>
-</head>
-
-<body>
-
-<h2>📦 Inventory Scanner</h2>
-
-<button onclick="setMode('ADD')">➕ ADD</button>
-<button onclick="setMode('TAKE')">➖ TAKE</button>
-
-<p id="mode">Mode: ADD</p>
-
-<button onclick="startCamera()">Start Camera</button>
-<button onclick="captureAndExtract()">Scan</button>
-
-<br><br>
-
-<video id="video" autoplay></video>
-
-<p id="status">Ready</p>
-
-<input id="pn" placeholder="MFR PN">
-<input id="desc" placeholder="Description">
-<input id="qty" type="number" value="1">
-
-<button onclick="save()">SAVE</button>
-
-<canvas id="canvas" style="display:none"></canvas>
+<!-- EVERYTHING ABOVE SAME (NO CHANGE) -->
+<!-- ONLY SCRIPT UPDATED BELOW -->
 
 <script>
-
 const GOOGLE_API_KEY = "AIzaSyBjzZf1DVzZFuaf9tC5SW8x9bjqp1t7HQQ";
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzYSqnfI-_n4HObZyrtypdkioVlKIHXUZfqDAYT5mgJ6nWnBU2pfL4EQg_NCqz8w6Gi/exec";
 
-let stream;
-let mode = "ADD";
+let currentStream = null, scanMode = "Add";
 
-// ───────── MODE ─────────
-function setMode(m){
-    mode = m;
-    document.getElementById("mode").innerText = "Mode: " + m;
+// ── NAV ──
+function showPage(name) {
+  document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+  document.getElementById("page-" + name).classList.add("active");
 }
 
-// ───────── CAMERA ─────────
-async function startCamera(){
-    stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
-    document.getElementById("video").srcObject = stream;
+function setMode(m) {
+  scanMode = m;
+  document.getElementById("btn-add").className = m === "Add" ? "btn btn-primary" : "btn btn-secondary";
+  document.getElementById("btn-take").className = m === "Take" ? "btn btn-primary" : "btn btn-secondary";
 }
 
-// ───────── FILTER ENGINE ─────────
+// ── CAMERA ──
+async function startCamera() {
+  currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1920 } });
+  document.getElementById("video").srcObject = currentStream;
+}
+
+// ── FILTER ENGINE ──
 function normalize(t){
-    return t.toUpperCase().trim()
-        .replace(/O/g,'0')
-        .replace(/I/g,'1')
-        .replace(/S/g,'5');
+  return t.toUpperCase().trim()
+    .replace(/O/g,'0')
+    .replace(/I/g,'1')
+    .replace(/S/g,'5');
 }
 
 function reject(t){
-    const bad = ["DATE","LOT","QTY","ROHS","PO","ORDER","CUSTOMER","LPN"];
-    for(let b of bad){
-        if(t.includes(b)) return true;
-    }
-    if(/^\d+$/.test(t)) return true;
-    if(/^\d{4}[-/]\d{2}[-/]\d{2}$/.test(t)) return true;
-    if(t.length < 6) return true;
-    return false;
+  const bad = ["DATE","LOT","QTY","ROHS","PO","ORDER","CUSTOMER","LPN","COO"];
+  for(let b of bad){ if(t.includes(b)) return true; }
+  if(/^\d+$/.test(t)) return true;
+  if(/^\d{4}[-/]\d{2}[-/]\d{2}$/.test(t)) return true;
+  if(t.length < 6) return true;
+  return false;
 }
 
 function valid(t){
-    return (
-        t.length>=6 &&
-        t.length<=25 &&
-        /^[A-Z0-9\-]+$/.test(t) &&
-        /[A-Z]/.test(t) &&
-        /[0-9]/.test(t)
-    );
+  return (
+    t.length>=6 &&
+    t.length<=25 &&
+    /^[A-Z0-9\-]+$/.test(t) &&
+    /[A-Z]/.test(t) &&
+    /[0-9]/.test(t)
+  );
 }
 
 function score(t){
-    let s=0;
-    if(/[A-Z]/.test(t)&&/[0-9]/.test(t)) s+=5;
-    if(t.length>=8&&t.length<=16) s+=3;
-    if((t.match(/-/g)||[]).length>2) s-=3;
-    if(/^\d/.test(t)) s-=2;
-    return s;
+  let s=0;
+  if(/[A-Z]/.test(t)&&/[0-9]/.test(t)) s+=5;
+  if(t.length>=8&&t.length<=16) s+=3;
+  if((t.match(/-/g)||[]).length>2) s-=3;
+  if(/^\d/.test(t)) s-=2;
+  if(t.endsWith("-ND")) s-=5;
+  return s;
 }
 
 function getCandidates(text){
-    const lines=text.split('\n')
-        .map(normalize)
-        .filter(l=>!reject(l))
-        .filter(l=>valid(l));
+  const lines=text.split('\n')
+    .map(normalize)
+    .filter(l=>!reject(l))
+    .filter(l=>valid(l));
 
-    const ranked=lines.sort((a,b)=>score(b)-score(a));
-    return [...new Set(ranked)].slice(0,3);
+  const ranked=lines.sort((a,b)=>score(b)-score(a));
+  return [...new Set(ranked)].slice(0,3);
 }
 
-// ───────── MAIN FLOW ─────────
-async function captureAndExtract(){
+// ── MAIN FLOW ──
+async function captureAndExtract() {
 
-    const video=document.getElementById("video");
-    const canvas=document.getElementById("canvas");
+  const video = document.getElementById("video");
+  const canvas = document.getElementById("canvas");
+  const crop = document.getElementById("cropCanvas");
 
-    canvas.width=video.videoWidth;
-    canvas.height=video.videoHeight;
-    canvas.getContext("2d").drawImage(video,0,0);
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext("2d").drawImage(video, 0, 0);
 
-    const base64=canvas.toDataURL().split(',')[1];
+  const bw = canvas.width * 0.8, bh = canvas.height * 0.7;
+  crop.width = bw; crop.height = bh;
+  crop.getContext("2d").drawImage(canvas, canvas.width*0.1, canvas.height*0.15, bw, bh, 0, 0, bw, bh);
 
-    document.getElementById("status").innerText="Scanning...";
+  const dataUrl = crop.toDataURL("image/jpeg", 0.9);
+  document.getElementById("cropPreview").src = dataUrl;
+  setCamStatus('<span class="spinner"></span>Scanning...', "loading");
 
-    try{
+  try {
 
-        const res=await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`,{
-            method:"POST",
-            body:JSON.stringify({
-                requests:[{
-                    image:{content:base64},
-                    features:[{type:"TEXT_DETECTION"}]
-                }]
-            })
-        });
-
-        const data=await res.json();
-        const text=data.responses[0].textAnnotations[0].description;
-
-        const candidates = getCandidates(text);
-
-        let finalPN = "";
-
-        // AUTO LOOP
-        for(let pn of candidates){
-            if(pn.length > 8){ // simple validation (placeholder)
-                finalPN = pn;
-                break;
-            }
-        }
-
-        // FALLBACK
-        if(!finalPN){
-            let choice = prompt("Select PN:\n" + candidates.join("\n"));
-            finalPN = choice || candidates[0];
-        }
-
-        document.getElementById("pn").value = finalPN;
-
-        document.getElementById("status").innerText="Done";
-
-    }catch(e){
-        document.getElementById("status").innerText="Error";
-    }
-}
-
-// ───────── SAVE TO GOOGLE SHEET ─────────
-async function save(){
-
-    const pn = document.getElementById("pn").value;
-    const desc = document.getElementById("desc").value;
-    const qty = document.getElementById("qty").value;
-
-    const timestamp = new Date().toLocaleString("en-GB");
-
-    if(!pn){
-        alert("No PN");
-        return;
-    }
-
-    document.getElementById("status").innerText="Saving...";
-
-    await fetch(SCRIPT_URL,{
-        method:"POST",
-        mode:"no-cors",
-        body: JSON.stringify({
-            timestamp: timestamp,
-            partNumber: pn,
-            description: desc,
-            quantity: qty,
-            mode: mode
-        })
+    const resp = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`, {
+      method: "POST",
+      body: JSON.stringify({
+        requests: [{
+          image: { content: dataUrl.split(',')[1] },
+          features: [{ type: "TEXT_DETECTION" }]
+        }]
+      })
     });
 
-    document.getElementById("status").innerText="Saved ✅";
+    const data = await resp.json();
+    const fullText = data.responses[0].textAnnotations[0].description;
+
+    let mfrPn = "";
+
+    // 🔥 STEP 1: PRIORITY (MFR PN)
+    const lines = fullText.split('\n').map(l=>l.toUpperCase());
+
+    for(let i=0;i<lines.length;i++){
+      if(lines[i].includes("MFR PN") || lines[i].includes("MAN PN") || lines[i].includes("MFG") || lines[i]=="MPN"){
+        mfrPn = lines[i].split(":")[1] || lines[i+1];
+        break;
+      }
+    }
+
+    // 🔥 STEP 2: AUTO LOOP (TOP 3)
+    if(!mfrPn){
+      const candidates = getCandidates(fullText);
+
+      for(let pn of candidates){
+        if(pn.length > 8){   // placeholder validation
+          mfrPn = pn;
+          break;
+        }
+      }
+
+      // 🔥 STEP 3: FALLBACK
+      if(!mfrPn && candidates.length){
+        let choice = prompt("Select PN:\n" + candidates.join("\n"));
+        mfrPn = choice || candidates[0];
+      }
+    }
+
+    mfrPn = (mfrPn || "").replace(/[^A-Z0-9\-]/g,"");
+
+    const desc = lines.find(l => /RES|CAP|IC|DIODE|EEPROM/i.test(l)) || "";
+
+    document.getElementById("scanMfrPn").value = mfrPn;
+    document.getElementById("scanDesc").value = desc;
+
+    setCamStatus("🎯 Done", "ok");
+
+  } catch(e) {
+    setCamStatus("❌ Scan Error", "err");
+  }
+}
+
+// ── SAVE ──
+async function syncToSheet() {
+
+  const pn = document.getElementById("scanMfrPn").value;
+  const desc = document.getElementById("scanDesc").value;
+  const qty = document.getElementById("scanQty").value;
+
+  if(!pn) return;
+
+  const rowData = [
+    new Date().toLocaleString("en-GB"),
+    pn,
+    desc,
+    qty,
+    scanMode
+  ];
+
+  setCamStatus('<span class="spinner"></span>Syncing...', "loading");
+
+  await fetch(APPS_SCRIPT_URL, {
+    method: "POST",
+    mode: "no-cors",
+    body: JSON.stringify(rowData)
+  });
+
+  toast("Saved " + pn);
+  setCamStatus("✓ Saved", "ok");
+}
+
+// ── UI HELPERS ──
+function setCamStatus(m, c) {
+  const s = document.getElementById("camStatus");
+  s.innerHTML = m;
+  s.className = "status-bar " + c;
+}
+
+function toast(m) {
+  const t = document.getElementById("toast");
+  t.innerText = m;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),3000);
 }
 
 </script>
-</body>
-</html>
