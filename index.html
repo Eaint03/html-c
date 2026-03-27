@@ -129,7 +129,6 @@ function getTopCandidates(lines) {
     return { val: l, score: s };
   }).sort((a, b) => b.score - a.score).slice(0, 3).map(c => c.val);
 }
-
 // 🔁 STEP 5 & 8: AUTO-LOOP / CHECKER
 async function checkInventory(pn) {
   // Currently "Silently checking"
