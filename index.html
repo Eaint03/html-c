@@ -1,16 +1,106 @@
-<!-- EVERYTHING ABOVE SAME (NO CHANGE) -->
-<!-- ONLY SCRIPT UPDATED BELOW -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEXWAH Precision Inventory</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f0f2f5; --surface: #ffffff; --surface2: #f7f8fa; --border: #e2e6ed; --border2: #d0d5dd;
+      --accent: #1a56db; --accent-light: #ebf0ff; --accent-dark: #1240a8; --text: #111827; --muted: #6b7280;
+      --success: #0a7a3e; --success-bg: #ecfdf5; --success-border: #a7f3d0; --error: #b91c1c; --error-bg: #fef2f2;
+      --error-border: #fecaca; --mono: 'IBM Plex Mono', monospace; --sans: 'IBM Plex Sans', sans-serif;
+    }
+    body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; }
+    .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; align-items: center; justify-content: space-between; height: 56px; position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 4px rgba(0,0,0,0.06); }
+    .topbar-brand { font-family: var(--mono); font-size: 15px; font-weight: 500; color: var(--accent); letter-spacing: -0.3px; }
+    .nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 28px; display: flex; gap: 2px; overflow-x: auto; }
+    .nav-btn { font-family: var(--sans); font-size: 13px; font-weight: 500; padding: 14px 16px; border: none; background: none; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; transition: 0.15s; }
+    .nav-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .page-wrap { max-width: 1100px; margin: 28px auto; padding: 0 20px; }
+    .page { display: none; }
+    .page.active { display: block; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px 24px; margin-bottom: 18px; }
+    .card-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+    .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+    .field label { font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; }
+    .field input { padding: 9px 12px; border: 1px solid var(--border2); border-radius: 8px; font-size: 13px; outline: none; font-family: var(--mono); width: 100%; }
+    .btn { font-family: var(--sans); font-size: 13px; font-weight: 600; padding: 9px 18px; border: none; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border2); }
+    .status-bar { padding: 10px 14px; border-radius: 8px; font-size: 12px; font-family: var(--mono); margin-top: 12px; border: 1px solid var(--border); background: var(--surface2); min-height: 40px; }
+    .status-bar.ok { background: var(--success-bg); color: var(--success); border-color: var(--success-border); }
+    .status-bar.err { background: var(--error-bg); color: var(--error); border-color: var(--error-border); }
+    .video-wrap { position: relative; width: 100%; border-radius: 10px; overflow: hidden; background: #000; aspect-ratio: 4/3; }
+    video { width: 100%; height: 100%; object-fit: cover; }
+    .scan-box-border { position: absolute; left: 10%; top: 20%; width: 80%; height: 60%; border: 2px solid #00d26a; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5); pointer-events: none; }
+    #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: #111827; color: #fff; padding: 12px 22px; border-radius: 10px; transition: 0.3s; z-index: 999; }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+    .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid #c3d9ff; border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 5px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<div class="topbar"><div class="topbar-brand">NEXWAH <span>/ Precision Inventory</span></div></div>
+<div class="nav">
+  <button class="nav-btn active" onclick="showPage('scanner')">Scan Label</button>
+  <button class="nav-btn" onclick="showPage('inventory')">Inventory</button>
+</div>
+
+<div class="page-wrap">
+  <div id="page-scanner" class="page active">
+    <div class="card">
+      <div class="card-title">MFR PN Precision Scanner</div>
+      <div style="display:flex;gap:10px;margin-bottom:15px;">
+        <button id="btn-add" class="btn btn-primary" onclick="setMode('Add')">➕ Add Mode</button>
+        <button id="btn-take" class="btn btn-secondary" onclick="setMode('Take')">➖ Take Mode</button>
+      </div>
+
+      <div style="grid-template-columns: 1fr 1fr; display:grid; gap:20px">
+        <div>
+          <div class="video-wrap">
+            <video id="video" autoplay playsinline muted></video>
+            <div class="scan-box-border"></div>
+          </div>
+          <div style="display:flex;gap:10px;margin-top:10px">
+            <button class="btn btn-primary" onclick="startCamera()">Start Camera</button>
+            <button class="btn btn-secondary" onclick="captureAndExtract()">⚡ Extract PN</button>
+          </div>
+          <div id="camStatus" class="status-bar">Ready.</div>
+        </div>
+        <div>
+          <div class="field"><label>Detected MFR Part Number</label><input type="text" id="scanMfrPn" style="font-weight:bold; font-size:18px; color:var(--accent)"></div>
+          <div class="field"><label>Description</label><input type="text" id="scanDesc"></div>
+          <div class="field"><label>Quantity</label><input type="number" id="scanQty" value="1"></div>
+          <button class="btn btn-primary" style="width:100%;padding:15px" onclick="syncToSheet()">🚀 SYNC TO SHEET</button>
+          <img id="cropPreview" style="width:100%; border-radius:8px; border:1px solid var(--border); margin-top:15px; background:#f0f0f0;">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="page-inventory" class="page">
+    <div class="card"><div class="card-title">Inventory Log</div><p style="font-size:13px; color:var(--muted)">Data is synced to your Google Sheet.</p></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<canvas id="canvas" style="display:none"></canvas>
+<canvas id="cropCanvas" style="display:none"></canvas>
 
 <script>
-const GOOGLE_API_KEY = "AIzaSyBjzZf1DVzZFuaf9tC5SW8x9bjqp1t7HQQ";
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzYSqnfI-_n4HObZyrtypdkioVlKIHXUZfqDAYT5mgJ6nWnBU2pfL4EQg_NCqz8w6Gi/exec";
-
+// --- KEYS & CONFIG ---
+const GOOGLE_API_KEY = "AIzaSyBjzZf1DVzZFuaf9tC5SW8x9bjqp1t7HQQ"; 
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzYSqnfI-_n4HObZyrtypdkioVlKIHXUZfqDAYT5mgJ6nWnBU2pfL4EQg_NCqz8w6Gi/exec";
 let currentStream = null, scanMode = "Add";
 
-// ── NAV ──
-function showPage(name) {
+// --- NAVIGATION ---
+function showPage(n) {
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-  document.getElementById("page-" + name).classList.add("active");
+  document.getElementById("page-" + n).classList.add("active");
 }
 
 function setMode(m) {
@@ -19,178 +109,105 @@ function setMode(m) {
   document.getElementById("btn-take").className = m === "Take" ? "btn btn-primary" : "btn btn-secondary";
 }
 
-// ── CAMERA ──
+// --- CAMERA ---
 async function startCamera() {
-  currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1920 } });
-  document.getElementById("video").srcObject = currentStream;
+  try {
+    currentStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1920 } });
+    document.getElementById("video").srcObject = currentStream;
+    setCamStatus("Camera ready.", "ok");
+  } catch(e) { setCamStatus("Camera error.", "err"); }
 }
 
-// ── FILTER ENGINE ──
-function normalize(t){
-  return t.toUpperCase().trim()
-    .replace(/O/g,'0')
-    .replace(/I/g,'1')
-    .replace(/S/g,'5');
-}
-
-function reject(t){
-  const bad = ["DATE","LOT","QTY","ROHS","PO","ORDER","CUSTOMER","LPN","COO"];
-  for(let b of bad){ if(t.includes(b)) return true; }
-  if(/^\d+$/.test(t)) return true;
-  if(/^\d{4}[-/]\d{2}[-/]\d{2}$/.test(t)) return true;
-  if(t.length < 6) return true;
-  return false;
-}
-
-function valid(t){
-  return (
-    t.length>=6 &&
-    t.length<=25 &&
-    /^[A-Z0-9\-]+$/.test(t) &&
-    /[A-Z]/.test(t) &&
-    /[0-9]/.test(t)
-  );
-}
-
-function score(t){
-  let s=0;
-  if(/[A-Z]/.test(t)&&/[0-9]/.test(t)) s+=5;
-  if(t.length>=8&&t.length<=16) s+=3;
-  if((t.match(/-/g)||[]).length>2) s-=3;
-  if(/^\d/.test(t)) s-=2;
-  if(t.endsWith("-ND")) s-=5;
-  return s;
-}
-
-function getCandidates(text){
-  const lines=text.split('\n')
-    .map(normalize)
-    .filter(l=>!reject(l))
-    .filter(l=>valid(l));
-
-  const ranked=lines.sort((a,b)=>score(b)-score(a));
-  return [...new Set(ranked)].slice(0,3);
-}
-
-// ── MAIN FLOW ──
+// --- PRECISION EXTRACTION ---
 async function captureAndExtract() {
-
   const video = document.getElementById("video");
+  if (!video.srcObject) return setCamStatus("Start camera first", "err");
+
   const canvas = document.getElementById("canvas");
   const crop = document.getElementById("cropCanvas");
-
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
+  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
   canvas.getContext("2d").drawImage(video, 0, 0);
 
-  const bw = canvas.width * 0.8, bh = canvas.height * 0.7;
+  const bw = canvas.width * 0.8, bh = canvas.height * 0.6;
   crop.width = bw; crop.height = bh;
-  crop.getContext("2d").drawImage(canvas, canvas.width*0.1, canvas.height*0.15, bw, bh, 0, 0, bw, bh);
-
-  const dataUrl = crop.toDataURL("image/jpeg", 0.9);
-  document.getElementById("cropPreview").src = dataUrl;
-  setCamStatus('<span class="spinner"></span>Scanning...', "loading");
+  crop.getContext("2d").drawImage(canvas, canvas.width*0.1, canvas.height*0.2, bw, bh, 0, 0, bw, bh);
+  
+  const base64 = crop.toDataURL("image/jpeg", 0.9).split(',')[1];
+  document.getElementById("cropPreview").src = crop.toDataURL("image/jpeg");
+  setCamStatus('<span class="spinner"></span>Identifying Part...', "loading");
 
   try {
-
     const resp = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`, {
-      method: "POST",
-      body: JSON.stringify({
-        requests: [{
-          image: { content: dataUrl.split(',')[1] },
-          features: [{ type: "TEXT_DETECTION" }]
-        }]
-      })
+      method: "POST", 
+      body: JSON.stringify({ requests: [{ image: { content: base64 }, features: [{ type: "TEXT_DETECTION" }] }] })
     });
-
     const data = await resp.json();
-    const fullText = data.responses[0].textAnnotations[0].description;
+    const annotations = data.responses[0].textAnnotations; 
+    if (!annotations || annotations.length < 2) throw new Error("No text found");
 
-    let mfrPn = "";
+    let mfrPnValue = "";
+    let anchorY = -1;
+    let anchorXEnd = -1;
 
-    // 🔥 STEP 1: PRIORITY (MFR PN)
-    const lines = fullText.split('\n').map(l=>l.toUpperCase());
-
-    for(let i=0;i<lines.length;i++){
-      if(lines[i].includes("MFR PN") || lines[i].includes("MAN PN") || lines[i].includes("MFG") || lines[i]=="MPN"){
-        mfrPn = lines[i].split(":")[1] || lines[i+1];
-        break;
-      }
-    }
-
-    // 🔥 STEP 2: AUTO LOOP (TOP 3)
-    if(!mfrPn){
-      const candidates = getCandidates(fullText);
-
-      for(let pn of candidates){
-        if(pn.length > 8){   // placeholder validation
-          mfrPn = pn;
-          break;
+    // STEP 1: Search for Landmark Label (MFR, MAN, PN)
+    for (let i = 1; i < annotations.length; i++) {
+        const word = annotations[i].description.toUpperCase();
+        if (word.includes("MFR") || word.includes("MAN") || word.includes("MFG") || word === "PN") {
+            const v = annotations[i].boundingPoly.vertices;
+            anchorY = v[0].y;      
+            anchorXEnd = v[1].x;   
+            break; 
         }
-      }
-
-      // 🔥 STEP 3: FALLBACK
-      if(!mfrPn && candidates.length){
-        let choice = prompt("Select PN:\n" + candidates.join("\n"));
-        mfrPn = choice || candidates[0];
-      }
     }
 
-    mfrPn = (mfrPn || "").replace(/[^A-Z0-9\-]/g,"");
+    // STEP 2: Spatial Match (Text sitting to the RIGHT on the SAME ROW)
+    if (anchorY !== -1) {
+        for (let i = 1; i < annotations.length; i++) {
+            const v = annotations[i].boundingPoly.vertices;
+            if (Math.abs(v[0].y - anchorY) < 35 && v[0].x > anchorXEnd) {
+                const text = annotations[i].description.trim();
+                // Reject Distributor Noise (-ND) and Dates (/)
+                if (text.length > 4 && !text.includes(":") && !text.toUpperCase().endsWith("-ND") && !text.includes("/")) {
+                    mfrPnValue = text;
+                    break;
+                }
+            }
+        }
+    }
 
-    const desc = lines.find(l => /RES|CAP|IC|DIODE|EEPROM/i.test(l)) || "";
+    // STEP 3: Fallback DNA Scoring (If no label is visible)
+    if (!mfrPnValue) {
+        const fullLines = annotations[0].description.split('\n').map(l => l.trim().toUpperCase());
+        mfrPnValue = fullLines.find(l => 
+          l.length > 6 && 
+          /[A-Z]/.test(l) && 
+          /[0-9]/.test(l) && 
+          !l.includes("/") && 
+          !l.endsWith("-ND")
+        ) || fullLines[1] || fullLines[0];
+    }
 
-    document.getElementById("scanMfrPn").value = mfrPn;
-    document.getElementById("scanDesc").value = desc;
-
-    setCamStatus("🎯 Done", "ok");
-
-  } catch(e) {
-    setCamStatus("❌ Scan Error", "err");
-  }
+    // Cleanup Result
+    const finalPn = mfrPnValue.replace(/[\s\(\)\[\]]/g, "").toUpperCase();
+    document.getElementById("scanMfrPn").value = finalPn;
+    document.getElementById("scanDesc").value = annotations[0].description.split('\n').find(l => /IC|CAP|RES|DIO|MOS/i.test(l)) || "";
+    
+    setCamStatus(finalPn ? "🎯 MFR PN Locked" : "⚠ Hold Steady", finalPn ? "ok" : "err");
+  } catch(e) { setCamStatus("❌ API Read Error", "err"); }
 }
 
-// ── SAVE ──
 async function syncToSheet() {
-
   const pn = document.getElementById("scanMfrPn").value;
-  const desc = document.getElementById("scanDesc").value;
-  const qty = document.getElementById("scanQty").value;
-
   if(!pn) return;
-
-  const rowData = [
-    new Date().toLocaleString("en-GB"),
-    pn,
-    desc,
-    qty,
-    scanMode
-  ];
-
+  const rowData = [new Date().toLocaleString("en-GB"), pn, document.getElementById("scanDesc").value, document.getElementById("scanQty").value, scanMode];
   setCamStatus('<span class="spinner"></span>Syncing...', "loading");
-
-  await fetch(APPS_SCRIPT_URL, {
-    method: "POST",
-    mode: "no-cors",
-    body: JSON.stringify(rowData)
-  });
-
-  toast("Saved " + pn);
+  await fetch(APPS_SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(rowData) });
+  toast(`Synced ${pn}`);
   setCamStatus("✓ Saved", "ok");
 }
 
-// ── UI HELPERS ──
-function setCamStatus(m, c) {
-  const s = document.getElementById("camStatus");
-  s.innerHTML = m;
-  s.className = "status-bar " + c;
-}
-
-function toast(m) {
-  const t = document.getElementById("toast");
-  t.innerText = m;
-  t.classList.add("show");
-  setTimeout(()=>t.classList.remove("show"),3000);
-}
-
+function setCamStatus(m, c) { const s = document.getElementById("camStatus"); s.innerHTML = m; s.className = "status-bar " + c; }
+function toast(m) { const t = document.getElementById("toast"); t.innerText = m; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"), 3000); }
 </script>
+</body>
+</html>
