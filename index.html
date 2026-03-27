@@ -3,26 +3,27 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NEXWAH / Supplier Sync</title>
+  <title>NEXWAH // Supplier Web Sync</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&family=IBM+Plex+Sans:wght@400;600&display=swap');
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root { --bg: #f0f2f5; --surface: #ffffff; --border: #e2e6ed; --accent: #1a56db; --text: #111827; --muted: #6b7280; --mono: 'IBM Plex Mono', monospace; }
-    body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); padding: 15px; }
+    body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); padding: 10px; }
     .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; max-width: 500px; margin: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
     .video-wrap { width: 100%; border-radius: 8px; overflow: hidden; background: #000; aspect-ratio: 4/3; margin-bottom: 15px; border: 1px solid var(--border); }
     video { width: 100%; height: 100%; object-fit: cover; }
     .field { margin-bottom: 15px; }
     .field label { font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 4px; }
-    
-    /* PREVIEW & EDIT BOX */
-    #editablePn { width: 100%; padding: 15px; border: 3px solid var(--accent); border-radius: 8px; font-family: var(--mono); font-size: 18px; font-weight: bold; color: #000; text-align: center; background: #fff; }
-    
-    .btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-bottom: 10px; font-size: 14px; transition: 0.2s; }
+    input { width: 100%; padding: 12px; border: 2px solid var(--border); border-radius: 8px; font-family: var(--mono); font-size: 16px; outline: none; transition: 0.2s; }
+    /* PART NUMBER BOX */
+    #editablePn { border-color: var(--accent); font-weight: bold; color: #000; text-align: center; font-size: 18px; }
+    /* QUANTITY BOX */
+    .qty-box { border-color: #059669; color: #059669; font-weight: bold; font-size: 20px; text-align: center; }
+    .btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-bottom: 8px; font-size: 14px; }
     .btn-primary { background: var(--accent); color: #fff; }
-    .btn-sync { background: #059669; color: #fff; display: none; padding: 18px; font-size: 16px; }
+    .btn-sync { background: #059669; color: #fff; display: none; height: 60px; font-size: 18px; box-shadow: 0 4px 10px rgba(5, 150, 105, 0.3); }
     .status-bar { padding: 12px; border-radius: 8px; font-size: 12px; font-family: var(--mono); background: #fff; border: 1px solid var(--border); margin-bottom: 15px; min-height: 45px; }
-    .candidate-btn { background: #fff; border: 1px solid var(--border); padding: 12px; border-radius: 8px; margin-top: 8px; display: block; width: 100%; text-align: left; font-family: var(--mono); font-weight: bold; cursor: pointer; color: var(--accent); }
+    .candidate-btn { background: #fff; border: 1px solid var(--border); padding: 12px; border-radius: 8px; margin-top: 6px; display: block; width: 100%; text-align: left; font-family: var(--mono); font-weight: bold; cursor: pointer; color: var(--accent); }
     .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #ccc; border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; margin-right: 8px; vertical-align: middle; }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
@@ -30,39 +31,48 @@
 <body>
 
 <div class="card">
-  <div style="font-family: var(--mono); font-size: 11px; color: var(--accent); margin-bottom: 15px; display: flex; justify-content: space-between;">
-    <b>NEXWAH // WEB SYNC</b>
-    <select id="scanMode"><option value="Add">MODE: ADD</option><option value="Take">MODE: TAKE</option></select>
+  <div style="font-family: var(--mono); font-size: 11px; color: var(--accent); margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+    <b>NEXWAH // WEB TRIAGE</b>
+    <select id="scanMode" style="border:none; background:none; font-weight:bold;"><option value="Add">MODE: ADD</option><option value="Take">MODE: TAKE</option></select>
   </div>
   
   <div class="video-wrap"><video id="video" autoplay playsinline muted></video></div>
   
-  <button class="btn btn-primary" onclick="startCamera()">1. OPEN CAMERA</button>
-  <button class="btn" style="background:#4b5563; color:#fff;" onclick="captureAndScan()">2. SCAN PN</button>
+  <button class="btn btn-primary" onclick="startCamera()">1. START CAMERA</button>
+  <button class="btn" style="background:#4b5563; color:#fff;" onclick="captureAndScan()">2. SCAN LABEL</button>
 
   <div id="status" class="status-bar">System Ready.</div>
 
   <div id="candidate-section" style="display:none; margin-bottom: 15px;">
-    <label style="font-size: 10px; font-weight: bold;">CHOOSE THE BEST MATCH:</label>
+    <label style="font-size: 10px; font-weight: bold; color:#92400e;">SELECT BEST MATCH:</label>
     <div id="candidate-list"></div>
   </div>
 
   <div class="field">
-    <label>MANUAL CORRECTION (DELETE MFR/PN HERE)</label>
-    <input type="text" id="editablePn" placeholder="...">
+    <label>PART NUMBER (MANUAL EDIT IF "MER/MFR" APPEARS)</label>
+    <div style="display:flex; gap:5px;">
+      <input type="text" id="editablePn" placeholder="Waiting for scan...">
+      <button onclick="document.getElementById('editablePn').value = document.getElementById('editablePn').value.substring(3)" style="padding:0 10px; background:#fee2e2; border:1px solid #ef4444; border-radius:8px; cursor:pointer;" title="Delete 3 characters">✂️</button>
+    </div>
   </div>
 
-  <button id="syncBtn" class="btn btn-sync" onclick="fetchWebAndSync()">🚀 SEARCH WEB & SYNC TO SHEET</button>
+  <div class="field">
+    <label>QUANTITY (COL D)</label>
+    <input type="number" id="qtyInput" class="qty-box" value="1">
+  </div>
+
+  <button id="syncBtn" class="btn btn-sync" onclick="fetchAndSync()">🚀 FETCH WEB DATA & SYNC</button>
 
   <div class="field" style="margin-top:20px; opacity:0.6;">
-    <label>Last Synced Description (Web Result)</label>
-    <input type="text" id="finalDesc" readonly style="background:#eee; font-size: 12px;">
+    <label>Last Supplier Description (Web Search Result)</label>
+    <input type="text" id="finalDesc" readonly style="background:#eee; font-size: 11px;">
   </div>
 </div>
 
 <canvas id="canvas" style="display:none"></canvas>
 
 <script>
+// --- CONFIG ---
 const GOOGLE_API_KEY = "AIzaSyBjzZf1DVzZFuaf9tC5SW8x9bjqp1t7HQQ";
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzYSqnfI-_n4HObZyrtypdkioVlKIHXUZfqDAYT5mgJ6nWnBU2pfL4EQg_NCqz8w6Gi/exec";
 
@@ -71,21 +81,23 @@ async function startCamera() {
   document.getElementById("video").srcObject = s;
 }
 
-// 🧽 STRIPPER: Removes MFR, PN, DATE, INV
+// 🧽 THE ATOMIC STRIPPER (Regex Focus)
 function cleanText(text) {
   let lines = text.split('\n').map(l => l.toUpperCase().trim());
   let results = [];
   const noise = ["INV", "S/O", "DATE", "LOT", "QTY", "SHIP", "CUST", "ORDER", "PACK", "PO#"];
 
   for (let l of lines) {
+    // Kill dates & standard garbage
     if (/(\d{2,4}[\/\-\.]\d{2,4}[\/\-\.]\d{2,4})/.test(l)) continue;
     if (noise.some(n => l.includes(n))) continue;
 
-    // Remove Labels even if touching PN
-    let c = l.replace(/[:;,\(\)\[\]\s]/g, "")
-             .replace(/^(MFR|MFG|MPN|MAN|PN|PART|P\/N|P\.N)/, "")
-             .trim();
+    // 1. Strip symbols/spaces
+    let c = l.replace(/[:;,\(\)\[\]\s\-\.]/g, "");
+    // 2. Chop Prefix (Handles misread MER, MFR, MFG, etc.)
+    c = c.replace(/^(MFR|MER|MFG|MNF|MPN|MAN|PN|PART|P\/N|P\.N|P\-N)/, "");
 
+    // 3. DNA Check (Must have mixed letters/numbers)
     if (c.length >= 6 && c.length <= 25 && /[A-Z]/.test(c) && /[0-9]/.test(c)) {
       results.push(c);
     }
@@ -99,8 +111,7 @@ async function captureAndScan() {
   canvas.width = v.videoWidth; canvas.height = v.videoHeight;
   canvas.getContext("2d").drawImage(v, 0, 0);
   const base64 = canvas.toDataURL("image/jpeg", 0.8).split(',')[1];
-  
-  updateStatus('<span class="spinner"></span>Reading Label...', "loading");
+  updateStatus('<span class="spinner"></span>Analyzing OCR...', "loading");
 
   try {
     const r = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`, {
@@ -111,7 +122,7 @@ async function captureAndScan() {
     const raw = d.responses[0].textAnnotations[0].description;
     const candidates = cleanText(raw);
 
-    if(candidates.length === 0) throw new Error("No PN Found");
+    if(candidates.length === 0) throw new Error("No PN detected");
 
     document.getElementById("candidate-section").style.display = "block";
     const list = document.getElementById("candidate-list");
@@ -124,30 +135,30 @@ async function captureAndScan() {
         document.getElementById("editablePn").value = pn;
         document.getElementById("syncBtn").style.display = "block";
         document.getElementById("candidate-section").style.display = "none";
-        updateStatus("Ready for Web Sync", "ok");
+        updateStatus("Finalize PN & Quantity", "ok");
       };
       list.appendChild(btn);
     });
   } catch(e) { updateStatus("❌ " + e.message, "err"); }
 }
 
-async function fetchWebAndSync() {
+async function fetchAndSync() {
   const pn = document.getElementById("editablePn").value.trim().toUpperCase();
+  const qty = document.getElementById("qtyInput").value;
   if(!pn) return;
 
-  updateStatus('<span class="spinner"></span>Crawling Supplier Data...', "loading");
+  updateStatus('<span class="spinner"></span>Crawling Supplier Website...', "loading");
 
   try {
-    // 1. WEB FETCH (Goes to Supplier via Apps Script)
+    // 1. WEB CRAWL (Via Apps Script)
     const lookup = await fetch(`${SCRIPT_URL}?action=lookup&pn=${pn}`);
     const info = await lookup.json();
     const desc = info.desc || "Electronic Component";
     document.getElementById("finalDesc").value = desc;
 
-    // 2. SYNC TO SHEET (A:Time, B:PN, C:Desc, D:Qty, E:Mode)
-    updateStatus('<span class="spinner"></span>Uploading to Sheet...', "loading");
-    const row = [new Date().toLocaleString("en-GB"), pn, desc, 1, document.getElementById("scanMode").value];
-    
+    // 2. UPLOAD (A:Time, B:PN, C:Desc, D:Qty, E:Mode)
+    updateStatus('<span class="spinner"></span>Saving to Google Sheet...', "loading");
+    const row = [new Date().toLocaleString("en-GB"), pn, desc, qty, document.getElementById("scanMode").value];
     await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(row) });
 
     updateStatus("✅ SUCCESS: " + pn + " Synced!", "ok");
