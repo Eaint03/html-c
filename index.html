@@ -3,25 +3,26 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NEXWAH Precision Control</title>
+  <title>NEXWAH / Supplier Sync</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono&family=IBM+Plex+Sans:wght@400;600&display=swap');
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root { --bg: #f0f2f5; --surface: #ffffff; --border: #e2e6ed; --accent: #1a56db; --text: #111827; --muted: #6b7280; --mono: 'IBM Plex Mono', monospace; }
     body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); padding: 15px; }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; max-width: 500px; margin: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-    .video-wrap { width: 100%; border-radius: 8px; overflow: hidden; background: #000; aspect-ratio: 4/3; margin-bottom: 15px; border: 2px solid var(--border); }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; max-width: 500px; margin: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .video-wrap { width: 100%; border-radius: 8px; overflow: hidden; background: #000; aspect-ratio: 4/3; margin-bottom: 15px; border: 1px solid var(--border); }
     video { width: 100%; height: 100%; object-fit: cover; }
-    .field { margin-bottom: 12px; }
+    .field { margin-bottom: 15px; }
     .field label { font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 4px; }
-    .field input { width: 100%; padding: 12px; border: 2px solid var(--accent); border-radius: 8px; font-family: var(--mono); font-size: 16px; font-weight: bold; color: var(--accent); background: #fff; }
-    .btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-bottom: 8px; font-size: 14px; transition: 0.2s; }
+    
+    /* PREVIEW & EDIT BOX */
+    #editablePn { width: 100%; padding: 15px; border: 3px solid var(--accent); border-radius: 8px; font-family: var(--mono); font-size: 18px; font-weight: bold; color: #000; text-align: center; background: #fff; }
+    
+    .btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-bottom: 10px; font-size: 14px; transition: 0.2s; }
     .btn-primary { background: var(--accent); color: #fff; }
-    .btn-sync { background: #059669; color: #fff; display: none; }
+    .btn-sync { background: #059669; color: #fff; display: none; padding: 18px; font-size: 16px; }
     .status-bar { padding: 12px; border-radius: 8px; font-size: 12px; font-family: var(--mono); background: #fff; border: 1px solid var(--border); margin-bottom: 15px; min-height: 45px; }
-    #fallback-ui { display: none; padding: 10px; background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; margin-bottom: 15px; }
     .candidate-btn { background: #fff; border: 1px solid var(--border); padding: 12px; border-radius: 8px; margin-top: 8px; display: block; width: 100%; text-align: left; font-family: var(--mono); font-weight: bold; cursor: pointer; color: var(--accent); }
-    .candidate-btn:hover { background: #eff6ff; }
     .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #ccc; border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; margin-right: 8px; vertical-align: middle; }
     @keyframes spin { to { transform: rotate(360deg); } }
   </style>
@@ -29,36 +30,33 @@
 <body>
 
 <div class="card">
-  <div style="font-family: var(--mono); font-size: 13px; color: var(--accent); margin-bottom: 15px; display: flex; justify-content: space-between;">
-    <b>NEXWAH // MANUAL CORRECTION</b>
-    <select id="scanMode" style="border:none; background:none; font-weight:bold;">
-      <option value="Add">ADD (+)</option>
-      <option value="Take">TAKE (-)</option>
-    </select>
+  <div style="font-family: var(--mono); font-size: 11px; color: var(--accent); margin-bottom: 15px; display: flex; justify-content: space-between;">
+    <b>NEXWAH // WEB SYNC</b>
+    <select id="scanMode"><option value="Add">MODE: ADD</option><option value="Take">MODE: TAKE</option></select>
   </div>
   
   <div class="video-wrap"><video id="video" autoplay playsinline muted></video></div>
   
-  <button class="btn btn-primary" onclick="startCamera()">1. START CAMERA</button>
-  <button class="btn" style="background:#4b5563; color:#fff;" onclick="captureAndScan()">2. SCAN & PREVIEW</button>
+  <button class="btn btn-primary" onclick="startCamera()">1. OPEN CAMERA</button>
+  <button class="btn" style="background:#4b5563; color:#fff;" onclick="captureAndScan()">2. SCAN PN</button>
 
-  <div id="status" class="status-bar">System Ready...</div>
+  <div id="status" class="status-bar">System Ready.</div>
 
-  <div id="fallback-ui">
-    <label style="font-size: 10px; font-weight: bold;">SELECT NEAREST OPTION:</label>
+  <div id="candidate-section" style="display:none; margin-bottom: 15px;">
+    <label style="font-size: 10px; font-weight: bold;">CHOOSE THE BEST MATCH:</label>
     <div id="candidate-list"></div>
   </div>
 
   <div class="field">
-    <label>Edit Part Number (Delete MFR here if needed)</label>
-    <input type="text" id="editablePn" placeholder="Result appears here...">
+    <label>MANUAL CORRECTION (DELETE MFR/PN HERE)</label>
+    <input type="text" id="editablePn" placeholder="...">
   </div>
 
-  <button id="syncBtn" class="btn btn-sync" onclick="finalSearchAndSync()">3. SEARCH WEB & SYNC TO SHEET</button>
+  <button id="syncBtn" class="btn btn-sync" onclick="fetchWebAndSync()">🚀 SEARCH WEB & SYNC TO SHEET</button>
 
   <div class="field" style="margin-top:20px; opacity:0.6;">
-    <label>Final Description (Col C)</label>
-    <input type="text" id="finalDesc" readonly style="font-size:12px; border-color:#ccc; background:#eee;">
+    <label>Last Synced Description (Web Result)</label>
+    <input type="text" id="finalDesc" readonly style="background:#eee; font-size: 12px;">
   </div>
 </div>
 
@@ -69,121 +67,95 @@ const GOOGLE_API_KEY = "AIzaSyBjzZf1DVzZFuaf9tC5SW8x9bjqp1t7HQQ";
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzYSqnfI-_n4HObZyrtypdkioVlKIHXUZfqDAYT5mgJ6nWnBU2pfL4EQg_NCqz8w6Gi/exec";
 
 async function startCamera() {
-  const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1280 } });
-  document.getElementById("video").srcObject = stream;
+  const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: 1280 } });
+  document.getElementById("video").srcObject = s;
 }
 
-// 🧽 STEP 3: STRICT FILTER & SLICER
-function filterAndStrip(text) {
+// 🧽 STRIPPER: Removes MFR, PN, DATE, INV
+function cleanText(text) {
   let lines = text.split('\n').map(l => l.toUpperCase().trim());
   let results = [];
-  // BLOCK PO, DATE, INV, SO
-  const blockList = ["INV", "S/O", "DATE", "LOT", "QTY", "SHIP", "CUST", "ORDER", "PACK", "BILL", "REF", "PO#", "ADVICE"];
+  const noise = ["INV", "S/O", "DATE", "LOT", "QTY", "SHIP", "CUST", "ORDER", "PACK", "PO#"];
 
-  for (let line of lines) {
-    // Kill dates with slashes
-    if (/(\d{2,4}[\/\-\.]\d{2,4}[\/\-\.]\d{2,4})/.test(line)) continue;
-    // Kill anything in the blocklist
-    if (blockList.some(bad => line.includes(bad))) continue;
+  for (let l of lines) {
+    if (/(\d{2,4}[\/\-\.]\d{2,4}[\/\-\.]\d{2,4})/.test(l)) continue;
+    if (noise.some(n => l.includes(n))) continue;
 
-    // Slice off MFR, PN, MPN (e.g., MFRRK73Z -> RK73Z)
-    let clean = line.replace(/[:;,\(\)\[\]\s]/g, "")
-                    .replace(/^MFR/, "").replace(/^MFG/, "").replace(/^MPN/, "")
-                    .replace(/^MAN/, "").replace(/^PN/, "").replace(/^PART/, "")
-                    .replace(/^P\/N/, "");
+    // Remove Labels even if touching PN
+    let c = l.replace(/[:;,\(\)\[\]\s]/g, "")
+             .replace(/^(MFR|MFG|MPN|MAN|PN|PART|P\/N|P\.N)/, "")
+             .trim();
 
-    // Valid MPN DNA: 6-25 chars, contains both Letters and Numbers
-    if (clean.length >= 6 && clean.length <= 25 && /[A-Z]/.test(clean) && /[0-9]/.test(clean)) {
-      if (!clean.endsWith("-ND")) results.push(clean);
+    if (c.length >= 6 && c.length <= 25 && /[A-Z]/.test(c) && /[0-9]/.test(c)) {
+      results.push(c);
     }
   }
-  return [...new Set(results)];
+  return [...new Set(results)].sort((a,b) => b.length - a.length);
 }
 
-// ⭐ STEP 4: RANKING
-function getTopCandidates(lines) {
-  return lines.map(l => {
-    let s = 20;
-    if (/^(SN|GRM|BZT|MAX|LM|AT|CC|RK|ERJ|RC|511|BSS|TPS)/.test(l)) s += 100;
-    return { val: l, score: s };
-  }).sort((a,b) => b.score - a.score).slice(0, 3).map(c => c.val);
-}
-
-// 🔁 SCAN & PREVIEW (No auto-search yet)
 async function captureAndScan() {
-  const video = document.getElementById("video");
+  const v = document.getElementById("video");
   const canvas = document.getElementById("canvas");
-  canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-  canvas.getContext("2d").drawImage(video, 0, 0);
+  canvas.width = v.videoWidth; canvas.height = v.videoHeight;
+  canvas.getContext("2d").drawImage(v, 0, 0);
   const base64 = canvas.toDataURL("image/jpeg", 0.8).split(',')[1];
   
-  document.getElementById("fallback-ui").style.display = "none";
-  document.getElementById("syncBtn").style.display = "none";
   updateStatus('<span class="spinner"></span>Reading Label...', "loading");
 
   try {
-    const gResp = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`, {
+    const r = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`, {
       method: "POST",
       body: JSON.stringify({ requests: [{ image: { content: base64 }, features: [{ type: "TEXT_DETECTION" }] }] })
     });
-    const gData = await gResp.json();
-    const rawText = gData.responses[0].textAnnotations[0].description;
-    const candidates = getTopCandidates(filterAndStrip(rawText));
+    const d = await r.json();
+    const raw = d.responses[0].textAnnotations[0].description;
+    const candidates = cleanText(raw);
 
-    if(candidates.length === 0) throw new Error("No Part Number Found");
+    if(candidates.length === 0) throw new Error("No PN Found");
 
-    // Show candidates so user can pick the best one to start with
-    showFallback(candidates);
-    updateStatus("🎯 Choose a PN to edit or search", "ok");
+    document.getElementById("candidate-section").style.display = "block";
+    const list = document.getElementById("candidate-list");
+    list.innerHTML = "";
+    candidates.slice(0,3).forEach(pn => {
+      const btn = document.createElement("button");
+      btn.className = "candidate-btn";
+      btn.innerText = pn;
+      btn.onclick = () => {
+        document.getElementById("editablePn").value = pn;
+        document.getElementById("syncBtn").style.display = "block";
+        document.getElementById("candidate-section").style.display = "none";
+        updateStatus("Ready for Web Sync", "ok");
+      };
+      list.appendChild(btn);
+    });
   } catch(e) { updateStatus("❌ " + e.message, "err"); }
 }
 
-function showFallback(candidates) {
-  const ui = document.getElementById("fallback-ui");
-  const list = document.getElementById("candidate-list");
-  ui.style.display = "block";
-  list.innerHTML = "";
-  candidates.forEach(pn => {
-    const btn = document.createElement("button");
-    btn.className = "candidate-btn";
-    btn.innerText = pn;
-    btn.onclick = () => {
-      document.getElementById("editablePn").value = pn; // Put in editable box
-      document.getElementById("syncBtn").style.display = "block"; // Show sync button
-      ui.style.display = "none";
-    };
-    list.appendChild(btn);
-  });
-}
-
-// 🔥 FINAL SEARCH AND SYNC (Triggered by button)
-async function finalSearchAndSync() {
+async function fetchWebAndSync() {
   const pn = document.getElementById("editablePn").value.trim().toUpperCase();
   if(!pn) return;
 
-  updateStatus('<span class="spinner"></span>Searching Web for Desc...', "loading");
+  updateStatus('<span class="spinner"></span>Crawling Supplier Data...', "loading");
 
   try {
-    // 1. Web Search via Apps Script
+    // 1. WEB FETCH (Goes to Supplier via Apps Script)
     const lookup = await fetch(`${SCRIPT_URL}?action=lookup&pn=${pn}`);
     const info = await lookup.json();
-    const desc = info.desc || "Manual Component";
+    const desc = info.desc || "Electronic Component";
     document.getElementById("finalDesc").value = desc;
 
-    // 2. Sync to Sheet (A=Time, B=PN, C=Desc, D=Qty, E=Mode)
+    // 2. SYNC TO SHEET (A:Time, B:PN, C:Desc, D:Qty, E:Mode)
     updateStatus('<span class="spinner"></span>Uploading to Sheet...', "loading");
-    const rowData = [new Date().toLocaleString("en-GB"), pn, desc, 1, document.getElementById("scanMode").value];
-
-    await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(rowData) });
+    const row = [new Date().toLocaleString("en-GB"), pn, desc, 1, document.getElementById("scanMode").value];
+    
+    await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(row) });
 
     updateStatus("✅ SUCCESS: " + pn + " Synced!", "ok");
     document.getElementById("syncBtn").style.display = "none";
-  } catch(e) { updateStatus("❌ Error during Sync", "err"); }
+  } catch(e) { updateStatus("❌ Sync Error", "err"); }
 }
 
-function updateStatus(m, c) {
-  document.getElementById("status").innerHTML = m;
-}
+function updateStatus(m, c) { document.getElementById("status").innerHTML = m; }
 </script>
 </body>
 </html>
