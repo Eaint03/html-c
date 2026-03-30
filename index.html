@@ -1,122 +1,534 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NEXWAH // Supplier Web Sync</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=IBM+Plex+Sans:wght@400;600&display=swap');
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg: #f0f2f5; --surface: #ffffff; --border: #e2e6ed;
-      --accent: #1a56db; --text: #111827; --muted: #6b7280;
-      --mono: 'IBM Plex Mono', monospace;
-    }
-    body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); padding: 10px; }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; max-width: 500px; margin: auto; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-    .video-wrap { width: 100%; border-radius: 8px; overflow: hidden; background: #000; aspect-ratio: 4/3; margin-bottom: 15px; border: 1px solid var(--border); }
-    video { width: 100%; height: 100%; object-fit: cover; }
-    .field { margin-bottom: 15px; }
-    .field label { font-size: 10px; font-weight: 600; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 4px; }
-    input { width: 100%; padding: 12px; border: 2px solid var(--border); border-radius: 8px; font-family: var(--mono); font-size: 16px; outline: none; transition: 0.2s; }
-    #editablePn { border-color: var(--accent); font-weight: bold; color: #000; text-align: center; font-size: 18px; }
-    .qty-box { border-color: #059669; color: #059669; font-weight: bold; font-size: 20px; text-align: center; }
-    .btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-bottom: 8px; font-size: 14px; transition: opacity 0.2s; }
-    .btn:active { opacity: 0.8; }
-    .btn-primary { background: var(--accent); color: #fff; }
-    .btn-gray { background: #4b5563; color: #fff; }
-    .btn-sync { background: #059669; color: #fff; display: none; height: 60px; font-size: 18px; box-shadow: 0 4px 10px rgba(5,150,105,0.3); }
-    .status-bar { padding: 12px; border-radius: 8px; font-size: 12px; font-family: var(--mono); background: #fff; border: 1px solid var(--border); margin-bottom: 10px; min-height: 45px; line-height: 1.5; }
-    .status-ok  { border-color: #059669; background: #f0fdf4; color: #065f46; }
-    .status-err { border-color: #ef4444; background: #fef2f2; color: #991b1b; }
-    .candidate-btn {
-      background: #fff; border: 2px solid var(--border); padding: 10px 14px;
-      border-radius: 8px; margin-top: 6px; display: flex; width: 100%;
-      justify-content: space-between; align-items: center;
-      font-family: var(--mono); font-weight: bold; cursor: pointer; color: var(--accent);
-      transition: border-color 0.15s, background 0.15s;
-    }
-    .candidate-btn:hover { border-color: var(--accent); background: #eef3ff; }
-    .badge { font-size: 9px; padding: 2px 7px; border-radius: 999px; font-family: var(--mono); font-weight: bold; letter-spacing: 0.05em; }
-    .badge-HIGH { background: #d1fae5; color: #065f46; }
-    .badge-MED  { background: #fef3c7; color: #92400e; }
-    .badge-LOW  { background: #fee2e2; color: #991b1b; }
-    .spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid #ccc; border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; margin-right: 8px; vertical-align: middle; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .debug-toggle { font-size: 10px; color: var(--muted); cursor: pointer; text-decoration: underline; display: block; margin-bottom: 6px; text-align: right; font-family: var(--mono); }
-    #rawOcrDebug { font-size: 10px; color: #555; font-family: var(--mono); white-space: pre-wrap; background: #f9fafb; border: 1px dashed #e2e6ed; border-radius: 6px; padding: 8px; margin-bottom: 12px; max-height: 120px; overflow-y: auto; display: none; }
-    .pn-row { display: flex; gap: 6px; }
-    .pn-row input { flex: 1; }
-    .clear-btn { padding: 0 14px; background: #fee2e2; border: 1px solid #ef4444; border-radius: 8px; cursor: pointer; font-size: 16px; color: #ef4444; font-weight: bold; flex-shrink: 0; }
-  </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NEXWAH // Supplier Sync</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=DM+Sans:wght@400;500;600&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #0d0f14;
+  --surface:   #161920;
+  --surface2:  #1e2230;
+  --border:    #2a2f3f;
+  --accent:    #3b82f6;
+  --accent2:   #10b981;
+  --warn:      #f59e0b;
+  --danger:    #ef4444;
+  --text:      #e8eaf0;
+  --muted:     #6b7590;
+  --mono:      'JetBrains Mono', monospace;
+  --sans:      'DM Sans', sans-serif;
+}
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 12px;
+  background-image:
+    radial-gradient(ellipse 60% 40% at 50% -10%, rgba(59,130,246,0.12) 0%, transparent 70%);
+}
+
+/* ── CARD ─────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  max-width: 480px;
+  margin: auto;
+  box-shadow: 0 0 0 1px rgba(59,130,246,0.06), 0 20px 60px rgba(0,0,0,0.5);
+}
+
+/* ── HEADER ───────────────────────────────── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.logo {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: 0.08em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.logo-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent2); animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+
+.mode-pill {
+  display: flex;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+}
+.mode-pill button {
+  padding: 5px 12px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.05em;
+}
+.mode-pill button.active-add { background: var(--accent2); color: #000; }
+.mode-pill button.active-take { background: var(--danger); color: #fff; }
+
+/* ── CAMERA ───────────────────────────────── */
+.video-wrap {
+  width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000;
+  aspect-ratio: 4/3;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  position: relative;
+}
+video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cam-overlay {
+  position: absolute; inset: 0; pointer-events: none;
+  display: flex; align-items: center; justify-content: center;
+}
+.cam-crosshair {
+  width: 140px; height: 80px;
+  border: 2px solid rgba(59,130,246,0.6);
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px rgba(59,130,246,0.2), inset 0 0 20px rgba(59,130,246,0.05);
+}
+.cam-crosshair::before, .cam-crosshair::after {
+  content: '';
+  position: absolute;
+  background: var(--accent);
+}
+.cam-crosshair::before { top: -1px; left: 12px; right: 12px; height: 1px; }
+.cam-crosshair::after  { left: -1px; top: 12px; bottom: 12px; width: 1px; }
+
+/* ── BUTTON ROW ───────────────────────────── */
+.btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.btn {
+  padding: 11px 14px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  letter-spacing: 0.01em;
+  font-family: var(--sans);
+}
+.btn:active { transform: scale(0.97); }
+.btn-cam   { background: var(--accent); color: #fff; }
+.btn-scan  { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+.btn-scan:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── STATUS BAR ───────────────────────────── */
+.status-bar {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-family: var(--mono);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  margin-bottom: 12px;
+  min-height: 40px;
+  line-height: 1.6;
+  color: var(--muted);
+  transition: all 0.3s;
+}
+.status-ok   { border-color: var(--accent2); background: rgba(16,185,129,0.08); color: #6ee7b7; }
+.status-err  { border-color: var(--danger);  background: rgba(239,68,68,0.08);  color: #fca5a5; }
+.status-load { border-color: var(--accent);  background: rgba(59,130,246,0.08); color: #93c5fd; }
+.status-warn { border-color: var(--warn);    background: rgba(245,158,11,0.08); color: #fcd34d; }
+
+/* ── CANDIDATES ───────────────────────────── */
+.candidate-section {
+  display: none;
+  margin-bottom: 14px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+}
+.candidate-section label {
+  font-size: 9px;
+  font-family: var(--mono);
+  font-weight: 700;
+  color: var(--warn);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 8px;
+}
+.candidate-btn {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 9px 12px;
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  color: var(--text);
+  transition: all 0.15s;
+}
+.candidate-btn:last-child { margin-bottom: 0; }
+.candidate-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); background: rgba(59,130,246,0.06); }
+.candidate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.badge {
+  font-size: 9px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-family: var(--mono);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+.badge-HIGH { background: rgba(16,185,129,0.2); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); }
+.badge-MED  { background: rgba(245,158,11,0.2); color: #fcd34d; border: 1px solid rgba(245,158,11,0.3); }
+.badge-LOW  { background: rgba(239,68,68,0.2);  color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+
+/* ── FIELD ────────────────────────────────── */
+.field { margin-bottom: 12px; }
+.field-label {
+  font-size: 9px;
+  font-family: var(--mono);
+  font-weight: 700;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 5px;
+}
+.input-row { display: flex; gap: 6px; }
+input[type="text"], input[type="number"] {
+  width: 100%;
+  padding: 11px 14px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+}
+input:focus { border-color: var(--accent); }
+#editablePn { border-color: var(--accent); color: #fff; text-align: center; font-size: 17px; letter-spacing: 0.04em; }
+#qtyInput   { border-color: var(--accent2); color: var(--accent2); text-align: center; font-size: 22px; }
+.clear-btn {
+  padding: 0 13px;
+  background: rgba(239,68,68,0.1);
+  border: 1px solid var(--danger);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 15px;
+  color: var(--danger);
+  font-weight: 700;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.clear-btn:hover { background: rgba(239,68,68,0.2); }
+
+/* ── RESULT CARD ──────────────────────────── */
+.result-card {
+  display: none;
+  background: var(--surface2);
+  border: 1px solid var(--accent2);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 14px;
+  position: relative;
+  overflow: hidden;
+}
+.result-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+}
+.result-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  font-size: 11px;
+  font-family: var(--mono);
+}
+.result-key   { color: var(--muted); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; padding-top: 1px; }
+.result-value { color: var(--text); font-weight: 700; word-break: break-word; line-height: 1.4; }
+.result-value.desc-val { color: #c7d2fe; font-size: 12px; }
+.source-badge {
+  display: inline-block;
+  font-size: 9px;
+  padding: 1px 7px;
+  border-radius: 20px;
+  font-family: var(--mono);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  margin-top: 2px;
+}
+.source-Mouser  { background: rgba(59,130,246,0.15); color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); }
+.source-DigiKey { background: rgba(245,158,11,0.15); color: #fcd34d; border: 1px solid rgba(245,158,11,0.3); }
+.source-LCSC    { background: rgba(16,185,129,0.15); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); }
+.source-NotFound{ background: rgba(239,68,68,0.1);   color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
+
+.datasheet-link {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 10px;
+  font-family: var(--mono);
+  color: var(--accent);
+  text-decoration: none;
+  padding: 3px 8px;
+  border: 1px solid rgba(59,130,246,0.3);
+  border-radius: 4px;
+}
+.datasheet-link:hover { background: rgba(59,130,246,0.1); }
+
+/* editable override desc */
+#finalDesc {
+  background: var(--surface2);
+  border-color: rgba(245,158,11,0.4);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 400;
+}
+#finalDesc:focus { border-color: var(--warn); }
+
+/* ── SYNC BUTTON ──────────────────────────── */
+.btn-sync {
+  display: none;
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #059669, #10b981);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 20px rgba(16,185,129,0.3);
+  letter-spacing: 0.02em;
+  transition: all 0.2s;
+  font-family: var(--sans);
+}
+.btn-sync:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(16,185,129,0.4); }
+.btn-sync:active { transform: scale(0.98); }
+
+/* ── SPINNER ──────────────────────────────── */
+.spinner {
+  display: inline-block;
+  width: 11px; height: 11px;
+  border: 2px solid rgba(255,255,255,0.2);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── DEBUG ────────────────────────────────── */
+.debug-toggle {
+  font-size: 10px;
+  color: var(--muted);
+  cursor: pointer;
+  text-decoration: underline;
+  display: block;
+  margin-bottom: 6px;
+  text-align: right;
+  font-family: var(--mono);
+}
+#rawOcrDebug {
+  font-size: 10px;
+  color: #555;
+  font-family: var(--mono);
+  white-space: pre-wrap;
+  background: var(--surface2);
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 10px;
+  max-height: 110px;
+  overflow-y: auto;
+  display: none;
+}
+
+/* ── DIVIDER ──────────────────────────────── */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 14px 0;
+}
+
+/* ── SUPPLIER WATERFALL STATUS ────────────── */
+.supplier-status {
+  display: none;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.sup-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-family: var(--mono);
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  background: var(--surface2);
+  letter-spacing: 0.04em;
+  transition: all 0.3s;
+}
+.sup-chip.checking { border-color: var(--accent); color: var(--accent); background: rgba(59,130,246,0.08); }
+.sup-chip.found    { border-color: var(--accent2); color: var(--accent2); background: rgba(16,185,129,0.08); }
+.sup-chip.miss     { border-color: var(--border);  color: #374151; }
+.sup-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+</style>
 </head>
 <body>
 <div class="card">
 
-  <!-- Header -->
-  <div style="font-family: var(--mono); font-size: 11px; color: var(--accent); margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
-    <b>NEXWAH // WEB TRIAGE</b>
-    <select id="scanMode" style="border:none; background:none; font-weight:bold; color: var(--accent); font-family: var(--mono);">
-      <option value="Add">MODE: ADD</option>
-      <option value="Take">MODE: TAKE</option>
-    </select>
-  </div>
-
-  <!-- Camera -->
-  <div class="video-wrap"><video id="video" autoplay playsinline muted></video></div>
-  <button class="btn btn-primary" onclick="startCamera()">1. START CAMERA</button>
-  <button class="btn btn-gray" onclick="captureAndScan()">2. SCAN LABEL</button>
-
-  <!-- Status -->
-  <div id="status" class="status-bar">System Ready.</div>
-
-  <!-- Debug OCR -->
-  <span class="debug-toggle" onclick="toggleDebug()">[ show raw OCR ]</span>
-  <div id="rawOcrDebug"></div>
-
-  <!-- Candidates -->
-  <div id="candidate-section" style="display:none; margin-bottom: 15px;">
-    <label style="font-size: 10px; font-weight: bold; color:#92400e; display:block; margin-bottom:4px;">SELECT BEST MPN MATCH:</label>
-    <div id="candidate-list"></div>
-  </div>
-
-  <!-- Part Number -->
-  <div class="field">
-    <label>Manufacturing Part Number</label>
-    <div class="pn-row">
-      <input type="text" id="editablePn" placeholder="Waiting for scan...">
-      <button class="clear-btn" onclick="clearPN()" title="Clear">✕</button>
+  <!-- ── HEADER ── -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-dot"></div>
+      NEXWAH // TRIAGE
+    </div>
+    <div class="mode-pill">
+      <button id="modeAdd"  onclick="setMode('Add')"  class="active-add">ADD</button>
+      <button id="modeTake" onclick="setMode('Take')">TAKE</button>
     </div>
   </div>
 
-  <!-- Quantity -->
+  <!-- ── CAMERA ── -->
+  <div class="video-wrap">
+    <video id="video" autoplay playsinline muted></video>
+    <div class="cam-overlay"><div class="cam-crosshair"></div></div>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn btn-cam"  onclick="startCamera()">📷 Start Camera</button>
+    <button class="btn btn-scan" onclick="captureAndScan()">⚡ Scan Label</button>
+  </div>
+
+  <!-- ── STATUS ── -->
+  <div id="status" class="status-bar">System Ready. Start camera and scan a label.</div>
+
+  <!-- ── DEBUG ── -->
+  <span class="debug-toggle" onclick="toggleDebug()">[ raw OCR ]</span>
+  <div id="rawOcrDebug"></div>
+
+  <!-- ── CANDIDATES ── -->
+  <div id="candidateSection" class="candidate-section">
+    <label>⚠ Multiple MPN Candidates — Select Correct One:</label>
+    <div id="candidateList"></div>
+  </div>
+
+  <!-- ── PART NUMBER FIELD ── -->
   <div class="field">
-    <label>Quantity (Col D)</label>
-    <input type="number" id="qtyInput" class="qty-box" value="1" min="1">
+    <span class="field-label">Manufacturing Part Number</span>
+    <div class="input-row">
+      <input type="text" id="editablePn" placeholder="Waiting for scan…" autocomplete="off" spellcheck="false">
+      <button class="clear-btn" onclick="clearAll()" title="Clear">✕</button>
+    </div>
   </div>
 
-  <!-- Sync -->
-  <button id="syncBtn" class="btn btn-sync" onclick="fetchAndSync()">🚀 FETCH WEB DATA &amp; SYNC</button>
-
-  <!-- Result -->
-  <div class="field" style="margin-top: 16px; opacity: 0.65;">
-    <label>Last Supplier Description (Web Result)</label>
-    <input type="text" id="finalDesc" readonly style="background:#eee; font-size: 11px;">
+  <!-- ── SUPPLIER WATERFALL CHIPS ── -->
+  <div id="supplierStatus" class="supplier-status" style="display:flex; flex-wrap:wrap;">
+    <div class="sup-chip" id="chip-Mouser" ><div class="sup-dot"></div>Mouser</div>
+    <div class="sup-chip" id="chip-LCSC"   ><div class="sup-dot"></div>LCSC</div>
+    <div class="sup-chip" id="chip-DigiKey"><div class="sup-dot"></div>DigiKey</div>
   </div>
+
+  <!-- ── RESULT CARD ── -->
+  <div id="resultCard" class="result-card">
+    <div class="result-grid">
+      <span class="result-key">MPN</span>
+      <span class="result-value" id="rMpn">—</span>
+
+      <span class="result-key">DESCRIPTION</span>
+      <span class="result-value desc-val" id="rDesc">—</span>
+
+      <span class="result-key">MAKER</span>
+      <span class="result-value" id="rMfr">—</span>
+
+      <span class="result-key">SOURCE</span>
+      <span class="result-value" id="rSource">—</span>
+    </div>
+    <a id="rDatasheet" href="#" target="_blank" class="datasheet-link" style="display:none">📄 Datasheet</a>
+  </div>
+
+  <!-- ── QTY ── -->
+  <div class="field">
+    <span class="field-label">Quantity</span>
+    <input type="number" id="qtyInput" value="1" min="1">
+  </div>
+
+  <!-- ── DESCRIPTION OVERRIDE ── -->
+  <div class="field">
+    <span class="field-label">Description (editable override)</span>
+    <input type="text" id="finalDesc" placeholder="Auto-filled from supplier lookup…" autocomplete="off">
+  </div>
+
+  <!-- ── SYNC BUTTON ── -->
+  <button id="syncBtn" class="btn-sync" onclick="syncToSheet()">
+    🚀 SYNC TO GOOGLE SHEET
+  </button>
 
 </div>
+
 <canvas id="canvas" style="display:none"></canvas>
 
 <script>
-// ─── CONFIG ──────────────────────────────────────────────────────────────────
-const GOOGLE_API_KEY = "AIzaSyBjzZf1DVzZFuaf9tC5SW8x9bjqp1t7HQQ";
-const SCRIPT_URL     = "https://script.google.com/macros/s/AKfycbzYSqnfI-_n4HObZyrtypdkioVlKIHXUZfqDAYT5mgJ6nWnBU2pfL4EQg_NCqz8w6Gi/exec";
+// ══════════════════════════════════════════════════════════════
+//  CONFIG — paste your own values here
+// ══════════════════════════════════════════════════════════════
+const GOOGLE_VISION_API_KEY = "AIzaSyBjzZf1DVzZFuaf9tC5SW8x9bjqp1t7HQQ";
 
-// ─── MPN LABEL VARIANTS ───────────────────────────────────────────────────────
-// Matches lines like: "MFR:", "MFR PN:", "MANUFACTURER PART NO:", "P/N:", etc.
+// Your deployed Google Apps Script Web App URL
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzYSqnfI-_n4HObZyrtypdkioVlKIHXUZfqDAYT5mgJ6nWnBU2pfL4EQg_NCqz8w6Gi/exec";
+
+// ══════════════════════════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════════════════════════
+let currentMode = "Add";
+let fetchedResult = null;
+
+// ══════════════════════════════════════════════════════════════
+//  MPN EXTRACTION (unchanged from original — proven logic)
+// ══════════════════════════════════════════════════════════════
+
 const MPN_LABEL_REGEX = /^(MANUFACTURER\s*PART\s*(NO?\.?|NUMBER)?|MFR\s*(PN|P\/N|NO?\.?)?|MFG\s*(PN|P\/N|NO?\.?)?|MPN|MNF\s*(PN|P\/N)?|MAN\s*(PN|P\/N)?|PART\s*(NO?\.?|NUMBER|#)?|P\s*\/?\s*N|CAT\s*(NO?\.?|#)?|ITEM\s*(NO?\.?|#)?|MODEL\s*(NO?\.?)?|REF\s*(NO?\.?|#)?)\s*[:#\-\.]?\s*/i;
 
-// ─── DESCRIPTION VOCABULARY (never inside a real MPN) ─────────────────────────
 const DESCRIPTION_WORDS = [
   "CAPACITOR","CAP","RESISTOR","RES","INDUCTOR","TRANSISTOR","DIODE","RELAY",
   "CONNECTOR","MODULE","SENSOR","SWITCH","VOLTAGE","REGULATOR","AMPLIFIER",
@@ -128,289 +540,366 @@ const DESCRIPTION_WORDS = [
   "LEADED","LEADFREE","ROHS","COMPLIANT","GENUINE","ORIGINAL"
 ];
 
-// Lines that are pure noise — skip entirely
 const NOISE_LINE_STARTS = [
   "INV","S/O","DATE","LOT#","LOT ","QTY","SHIP","CUST","ORDER",
   "PACK","PO#","REV ","SER ","SERIAL","ROHS","LEAD","INVOICE",
   "PACKING","DELIVERY","PURCHASE","RECEIPT","BATCH"
 ];
 
-// ─── MPN SCORER ───────────────────────────────────────────────────────────────
 function scoreMPN(raw) {
-  // Collapse whitespace to get clean token
   const pn = raw.replace(/\s+/g, "").toUpperCase();
+  if (pn.length < 4 || pn.length > 30) return null;
+  if (!/[A-Z]/.test(pn)) return null;
+  if (!/[0-9]/.test(pn)) return null;
+  if (/^\d{2,4}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}$/.test(pn)) return null;
+  if (/^\d+$/.test(pn)) return null;
+  if (/^[A-Z]{2,4}\d{1}$/.test(pn)) return null;
+  if (pn.includes(" ")) return null;
+  if (DESCRIPTION_WORDS.some(w => pn === w || pn.startsWith(w+"-") || pn.endsWith("-"+w))) return null;
 
-  // ── Hard Rejects ──────────────────────────────────────────────────────────
-  if (pn.length < 4 || pn.length > 30)                  return null; // length gate
-  if (!/[A-Z]/.test(pn))                                return null; // must have letters
-  if (!/[0-9]/.test(pn))                                return null; // must have digits
-  if (/^\d{2,4}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}$/.test(pn)) return null; // date pattern
-  if (/^\d+$/.test(pn))                                 return null; // pure number
-  if (/^[A-Z]{2,4}\d{1}$/.test(pn))                    return null; // e.g. QTY1, REV2
-  if (pn.includes(" "))                                 return null; // no spaces in MPN
-
-  // Contains full description words
-  if (DESCRIPTION_WORDS.some(w => pn === w || pn.startsWith(w + "-") || pn.endsWith("-" + w))) return null;
-
-  // ── Scoring ───────────────────────────────────────────────────────────────
   let score = 0;
-
-  const letters = (pn.match(/[A-Z]/g) || []).length;
-  const digits  = (pn.match(/[0-9]/g) || []).length;
-  const letterRatio = letters / pn.length;
-  const digitRatio  = digits  / pn.length;
-
-  // Ideal length: 5–18
+  const letters = (pn.match(/[A-Z]/g)||[]).length;
+  const digits  = (pn.match(/[0-9]/g)||[]).length;
+  const lr = letters/pn.length, dr = digits/pn.length;
   if (pn.length >= 5 && pn.length <= 18) score += 30;
-
-  // Balanced letter/digit mix (hallmark of real MPNs)
-  if (letterRatio > 0.20 && letterRatio < 0.85) score += 25;
-  if (digitRatio  > 0.15 && digitRatio  < 0.75) score += 25;
-
-  // Starts with 2–5 uppercase letters (manufacturer prefix)
+  if (lr > 0.20 && lr < 0.85) score += 25;
+  if (dr > 0.15 && dr < 0.75) score += 25;
   if (/^[A-Z]{2,5}/.test(pn)) score += 10;
-
-  // Ends with common MPN suffix characters
   if (/[TNRPSDABCEFGHIJKLMNQUVWXYZ]\d*$/.test(pn)) score += 8;
-
-  // Contains digits in the middle (strong MPN signal)
   if (/[A-Z]\d+[A-Z]/.test(pn)) score += 15;
-
-  // Penalty: all letters, no structure
   if (/^[A-Z]+$/.test(pn)) score -= 25;
-
-  // Penalty: too long
   if (pn.length > 20) score -= 15;
-
-  // Penalty: starts with obvious noise prefix that didn't get stripped
   if (/^(MFR|MFG|MNF|MPN|MAN|PN)/.test(pn)) score -= 40;
 
   const tier = score >= 60 ? "HIGH" : score >= 35 ? "MED" : "LOW";
   return { pn, score, tier };
 }
 
-// ─── MAIN EXTRACTOR ───────────────────────────────────────────────────────────
 function extractMPNs(ocrText) {
   const lines = ocrText.split('\n').map(l => l.trim()).filter(Boolean);
-  const found = new Map(); // pn → best result
+  const found = new Map();
 
-  const addCandidate = (raw, bonusScore = 0, fromLabel = false) => {
-    const result = scoreMPN(raw);
-    if (!result) return;
-    result.score += bonusScore;
-    if (fromLabel) {
-      result.tier  = "HIGH";
-      result.score += 50;
-    }
-    const existing = found.get(result.pn);
-    if (!existing || result.score > existing.score) {
-      found.set(result.pn, result);
-    }
+  const add = (raw, bonus=0, fromLabel=false) => {
+    const r = scoreMPN(raw);
+    if (!r) return;
+    r.score += bonus;
+    if (fromLabel) { r.tier = "HIGH"; r.score += 50; }
+    const ex = found.get(r.pn);
+    if (!ex || r.score > ex.score) found.set(r.pn, r);
   };
 
-  // ── PASS 1: Label-aware extraction ────────────────────────────────────────
-  // Finds "MFR: VALUE" or "MFR" / "VALUE" (next line)
   for (let i = 0; i < lines.length; i++) {
-    const lineUpper = lines[i].toUpperCase();
-
-    if (MPN_LABEL_REGEX.test(lineUpper)) {
-      // Case A: value on same line after label  →  "MFR: STM32F103C8T6"
-      const afterLabel = lineUpper.replace(MPN_LABEL_REGEX, "").trim();
-      if (afterLabel.length >= 4) {
-        afterLabel.split(/\s+/).forEach(t => addCandidate(t, 0, true));
+    const up = lines[i].toUpperCase();
+    if (MPN_LABEL_REGEX.test(up)) {
+      const after = up.replace(MPN_LABEL_REGEX,"").trim();
+      if (after.length >= 4) after.split(/\s+/).forEach(t => add(t, 0, true));
+      if (i+1 < lines.length) {
+        const n1 = lines[i+1].toUpperCase().trim();
+        if (!MPN_LABEL_REGEX.test(n1) && n1.length >= 4) n1.split(/\s+/).forEach(t => add(t, 0, true));
       }
-
-      // Case B: value on next line  →  "MFR\nSTM32F103C8T6"
-      if (i + 1 < lines.length) {
-        const nextUpper = lines[i + 1].toUpperCase().trim();
-        if (!MPN_LABEL_REGEX.test(nextUpper) && nextUpper.length >= 4) {
-          nextUpper.split(/\s+/).forEach(t => addCandidate(t, 0, true));
-        }
-      }
-
-      // Case C: value 2 lines down (sometimes label → blank → value)
-      if (i + 2 < lines.length) {
-        const next2Upper = lines[i + 2].toUpperCase().trim();
-        if (!MPN_LABEL_REGEX.test(next2Upper) && next2Upper.length >= 4) {
-          next2Upper.split(/\s+/).forEach(t => addCandidate(t, 5, true));
-        }
+      if (i+2 < lines.length) {
+        const n2 = lines[i+2].toUpperCase().trim();
+        if (!MPN_LABEL_REGEX.test(n2) && n2.length >= 4) n2.split(/\s+/).forEach(t => add(t, 5, true));
       }
     }
   }
 
-  // ── PASS 2: Fallback token scan (only if no HIGH found) ───────────────────
   const hasHigh = [...found.values()].some(r => r.tier === "HIGH");
   if (!hasHigh) {
     for (const line of lines) {
-      const upper = line.toUpperCase();
-      if (NOISE_LINE_STARTS.some(n => upper.startsWith(n))) continue;
-      upper.split(/[\s\/,;:|()\[\]]+/).forEach(t => addCandidate(t));
+      const up = line.toUpperCase();
+      if (NOISE_LINE_STARTS.some(n => up.startsWith(n))) continue;
+      up.split(/[\s\/,;:|()\[\]]+/).forEach(t => add(t));
     }
   }
 
-  // Sort: HIGH > MED > LOW, then by score desc
-  const tierOrder = { HIGH: 0, MED: 1, LOW: 2 };
+  const order = { HIGH:0, MED:1, LOW:2 };
   return [...found.values()]
-    .sort((a, b) => tierOrder[a.tier] - tierOrder[b.tier] || b.score - a.score)
-    .slice(0, 5);
+    .sort((a,b) => order[a.tier]-order[b.tier] || b.score-a.score)
+    .slice(0,5);
 }
 
-// ─── CAMERA ──────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  CAMERA
+// ══════════════════════════════════════════════════════════════
+
 async function startCamera() {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }
+      video: { facingMode:"environment", width:{ideal:1920}, height:{ideal:1080} }
     });
     document.getElementById("video").srcObject = stream;
-    updateStatus("📷 Camera active. Position label clearly.", "");
+    setStatus("📷 Camera active. Aim at the label and tap Scan.", "");
   } catch(e) {
-    updateStatus("❌ Camera error: " + e.message, "err");
+    setStatus("❌ Camera error: " + e.message, "err");
   }
 }
 
-// ─── CAPTURE & SCAN ───────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  SCAN
+// ══════════════════════════════════════════════════════════════
+
 async function captureAndScan() {
-  const video  = document.getElementById("video");
+  const video = document.getElementById("video");
   const canvas = document.getElementById("canvas");
+  if (!video.srcObject) { setStatus("⚠ Start the camera first.", "err"); return; }
 
-  if (!video.srcObject) {
-    updateStatus("⚠️ Start the camera first.", "err");
-    return;
-  }
-
-  canvas.width  = video.videoWidth;
+  canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
   canvas.getContext("2d").drawImage(video, 0, 0);
   const base64 = canvas.toDataURL("image/jpeg", 0.9).split(',')[1];
 
-  updateStatus('<span class="spinner"></span>Running OCR…', "");
+  setStatus('<span class="spinner"></span>Running OCR…', "load");
 
   try {
     const res = await fetch(
-      `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_API_KEY}`,
+      `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_VISION_API_KEY}`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type":"application/json" },
         body: JSON.stringify({
-          requests: [{
-            image: { content: base64 },
-            features: [{ type: "TEXT_DETECTION", maxResults: 1 }]
-          }]
+          requests: [{ image:{content:base64}, features:[{type:"TEXT_DETECTION",maxResults:1}] }]
         })
       }
     );
-
     const data = await res.json();
-
     if (data.error) throw new Error(data.error.message);
 
     const annotations = data.responses[0].textAnnotations;
     if (!annotations || annotations.length === 0) throw new Error("No text found in image.");
 
     const rawText = annotations[0].description;
-
-    // Show raw OCR in debug panel
     document.getElementById("rawOcrDebug").textContent = rawText;
 
     const candidates = extractMPNs(rawText);
-
     if (candidates.length === 0) {
-      updateStatus("⚠️ No MPN candidates found. Try manual entry.", "err");
+      setStatus("⚠ No MPN found. Enter manually and tap Sync.", "warn");
       return;
     }
 
-    // If top result is HIGH confidence → auto-populate
     if (candidates[0].tier === "HIGH") {
-      document.getElementById("editablePn").value = candidates[0].pn;
-      document.getElementById("syncBtn").style.display = "block";
-      document.getElementById("candidate-section").style.display = "none";
-      updateStatus(`✅ MPN detected: ${candidates[0].pn}`, "ok");
+      // Auto-select the HIGH confidence result
+      selectPN(candidates[0].pn);
+      document.getElementById("candidateSection").style.display = "none";
       return;
     }
 
-    // Otherwise show picker
-    const list = document.getElementById("candidate-list");
+    // Show picker for MED / LOW
+    const list = document.getElementById("candidateList");
     list.innerHTML = "";
     candidates.forEach(c => {
       const btn = document.createElement("button");
       btn.className = "candidate-btn";
-      btn.innerHTML = `
-        <span>${c.pn}</span>
-        <span class="badge badge-${c.tier}">${c.tier} · ${c.score}</span>
-      `;
+      btn.innerHTML = `<span>${c.pn}</span><span class="badge badge-${c.tier}">${c.tier} · ${c.score}</span>`;
       btn.onclick = () => {
-        document.getElementById("editablePn").value = c.pn;
-        document.getElementById("syncBtn").style.display = "block";
-        document.getElementById("candidate-section").style.display = "none";
-        updateStatus(`✅ Selected: ${c.pn}`, "ok");
+        document.querySelectorAll(".candidate-btn").forEach(b => b.disabled = true);
+        document.getElementById("candidateSection").style.display = "none";
+        selectPN(c.pn);
       };
       list.appendChild(btn);
     });
-
-    document.getElementById("candidate-section").style.display = "block";
-    updateStatus(`Found ${candidates.length} candidate(s). Select the correct MPN.`, "");
+    document.getElementById("candidateSection").style.display = "block";
+    setStatus(`Found ${candidates.length} candidate(s). Tap the correct MPN.`, "warn");
 
   } catch(e) {
-    updateStatus("❌ OCR Error: " + e.message, "err");
+    setStatus("❌ OCR Error: " + e.message, "err");
   }
 }
 
-// ─── FETCH & SYNC ─────────────────────────────────────────────────────────────
-async function fetchAndSync() {
-  const pn  = document.getElementById("editablePn").value.trim().toUpperCase();
-  const qty = document.getElementById("qtyInput").value;
+// ══════════════════════════════════════════════════════════════
+//  SELECT PN → FETCH DESCRIPTION FROM APPS SCRIPT WATERFALL
+// ══════════════════════════════════════════════════════════════
 
-  if (!pn) {
-    updateStatus("⚠️ No part number entered.", "err");
-    return;
-  }
+async function selectPN(pn) {
+  document.getElementById("editablePn").value = pn;
+  document.getElementById("resultCard").style.display = "none";
+  document.getElementById("syncBtn").style.display = "none";
+  document.getElementById("finalDesc").value = "";
+  fetchedResult = null;
 
-  updateStatus('<span class="spinner"></span>Crawling supplier website…', "");
+  // Show supplier chips
+  document.getElementById("supplierStatus").style.display = "flex";
+  resetChips();
+
+  setStatus(`<span class="spinner"></span>Looking up <b>${pn}</b> across suppliers…`, "load");
 
   try {
-    // Step 1: Web lookup via Apps Script
-    const lookupRes = await fetch(`${SCRIPT_URL}?action=lookup&pn=${encodeURIComponent(pn)}`);
-    const info = await lookupRes.json();
-    const desc = info.desc || "Electronic Component";
-    document.getElementById("finalDesc").value = desc;
+    // Animate chips sequentially while waiting
+    animateChips();
 
-    // Step 2: Write row to Google Sheet (A:Time, B:PN, C:Desc, D:Qty, E:Mode)
-    updateStatus('<span class="spinner"></span>Saving to Google Sheet…', "");
+    const res = await fetch(`${SCRIPT_URL}?action=lookup&pn=${encodeURIComponent(pn)}`);
+    const info = await res.json();
+
+    stopChipAnimation();
+
+    if (info.error) throw new Error(info.error);
+
+    const source = info.source || "Unknown";
+    const desc   = info.desc   || "Electronic Component";
+    const mfr    = info.manufacturer || "—";
+    const dsUrl  = info.datasheet    || "";
+
+    fetchedResult = { pn, desc, source, mfr, datasheet: dsUrl };
+
+    // Mark found chip
+    markChip(source, "found");
+
+    // Populate result card
+    document.getElementById("rMpn").textContent  = info.pn || pn;
+    document.getElementById("rDesc").textContent = desc;
+    document.getElementById("rMfr").textContent  = mfr;
+    document.getElementById("rSource").innerHTML =
+      `<span class="source-badge source-${source}">${source}</span>`;
+
+    const dsLink = document.getElementById("rDatasheet");
+    if (dsUrl) {
+      dsLink.href = dsUrl;
+      dsLink.style.display = "inline-block";
+    } else {
+      dsLink.style.display = "none";
+    }
+
+    document.getElementById("resultCard").style.display = "block";
+    document.getElementById("finalDesc").value = desc;
+    document.getElementById("syncBtn").style.display = "block";
+
+    if (source === "Not Found") {
+      setStatus(`⚠ No description found for <b>${pn}</b>. Enter manually.`, "warn");
+    } else {
+      setStatus(`✅ Description found via <b>${source}</b>. Verify and sync.`, "ok");
+    }
+
+  } catch(e) {
+    stopChipAnimation();
+    document.getElementById("syncBtn").style.display = "block";
+    setStatus(`⚠ Lookup failed (${e.message}). Enter description manually.`, "err");
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  SYNC TO GOOGLE SHEET
+// ══════════════════════════════════════════════════════════════
+
+async function syncToSheet() {
+  const pn   = document.getElementById("editablePn").value.trim().toUpperCase();
+  const qty  = document.getElementById("qtyInput").value || "1";
+  const desc = document.getElementById("finalDesc").value.trim() || "Electronic Component";
+
+  if (!pn) { setStatus("⚠ No part number entered.", "err"); return; }
+
+  setStatus('<span class="spinner"></span>Saving to Google Sheet…', "load");
+  document.getElementById("syncBtn").disabled = true;
+
+  try {
     const row = [
       new Date().toLocaleString("en-GB"),
       pn,
       desc,
       qty,
-      document.getElementById("scanMode").value
+      currentMode
     ];
 
     await fetch(SCRIPT_URL, {
       method: "POST",
       mode: "no-cors",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type":"application/json" },
       body: JSON.stringify(row)
     });
 
-    updateStatus(`✅ SUCCESS: ${pn} synced to sheet!`, "ok");
+    setStatus(`✅ SYNCED: <b>${pn}</b> × ${qty} → Google Sheet`, "ok");
     document.getElementById("syncBtn").style.display = "none";
+    document.getElementById("syncBtn").disabled = false;
+
+    // Flash qty field green
+    const qtyEl = document.getElementById("qtyInput");
+    qtyEl.style.borderColor = "var(--accent2)";
+    setTimeout(() => { qtyEl.style.borderColor = ""; }, 1500);
 
   } catch(e) {
-    updateStatus("❌ Sync failed: " + e.message, "err");
+    setStatus("❌ Sync failed: " + e.message, "err");
+    document.getElementById("syncBtn").disabled = false;
   }
 }
 
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
-function updateStatus(msg, type) {
-  const el = document.getElementById("status");
-  el.innerHTML   = msg;
-  el.className   = "status-bar" + (type === "ok" ? " status-ok" : type === "err" ? " status-err" : "");
+// ══════════════════════════════════════════════════════════════
+//  SUPPLIER CHIP ANIMATION
+// ══════════════════════════════════════════════════════════════
+
+const SUPPLIERS = ["Mouser", "LCSC", "DigiKey"];
+let chipTimer = null;
+let chipIdx = 0;
+
+function resetChips() {
+  SUPPLIERS.forEach(s => {
+    const el = document.getElementById("chip-" + s);
+    if (el) el.className = "sup-chip";
+  });
+  chipIdx = 0;
 }
 
-function clearPN() {
+function animateChips() {
+  chipTimer = setInterval(() => {
+    // Reset previous
+    if (chipIdx > 0) {
+      const prev = document.getElementById("chip-" + SUPPLIERS[chipIdx-1]);
+      if (prev) prev.className = "sup-chip miss";
+    }
+    if (chipIdx < SUPPLIERS.length) {
+      const cur = document.getElementById("chip-" + SUPPLIERS[chipIdx]);
+      if (cur) cur.className = "sup-chip checking";
+      chipIdx++;
+    } else {
+      clearInterval(chipTimer);
+    }
+  }, 600);
+}
+
+function stopChipAnimation() {
+  if (chipTimer) clearInterval(chipTimer);
+  // Reset all still-checking chips to miss
+  SUPPLIERS.forEach(s => {
+    const el = document.getElementById("chip-" + s);
+    if (el && el.classList.contains("checking")) el.className = "sup-chip miss";
+  });
+}
+
+function markChip(source, state) {
+  const el = document.getElementById("chip-" + source);
+  if (el) el.className = "sup-chip " + state;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════════════════════
+
+function setStatus(msg, type) {
+  const el = document.getElementById("status");
+  el.innerHTML = msg;
+  el.className = "status-bar"
+    + (type==="ok"   ? " status-ok"
+    : type==="err"   ? " status-err"
+    : type==="load"  ? " status-load"
+    : type==="warn"  ? " status-warn"
+    : "");
+}
+
+function setMode(m) {
+  currentMode = m;
+  document.getElementById("modeAdd").className  = m==="Add"  ? "active-add"  : "";
+  document.getElementById("modeTake").className = m==="Take" ? "active-take" : "";
+}
+
+function clearAll() {
   document.getElementById("editablePn").value = "";
-  document.getElementById("syncBtn").style.display = "none";
-  document.getElementById("candidate-section").style.display = "none";
-  updateStatus("Cleared. Ready to scan.", "");
+  document.getElementById("finalDesc").value  = "";
+  document.getElementById("syncBtn").style.display     = "none";
+  document.getElementById("resultCard").style.display  = "none";
+  document.getElementById("candidateSection").style.display = "none";
+  document.getElementById("supplierStatus").style.display = "none";
+  document.querySelectorAll(".candidate-btn").forEach(b => b.disabled = false);
+  resetChips();
+  fetchedResult = null;
+  setStatus("Cleared. Ready to scan.", "");
 }
 
 function toggleDebug() {
