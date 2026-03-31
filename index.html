@@ -23,6 +23,7 @@ body {
   padding:20px; max-width:480px; margin:auto;
   box-shadow:0 0 0 1px rgba(59,130,246,0.06),0 20px 60px rgba(0,0,0,0.5);
 }
+
 /* HEADER */
 .header { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid var(--border); }
 .logo { font-family:var(--mono); font-size:13px; font-weight:800; color:var(--accent); letter-spacing:0.08em; display:flex; align-items:center; gap:8px; }
@@ -31,15 +32,33 @@ body {
 .mode-pill { display:flex; background:var(--surface2); border:1px solid var(--border); border-radius:20px; overflow:hidden; font-family:var(--mono); font-size:10px; font-weight:700; }
 .mode-pill button { padding:5px 12px; border:none; background:transparent; color:var(--muted); cursor:pointer; transition:all 0.2s; letter-spacing:0.05em; }
 .mode-pill button.active-add  { background:var(--accent2); color:#000; }
-.mode-pill button.active-take { background:var(--danger);  color:#fff; }
+.mode-pill button.active-take { background:var(--danger); color:#fff; }
+
 /* CAMERA */
-.video-wrap { width:100%; border-radius:10px; overflow:hidden; background:#000; aspect-ratio:4/3; margin-bottom:12px; border:1px solid var(--border); position:relative; }
+.video-wrap { width:100%; border-radius:10px; overflow:hidden; background:#000; aspect-ratio:4/3; margin-bottom:6px; border:1px solid var(--border); position:relative; }
 video { width:100%; height:100%; object-fit:cover; display:block; }
 .cam-overlay { position:absolute; inset:0; pointer-events:none; display:flex; align-items:center; justify-content:center; }
-.cam-crosshair { width:140px; height:80px; border:2px solid rgba(59,130,246,0.6); border-radius:6px; box-shadow:0 0 0 1px rgba(59,130,246,0.2),inset 0 0 20px rgba(59,130,246,0.05); }
-.cam-crosshair::before,.cam-crosshair::after { content:''; position:absolute; background:var(--accent); }
-.cam-crosshair::before { top:-1px; left:12px; right:12px; height:1px; }
-.cam-crosshair::after  { left:-1px; top:12px; bottom:12px; width:1px; }
+
+/* Better crosshair — bigger target zone for labels */
+.cam-crosshair {
+  width:260px; height:120px;
+  border:2px solid rgba(59,130,246,0.8); border-radius:6px;
+  box-shadow:0 0 0 1px rgba(59,130,246,0.3),inset 0 0 30px rgba(59,130,246,0.06);
+  position:relative;
+}
+/* Corner brackets only — cleaner aiming guide */
+.cam-crosshair::before {
+  content:'';position:absolute;
+  top:-2px;left:-2px;width:20px;height:20px;
+  border-top:3px solid var(--accent);border-left:3px solid var(--accent);
+  border-radius:3px 0 0 0;
+  box-shadow:calc(260px + 1px) 0 0 -0px var(--accent), 0 calc(120px + 1px) 0 0 var(--accent), calc(260px + 1px) calc(120px + 1px) 0 0 var(--accent);
+}
+
+/* Camera controls row */
+.cam-controls { display:flex; gap:6px; align-items:center; margin-bottom:12px; }
+.cam-hint { font-size:10px; font-family:var(--mono); color:var(--muted); flex:1; padding:0 4px; }
+
 /* BUTTONS */
 .btn-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; }
 .btn { padding:11px 14px; border:none; border-radius:8px; font-weight:600; font-size:13px; cursor:pointer; transition:all 0.15s; display:flex; align-items:center; justify-content:center; gap:6px; font-family:var(--sans); }
@@ -47,12 +66,23 @@ video { width:100%; height:100%; object-fit:cover; display:block; }
 .btn-cam  { background:var(--accent); color:#fff; }
 .btn-scan { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
 .btn-scan:hover { border-color:var(--accent); color:var(--accent); }
+
+/* OCR MODE TOGGLE */
+.ocr-mode {
+  display:flex; gap:6px; margin-bottom:12px; align-items:center;
+  font-size:10px; font-family:var(--mono); color:var(--muted);
+}
+.ocr-mode label { display:flex; align-items:center; gap:4px; cursor:pointer; padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--surface2); transition:all 0.15s; }
+.ocr-mode label:has(input:checked) { border-color:var(--accent); color:var(--accent); background:rgba(59,130,246,0.08); }
+.ocr-mode input[type=radio] { display:none; }
+
 /* STATUS */
 .status-bar { padding:10px 14px; border-radius:8px; font-size:11px; font-family:var(--mono); border:1px solid var(--border); background:var(--surface2); margin-bottom:12px; min-height:40px; line-height:1.6; color:var(--muted); transition:all 0.3s; }
 .status-ok   { border-color:var(--accent2); background:rgba(16,185,129,0.08); color:#6ee7b7; }
 .status-err  { border-color:var(--danger);  background:rgba(239,68,68,0.08);  color:#fca5a5; }
 .status-load { border-color:var(--accent);  background:rgba(59,130,246,0.08); color:#93c5fd; }
 .status-warn { border-color:var(--warn);    background:rgba(245,158,11,0.08); color:#fcd34d; }
+
 /* CANDIDATES */
 .candidate-section { display:none; margin-bottom:14px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px; }
 .candidate-section label { font-size:9px; font-family:var(--mono); font-weight:700; color:var(--warn); letter-spacing:0.1em; text-transform:uppercase; display:block; margin-bottom:8px; }
@@ -64,6 +94,7 @@ video { width:100%; height:100%; object-fit:cover; display:block; }
 .badge-HIGH { background:rgba(16,185,129,0.2); color:#6ee7b7; border:1px solid rgba(16,185,129,0.3); }
 .badge-MED  { background:rgba(245,158,11,0.2); color:#fcd34d; border:1px solid rgba(245,158,11,0.3); }
 .badge-LOW  { background:rgba(239,68,68,0.2);  color:#fca5a5; border:1px solid rgba(239,68,68,0.3); }
+
 /* FIELDS */
 .field { margin-bottom:12px; }
 .field-label { font-size:9px; font-family:var(--mono); font-weight:700; color:var(--muted); letter-spacing:0.1em; text-transform:uppercase; display:block; margin-bottom:5px; }
@@ -74,6 +105,7 @@ input:focus { border-color:var(--accent); }
 #qtyInput   { border-color:var(--accent2); color:var(--accent2); text-align:center; font-size:22px; }
 .clear-btn { padding:0 13px; background:rgba(239,68,68,0.1); border:1px solid var(--danger); border-radius:8px; cursor:pointer; font-size:15px; color:var(--danger); font-weight:700; flex-shrink:0; transition:background 0.15s; }
 .clear-btn:hover { background:rgba(239,68,68,0.2); }
+
 /* RESULT CARD */
 .result-card { display:none; background:var(--surface2); border:1px solid var(--accent2); border-radius:10px; padding:14px; margin-bottom:14px; position:relative; overflow:hidden; }
 .result-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--accent),var(--accent2)); }
@@ -91,16 +123,20 @@ input:focus { border-color:var(--accent); }
 .datasheet-link:hover { background:rgba(59,130,246,0.1); }
 #finalDesc { background:var(--surface2); border-color:rgba(245,158,11,0.4); color:var(--text); font-size:12px; font-weight:400; }
 #finalDesc:focus { border-color:var(--warn); }
+
 /* SYNC BUTTON */
 .btn-sync { display:none; width:100%; padding:16px; background:linear-gradient(135deg,#059669,#10b981); border:none; border-radius:10px; color:#fff; font-size:16px; font-weight:700; cursor:pointer; margin-bottom:12px; box-shadow:0 4px 20px rgba(16,185,129,0.3); transition:all 0.2s; font-family:var(--sans); }
 .btn-sync:hover  { transform:translateY(-1px); box-shadow:0 6px 24px rgba(16,185,129,0.4); }
 .btn-sync:active { transform:scale(0.98); }
+
 /* SPINNER */
 .spinner { display:inline-block; width:11px; height:11px; border:2px solid rgba(255,255,255,0.2); border-top-color:var(--accent); border-radius:50%; animation:spin 0.6s linear infinite; margin-right:6px; vertical-align:middle; }
 @keyframes spin { to { transform:rotate(360deg); } }
+
 /* DEBUG */
 .debug-toggle { font-size:10px; color:var(--muted); cursor:pointer; text-decoration:underline; display:block; margin-bottom:6px; text-align:right; font-family:var(--mono); }
-#rawOcrDebug { font-size:10px; color:#555; font-family:var(--mono); white-space:pre-wrap; background:var(--surface2); border:1px dashed var(--border); border-radius:6px; padding:8px; margin-bottom:10px; max-height:110px; overflow-y:auto; display:none; }
+#rawOcrDebug { font-size:10px; color:#6ee7b7; font-family:var(--mono); white-space:pre-wrap; background:var(--surface2); border:1px dashed var(--border); border-radius:6px; padding:8px; margin-bottom:10px; max-height:150px; overflow-y:auto; display:none; }
+
 /* SUPPLIER CHIPS */
 .supplier-status { display:none; gap:6px; margin-bottom:12px; flex-wrap:wrap; }
 .sup-chip { display:flex; align-items:center; gap:5px; font-size:10px; font-family:var(--mono); font-weight:700; padding:4px 10px; border-radius:20px; border:1px solid var(--border); color:var(--muted); background:var(--surface2); letter-spacing:0.04em; transition:all 0.3s; }
@@ -115,25 +151,40 @@ input:focus { border-color:var(--accent); }
 <div class="card">
 
   <div class="header">
-    <div class="logo"><div class="logo-dot"></div>NEXWAH // TRIAGE</div>
+    <div class="logo"><div class="logo-dot"></div>NEXWAH // Inventory</div>
     <div class="mode-pill">
       <button id="modeAdd"  onclick="setMode('Add')"  class="active-add">ADD</button>
       <button id="modeTake" onclick="setMode('Take')">TAKE</button>
     </div>
   </div>
 
+  <!-- CAMERA -->
   <div class="video-wrap">
     <video id="video" autoplay playsinline muted></video>
     <div class="cam-overlay"><div class="cam-crosshair"></div></div>
   </div>
+
+  <!-- Hint below camera -->
+  <div class="cam-controls">
+    <span class="cam-hint">💡 Hold label flat · Fill the blue box · Avoid shadows</span>
+  </div>
+
   <div class="btn-row">
     <button class="btn btn-cam"  onclick="startCamera()">📷 Start Camera</button>
     <button class="btn btn-scan" onclick="captureAndScan()">⚡ Scan Label</button>
   </div>
 
+  <!-- OCR enhancement mode -->
+  <div class="ocr-mode">
+    <span style="margin-right:4px;">ENHANCE:</span>
+    <label><input type="radio" name="ocrMode" value="normal" checked> Normal</label>
+    <label><input type="radio" name="ocrMode" value="contrast"> High Contrast</label>
+    <label><input type="radio" name="ocrMode" value="sharpen"> Sharpen</label>
+  </div>
+
   <div id="status" class="status-bar">System Ready. Start camera and scan a label.</div>
 
-  <span class="debug-toggle" onclick="toggleDebug()">[ raw OCR ]</span>
+  <span class="debug-toggle" onclick="toggleDebug()">[ raw OCR text ]</span>
   <div id="rawOcrDebug"></div>
 
   <div id="candidateSection" class="candidate-section">
@@ -144,7 +195,8 @@ input:focus { border-color:var(--accent); }
   <div class="field">
     <span class="field-label">Manufacturing Part Number</span>
     <div class="input-row">
-      <input type="text" id="editablePn" placeholder="Waiting for scan…" autocomplete="off" spellcheck="false">
+      <input type="text" id="editablePn" placeholder="Waiting for scan…" autocomplete="off" spellcheck="false"
+             oninput="onManualPN(this.value)">
       <button class="clear-btn" onclick="clearAll()" title="Clear">✕</button>
     </div>
   </div>
@@ -177,163 +229,591 @@ input:focus { border-color:var(--accent); }
     <input type="text" id="finalDesc" placeholder="Auto-filled from lookup…" autocomplete="off">
   </div>
 
-  <button id="syncBtn" class="btn-sync" onclick="syncToSheet()"> SYNC TO GOOGLE SHEET</button>
+  <button id="syncBtn" class="btn-sync" onclick="syncToSheet()">🚀 SYNC TO GOOGLE SHEET</button>
 
 </div>
 <canvas id="canvas" style="display:none"></canvas>
+<canvas id="processCanvas" style="display:none"></canvas>
+
 <script>
+// ══════════════════════════════════════════════════════════════
+//  CONFIG — update SCRIPT_URL after each new deployment
+// ══════════════════════════════════════════════════════════════
 const GOOGLE_VISION_API_KEY = "AIzaSyBjzZf1DVzZFuaf9tC5SW8x9bjqp1t7HQQ";
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyK6ybxtjkBmZHrwKofhYfr6aZ1OdlQYPusYIeWADp_zNBm9P7rxXTa_UKUsnlDaOHI/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzGfmQCtAo0rHZ82BjM7BO-ZJm4bgw685hLX60bg8qC7uhSVbqBrpkL9doIgabF65eV/exec";
 
-let currentMode = "Add", fetchedResult = null;
+let currentMode = "Add";
+let fetchedResult = null;
+let manualLookupTimer = null;
 
-// MPN EXTRACTION
-const MPN_LABEL_REGEX = /^(MANUFACTURER\s*PART\s*(NO?\.?|NUMBER)?|MFR\s*(PN|P\/N|NO?\.?)?|MFG\s*(PN|P\/N|NO?\.?)?|MPN|MNF\s*(PN|P\/N)?|MAN\s*(PN|P\/N)?|PART\s*(NO?\.?|NUMBER|#)?|P\s*\/?\s*N|CAT\s*(NO?\.?|#)?|ITEM\s*(NO?\.?|#)?|MODEL\s*(NO?\.?)?|REF\s*(NO?\.?|#)?)\s*[:#\-\.]?\s*/i;
-const DESCRIPTION_WORDS = ["CAPACITOR","CAP","RESISTOR","RES","INDUCTOR","TRANSISTOR","DIODE","RELAY","CONNECTOR","MODULE","SENSOR","SWITCH","VOLTAGE","REGULATOR","AMPLIFIER","OSCILLATOR","CRYSTAL","FILTER","FUSE","DISPLAY","CONTROLLER","DRIVER","INTERFACE","ELECTROLYTIC","CERAMIC","FILM","TANTALUM","THROUGH","HOLE","SMD","SMT","WATT","VOLT","AMP","OHM","FARAD","HENRY","HERTZ","WITH","FOR","AND","THE","FROM","TYPE","PACK","REEL","TAPE","TRAY","BLACK","WHITE","RED","BLUE","GREEN","YELLOW","SILVER","GOLD","LEADED","LEADFREE","ROHS","COMPLIANT","GENUINE","ORIGINAL"];
-const NOISE_LINE_STARTS = ["INV","S/O","DATE","LOT#","LOT ","QTY","SHIP","CUST","ORDER","PACK","PO#","REV ","SER ","SERIAL","ROHS","LEAD","INVOICE","PACKING","DELIVERY","PURCHASE","RECEIPT","BATCH"];
+// ══════════════════════════════════════════════════════════════
+//  IMAGE PREPROCESSING — improves OCR accuracy on small labels
+// ══════════════════════════════════════════════════════════════
+
+function preprocessImage(srcCanvas, mode) {
+  const dst = document.getElementById("processCanvas");
+  const sw = srcCanvas.width, sh = srcCanvas.height;
+
+  // ── Step 1: Upscale 2× for better OCR on small text ──────
+  const scale = 2;
+  dst.width  = sw * scale;
+  dst.height = sh * scale;
+  const ctx = dst.getContext("2d");
+
+  // Use imageSmoothingQuality high for upscaling
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(srcCanvas, 0, 0, dst.width, dst.height);
+
+  if (mode === "normal") {
+    // Slight contrast boost even in normal mode
+    applyContrast(ctx, dst.width, dst.height, 1.2, 10);
+    return dst;
+  }
+
+  if (mode === "contrast") {
+    // Strong contrast + brightness — great for faded/printed labels
+    applyContrast(ctx, dst.width, dst.height, 2.0, -30);
+    applyThreshold(ctx, dst.width, dst.height, 128);
+    return dst;
+  }
+
+  if (mode === "sharpen") {
+    // Unsharp mask approximation for blurry labels
+    applyContrast(ctx, dst.width, dst.height, 1.5, 0);
+    applySharpen(ctx, dst.width, dst.height);
+    return dst;
+  }
+
+  return dst;
+}
+
+function applyContrast(ctx, w, h, factor, brightness) {
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    d[i]   = Math.min(255, Math.max(0, factor * (d[i]   - 128) + 128 + brightness));
+    d[i+1] = Math.min(255, Math.max(0, factor * (d[i+1] - 128) + 128 + brightness));
+    d[i+2] = Math.min(255, Math.max(0, factor * (d[i+2] - 128) + 128 + brightness));
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+function applyThreshold(ctx, w, h, threshold) {
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const gray = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
+    const v = gray > threshold ? 255 : 0;
+    d[i] = d[i+1] = d[i+2] = v;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+function applySharpen(ctx, w, h) {
+  // 3×3 unsharp mask kernel
+  const kernel = [
+     0, -1,  0,
+    -1,  5, -1,
+     0, -1,  0
+  ];
+  const img  = ctx.getImageData(0, 0, w, h);
+  const out  = ctx.createImageData(w, h);
+  const s = img.data, d = out.data;
+  for (let y = 1; y < h-1; y++) {
+    for (let x = 1; x < w-1; x++) {
+      const i = (y*w+x)*4;
+      for (let c = 0; c < 3; c++) {
+        let v = 0;
+        for (let ky=-1; ky<=1; ky++) {
+          for (let kx=-1; kx<=1; kx++) {
+            const ni = ((y+ky)*w+(x+kx))*4;
+            v += s[ni+c] * kernel[(ky+1)*3+(kx+1)];
+          }
+        }
+        d[i+c] = Math.min(255, Math.max(0, v));
+      }
+      d[i+3] = 255;
+    }
+  }
+  ctx.putImageData(out, 0, 0);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  IMPROVED MPN EXTRACTION
+// ══════════════════════════════════════════════════════════════
+
+// Comprehensive label prefixes — including Chinese supplier labels
+const MPN_LABEL_REGEX = /^(MANUFACTURER\s*PART\s*(NO?\.?|NUMBER)?|MFR\s*(PN|P\/N|NO?\.?)?|MFG\s*(PN|P\/N|NO?\.?)?|MPN|MNF\s*(PN|P\/N)?|MAN\s*(PN|P\/N)?|PART\s*(NO?\.?|NUMBER|#)?|P\s*\/?\s*N|CAT\s*(NO?\.?|#)?|ITEM\s*(NO?\.?|#)?|MODEL\s*(NO?\.?)?|REF\s*(NO?\.?|#)?|型号|料号|物料编号|规格型号)\s*[:#\-\.\s]?\s*/i;
+
+const DESCRIPTION_WORDS = new Set([
+  "CAPACITOR","CAP","RESISTOR","RES","INDUCTOR","IND","TRANSISTOR","DIODE","RELAY",
+  "CONNECTOR","CONN","MODULE","SENSOR","SWITCH","VOLTAGE","REGULATOR","REG",
+  "AMPLIFIER","AMP","OSCILLATOR","CRYSTAL","XTAL","FILTER","FUSE","DISPLAY",
+  "CONTROLLER","CTRL","DRIVER","DRV","INTERFACE","ELECTROLYTIC","ELEC",
+  "CERAMIC","FILM","TANTALUM","TANT","SMD","SMT","WATT","VOLT","OHM","FARAD",
+  "HENRY","HERTZ","WITH","FOR","AND","THE","FROM","TYPE","PACK","REEL",
+  "TAPE","TRAY","BLACK","WHITE","RED","BLUE","GREEN","YELLOW","SILVER","GOLD",
+  "LEADED","LEADFREE","ROHS","COMPLIANT","GENUINE","ORIGINAL","THROUGH","HOLE"
+]);
+
+const NOISE_STARTS = new Set([
+  "INV","S/O","DATE","LOT#","LOT ","QTY","SHIP","CUST","ORDER",
+  "PACK","PO#","REV ","SER ","SERIAL","LEAD","INVOICE",
+  "PACKING","DELIVERY","PURCHASE","RECEIPT","BATCH","TOTAL","PRICE",
+  "UNIT","USD","SGD","CNY","EUR","GBP","MYR"
+]);
+
+// Known manufacturer prefixes — huge boost to scoring
+const MFR_PREFIXES = new Set([
+  "STM","STM32","STM8","TI","LM","TL","SN","OPA","INA","REF","TPS","LMR","LMK",
+  "NXP","LPC","MKE","MK","FXOS","FXLS",
+  "MCR","MCP","PIC","ATTINY","ATMEGA","AT",
+  "ESP","ESP32","ESP8266",
+  "GRM","LQH","BLM","NFM","GCM","CGA","GJM",
+  "CRCW","RCWP","ERJ","RK73","RC","RN",
+  "IRF","IRFZ","IRLZ","IPP","IPS","BSS","BSR","BC","BD","BT","BUK",
+  "LT","LTC","LTM","LTZ",
+  "MAX","ICM","ICL","ISL","EL","HIN",
+  "ADM","AD","ADA","ADP","ADR","ADXL",
+  "BAT","BAS","BZX","BZT","MM","MBR","MB",
+  "ULN","UDN","L29","L6","STP","STF",
+  "C2012","C1608","C0402","C0603","C0805","C1206",
+  "RC0402","RC0603","RC0805","RC1206",
+  "GRM21","GRM18","GRM15"
+]);
 
 function scoreMPN(raw) {
-  const pn=raw.replace(/\s+/g,"").toUpperCase();
-  if(pn.length<4||pn.length>30)return null;
-  if(!/[A-Z]/.test(pn)||!/[0-9]/.test(pn))return null;
-  if(/^\d{2,4}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}$/.test(pn))return null;
-  if(/^\d+$/.test(pn)||/^[A-Z]{2,4}\d{1}$/.test(pn))return null;
-  if(pn.includes(" "))return null;
-  if(DESCRIPTION_WORDS.some(w=>pn===w||pn.startsWith(w+"-")||pn.endsWith("-"+w)))return null;
-  let score=0;
-  const lr=(pn.match(/[A-Z]/g)||[]).length/pn.length, dr=(pn.match(/[0-9]/g)||[]).length/pn.length;
-  if(pn.length>=5&&pn.length<=18)score+=30;
-  if(lr>0.20&&lr<0.85)score+=25; if(dr>0.15&&dr<0.75)score+=25;
-  if(/^[A-Z]{2,5}/.test(pn))score+=10; if(/[TNRPSDABCEFGHIJKLMNQUVWXYZ]\d*$/.test(pn))score+=8;
-  if(/[A-Z]\d+[A-Z]/.test(pn))score+=15; if(/^[A-Z]+$/.test(pn))score-=25;
-  if(pn.length>20)score-=15; if(/^(MFR|MFG|MNF|MPN|MAN|PN)/.test(pn))score-=40;
-  return{pn,score,tier:score>=60?"HIGH":score>=35?"MED":"LOW"};
-}
-function extractMPNs(txt) {
-  const lines=txt.split('\n').map(l=>l.trim()).filter(Boolean), found=new Map();
-  const add=(raw,bonus=0,lbl=false)=>{const r=scoreMPN(raw);if(!r)return;r.score+=bonus;if(lbl){r.tier="HIGH";r.score+=50;}const ex=found.get(r.pn);if(!ex||r.score>ex.score)found.set(r.pn,r);};
-  for(let i=0;i<lines.length;i++){const up=lines[i].toUpperCase();if(MPN_LABEL_REGEX.test(up)){const af=up.replace(MPN_LABEL_REGEX,"").trim();if(af.length>=4)af.split(/\s+/).forEach(t=>add(t,0,true));if(i+1<lines.length){const n1=lines[i+1].toUpperCase().trim();if(!MPN_LABEL_REGEX.test(n1)&&n1.length>=4)n1.split(/\s+/).forEach(t=>add(t,0,true));}if(i+2<lines.length){const n2=lines[i+2].toUpperCase().trim();if(!MPN_LABEL_REGEX.test(n2)&&n2.length>=4)n2.split(/\s+/).forEach(t=>add(t,5,true));}}}
-  const hasHigh=[...found.values()].some(r=>r.tier==="HIGH");
-  if(!hasHigh){for(const line of lines){const up=line.toUpperCase();if(NOISE_LINE_STARTS.some(n=>up.startsWith(n)))continue;up.split(/[\s\/,;:|()\[\]]+/).forEach(t=>add(t));}}
-  return[...found.values()].sort((a,b)=>({HIGH:0,MED:1,LOW:2}[a.tier]-{HIGH:0,MED:1,LOW:2}[b.tier]||b.score-a.score)).slice(0,5);
+  // Remove common OCR noise characters
+  const pn = raw.replace(/[^A-Z0-9\-\.\/]/g, "").toUpperCase();
+
+  // ── Hard rejects ──────────────────────────────────────────
+  if (pn.length < 4 || pn.length > 32) return null;
+  if (!/[A-Z]/.test(pn)) return null;         // must have letters
+  if (!/[0-9]/.test(pn)) return null;         // must have digits
+  if (/^\d{2,4}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}$/.test(pn)) return null;  // date
+  if (/^\d+$/.test(pn)) return null;           // pure number
+  if (/^[A-Z]{1,3}\d{1,2}$/.test(pn)) return null;  // e.g. R1, C12, Q3
+  if (DESCRIPTION_WORDS.has(pn)) return null;
+
+  let score = 0;
+  const len     = pn.length;
+  const letters = (pn.match(/[A-Z]/g)||[]).length;
+  const digits  = (pn.match(/[0-9]/g)||[]).length;
+  const lr = letters/len, dr = digits/len;
+
+  // ── Length score ──────────────────────────────────────────
+  if (len >= 4  && len <= 6)  score += 20;
+  if (len >= 7  && len <= 14) score += 35;  // sweet spot
+  if (len >= 15 && len <= 20) score += 20;
+  if (len > 20) score -= 10;
+
+  // ── Letter/digit balance ──────────────────────────────────
+  if (lr > 0.15 && lr < 0.90) score += 20;
+  if (dr > 0.10 && dr < 0.80) score += 20;
+
+  // ── Structure patterns ────────────────────────────────────
+  if (/^[A-Z]{2,6}\d/.test(pn))     score += 20;  // starts letters then digit
+  if (/[A-Z]\d+[A-Z]/.test(pn))     score += 18;  // letter-digits-letter (e.g. STM32F)
+  if (/\d{2,}[A-Z]{1,4}$/.test(pn)) score += 12;  // ends digits-letters (e.g. 103C8T6)
+  if (/^[A-Z]+$/.test(pn))           score -= 30;  // all letters = bad
+
+  // ── Known manufacturer prefix ─────────────────────────────
+  for (var prefix of MFR_PREFIXES) {
+    if (pn.startsWith(prefix)) { score += 40; break; }
+  }
+
+  // ── Penalties ─────────────────────────────────────────────
+  if (/^(MFR|MFG|MNF|MPN|MAN|PN|REV|SER|LOT|INV|PO)/.test(pn)) score -= 50;
+  if (pn.split('-').length > 4) score -= 10;  // too many hyphens = probably not MPN
+
+  // ── Tier assignment ───────────────────────────────────────
+  const tier = score >= 70 ? "HIGH" : score >= 40 ? "MED" : "LOW";
+  return { pn, score, tier };
 }
 
-// CAMERA
+function extractMPNs(ocrText) {
+  // ── Pre-clean OCR text ────────────────────────────────────
+  // Fix common OCR errors: O→0 in numeric context, I→1 in numeric context
+  const cleaned = ocrText
+    .replace(/[^\x20-\x7E\n]/g, ' ')   // remove non-ASCII
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n');
+
+  const lines = cleaned.split('\n').map(l => l.trim()).filter(Boolean);
+  const found = new Map();
+
+  const add = (raw, bonus=0, fromLabel=false) => {
+    const r = scoreMPN(raw);
+    if (!r) return;
+    r.score += bonus;
+    if (fromLabel) { r.tier = "HIGH"; r.score += 60; }
+    const ex = found.get(r.pn);
+    if (!ex || r.score > ex.score) found.set(r.pn, r);
+  };
+
+  // ── PASS 1: Label-aware (highest priority) ────────────────
+  for (let i = 0; i < lines.length; i++) {
+    const up = lines[i].toUpperCase();
+    if (!MPN_LABEL_REGEX.test(up)) continue;
+
+    // Value on same line after label: "MPN: STM32F103C8T6"
+    const afterLabel = up.replace(MPN_LABEL_REGEX, "").trim();
+    if (afterLabel.length >= 4) {
+      // Take only first token — rest is usually description
+      const firstToken = afterLabel.split(/\s+/)[0];
+      add(firstToken, 0, true);
+      // Also try full afterLabel in case it's a compound PN
+      if (!afterLabel.includes(" ")) add(afterLabel, 0, true);
+    }
+
+    // Value on next line (label on its own line): "MPN\nSTM32F103C8T6"
+    for (let offset = 1; offset <= 2; offset++) {
+      if (i + offset >= lines.length) break;
+      const nextLine = lines[i + offset].toUpperCase().trim();
+      if (MPN_LABEL_REGEX.test(nextLine)) break;  // another label — stop
+      if (nextLine.length >= 4 && nextLine.length <= 32) {
+        nextLine.split(/\s+/).forEach(t => add(t, 0, offset === 1));
+      }
+    }
+  }
+
+  // ── PASS 2: Colon-pattern scan ────────────────────────────
+  // Catches "MPN:VALUE" without spaces, common on thermal-printed labels
+  for (const line of lines) {
+    const colonMatch = line.match(/(?:MPN|P\/N|PART\s*NO?\.?|MODEL)\s*[:\-]\s*([A-Z0-9][A-Z0-9\-\.\/]{3,29})/i);
+    if (colonMatch) add(colonMatch[1].toUpperCase(), 20, true);
+  }
+
+  // ── PASS 3: Fallback token scan ───────────────────────────
+  const hasHigh = [...found.values()].some(r => r.tier === "HIGH");
+  if (!hasHigh) {
+    for (const line of lines) {
+      const up = line.toUpperCase();
+      if ([...NOISE_STARTS].some(n => up.startsWith(n))) continue;
+      // Split on common separators
+      up.split(/[\s,;|()\[\]]+/).forEach(t => {
+        if (t.length >= 4) add(t);
+      });
+    }
+  }
+
+  // ── Sort and return top 6 ─────────────────────────────────
+  const tierOrder = { HIGH:0, MED:1, LOW:2 };
+  return [...found.values()]
+    .sort((a,b) => tierOrder[a.tier] - tierOrder[b.tier] || b.score - a.score)
+    .slice(0, 6);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  CAMERA
+// ══════════════════════════════════════════════════════════════
 async function startCamera() {
   try {
-    const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment",width:{ideal:1920},height:{ideal:1080}}});
-    document.getElementById("video").srcObject=s;
-    setStatus("📷 Camera active. Aim at label and tap Scan.","");
-  } catch(e){setStatus("❌ Camera: "+e.message,"err");}
-}
-
-// SCAN
-async function captureAndScan() {
-  const video=document.getElementById("video"),canvas=document.getElementById("canvas");
-  if(!video.srcObject){setStatus("⚠ Start camera first.","err");return;}
-  canvas.width=video.videoWidth; canvas.height=video.videoHeight;
-  canvas.getContext("2d").drawImage(video,0,0);
-  const b64=canvas.toDataURL("image/jpeg",0.9).split(',')[1];
-  setStatus('<span class="spinner"></span>Running OCR…',"load");
-  try {
-    const res=await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_VISION_API_KEY}`,
-      {method:"POST",headers:{"Content-Type":"application/json"},
-       body:JSON.stringify({requests:[{image:{content:b64},features:[{type:"TEXT_DETECTION",maxResults:1}]}]})});
-    const data=await res.json();
-    if(data.error)throw new Error(data.error.message);
-    const ann=data.responses[0].textAnnotations;
-    if(!ann||!ann.length)throw new Error("No text found.");
-    const raw=ann[0].description;
-    document.getElementById("rawOcrDebug").textContent=raw;
-    const cands=extractMPNs(raw);
-    if(!cands.length){setStatus("⚠ No MPN found. Enter manually.","warn");return;}
-    if(cands[0].tier==="HIGH"){selectPN(cands[0].pn);document.getElementById("candidateSection").style.display="none";return;}
-    const list=document.getElementById("candidateList"); list.innerHTML="";
-    cands.forEach(c=>{
-      const btn=document.createElement("button"); btn.className="candidate-btn";
-      btn.innerHTML=`<span>${c.pn}</span><span class="badge badge-${c.tier}">${c.tier}·${c.score}</span>`;
-      btn.onclick=()=>{document.querySelectorAll(".candidate-btn").forEach(b=>b.disabled=true);document.getElementById("candidateSection").style.display="none";selectPN(c.pn);};
-      list.appendChild(btn);
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: "environment",
+        width:  { ideal: 1920 },
+        height: { ideal: 1080 },
+        // Request auto-focus and high frame rate where supported
+        focusMode: "continuous",
+        frameRate: { ideal: 30 }
+      }
     });
-    document.getElementById("candidateSection").style.display="block";
-    setStatus(`Found ${cands.length} candidate(s). Tap the correct MPN.`,"warn");
-  } catch(e){setStatus("❌ OCR: "+e.message,"err");}
-}
-
-// SELECT PN → FETCH
-async function selectPN(pn) {
-  document.getElementById("editablePn").value=pn;
-  document.getElementById("resultCard").style.display="none";
-  document.getElementById("syncBtn").style.display="none";
-  document.getElementById("finalDesc").value="";
-  fetchedResult=null;
-  document.getElementById("supplierStatus").style.display="flex";
-  resetChips(); animateChips();
-  setStatus(`<span class="spinner"></span>Looking up <b>${pn}</b> via Gemini AI…`,"load");
-  try {
-    const res=await fetch(`${SCRIPT_URL}?action=lookup&pn=${encodeURIComponent(pn)}`);
-    const info=await res.json();
-    stopChipAnimation();
-    if(info.error)throw new Error(info.error);
-    const source=info.source||"Unknown", desc=info.desc||"Electronic Component",
-          mfr=info.manufacturer||"—", dsUrl=info.datasheet||"";
-    fetchedResult={pn,desc,source,mfr,datasheet:dsUrl};
-    markChip(source,"found");
-    document.getElementById("rMpn").textContent=info.pn||pn;
-    document.getElementById("rDesc").textContent=desc;
-    document.getElementById("rMfr").textContent=mfr;
-    document.getElementById("rSource").innerHTML=`<span class="source-badge source-${source.replace(/ /g,"")}">${source}</span>`;
-    const ds=document.getElementById("rDatasheet");
-    if(dsUrl){ds.href=dsUrl;ds.style.display="inline-block";}else{ds.style.display="none";}
-    document.getElementById("resultCard").style.display="block";
-    document.getElementById("finalDesc").value=desc;
-    document.getElementById("syncBtn").style.display="block";
-    setStatus(source==="Not Found"?`⚠ Not found for <b>${pn}</b>. Enter manually.`:`✅ Found via <b>${source}</b>. Verify and sync.`,source==="Not Found"?"warn":"ok");
+    document.getElementById("video").srcObject = stream;
+    setStatus("📷 Camera active. Fill the blue box with the label then tap Scan.", "");
   } catch(e) {
-    stopChipAnimation();
-    document.getElementById("syncBtn").style.display="block";
-    setStatus(`⚠ Lookup failed: ${e.message}. Enter manually.`,"err");
+    setStatus("❌ Camera error: " + e.message, "err");
   }
 }
 
-// SYNC
-async function syncToSheet() {
-  const pn=document.getElementById("editablePn").value.trim().toUpperCase();
-  const qty=document.getElementById("qtyInput").value||"1";
-  const desc=document.getElementById("finalDesc").value.trim()||"Electronic Component";
-  if(!pn){setStatus("⚠ No part number.","err");return;}
-  setStatus('<span class="spinner"></span>Saving to Google Sheet…',"load");
-  document.getElementById("syncBtn").disabled=true;
+// ══════════════════════════════════════════════════════════════
+//  CAPTURE & SCAN
+// ══════════════════════════════════════════════════════════════
+async function captureAndScan() {
+  const video  = document.getElementById("video");
+  const canvas = document.getElementById("canvas");
+  if (!video.srcObject) { setStatus("⚠ Start the camera first.", "err"); return; }
+
+  // Capture frame
+  canvas.width  = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext("2d").drawImage(video, 0, 0);
+
+  // Get selected enhancement mode
+  const mode = document.querySelector('input[name="ocrMode"]:checked').value;
+
+  // Preprocess image
+  const processed = preprocessImage(canvas, mode);
+
+  // Convert to base64 — use PNG for lossless if enhanced, jpeg otherwise
+  const mimeType = mode === "normal" ? "image/jpeg" : "image/png";
+  const quality  = mode === "normal" ? 0.95 : undefined;
+  const base64   = quality
+    ? processed.toDataURL(mimeType, quality).split(',')[1]
+    : processed.toDataURL(mimeType).split(',')[1];
+
+  setStatus('<span class="spinner"></span>Running OCR' + (mode !== "normal" ? ' [' + mode + ']' : '') + '…', "load");
+
   try {
-    await fetch(SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify([new Date().toLocaleString("en-GB"),pn,desc,qty,currentMode])});
-    setStatus(`✅ SYNCED: <b>${pn}</b> × ${qty} → Sheet`,"ok");
-    document.getElementById("syncBtn").style.display="none";
-    document.getElementById("syncBtn").disabled=false;
-    const q=document.getElementById("qtyInput"); q.style.borderColor="var(--accent2)";
-    setTimeout(()=>{q.style.borderColor="";},1500);
-  } catch(e){setStatus("❌ Sync failed: "+e.message,"err");document.getElementById("syncBtn").disabled=false;}
+    const res = await fetch(
+      `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_VISION_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          requests: [{
+            image: { content: base64 },
+            features: [
+              { type: "TEXT_DETECTION",     maxResults: 1  },
+              { type: "DOCUMENT_TEXT_DETECTION", maxResults: 1 }  // better for printed labels
+            ],
+            imageContext: {
+              languageHints: ["en","zh"]  // English + Chinese for LCSC/Chinese labels
+            }
+          }]
+        })
+      }
+    );
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+
+    const resp = data.responses[0];
+
+    // Prefer DOCUMENT_TEXT_DETECTION (better for dense label text)
+    const fullText = (resp.fullTextAnnotation && resp.fullTextAnnotation.text)
+                  || (resp.textAnnotations && resp.textAnnotations[0] && resp.textAnnotations[0].description)
+                  || "";
+
+    if (!fullText) throw new Error("No text found. Try High Contrast mode.");
+
+    document.getElementById("rawOcrDebug").textContent = fullText;
+
+    const candidates = extractMPNs(fullText);
+    if (candidates.length === 0) {
+      setStatus("⚠ No MPN found. Try High Contrast or Sharpen mode, or enter manually.", "warn");
+      return;
+    }
+
+    // Auto-select if HIGH confidence
+    if (candidates[0].tier === "HIGH") {
+      selectPN(candidates[0].pn);
+      document.getElementById("candidateSection").style.display = "none";
+      return;
+    }
+
+    // Show picker for MED/LOW
+    const list = document.getElementById("candidateList");
+    list.innerHTML = "";
+    candidates.forEach(c => {
+      const btn = document.createElement("button");
+      btn.className = "candidate-btn";
+      btn.innerHTML = `<span>${c.pn}</span><span class="badge badge-${c.tier}">${c.tier} · ${c.score}</span>`;
+      btn.onclick = () => {
+        document.querySelectorAll(".candidate-btn").forEach(b => b.disabled = true);
+        document.getElementById("candidateSection").style.display = "none";
+        selectPN(c.pn);
+      };
+      list.appendChild(btn);
+    });
+    document.getElementById("candidateSection").style.display = "block";
+    setStatus(`Found ${candidates.length} candidate(s). Tap the correct MPN.`, "warn");
+
+  } catch(e) {
+    setStatus("❌ OCR Error: " + e.message, "err");
+  }
 }
 
-// CHIPS
-const SUPPLIERS=["GeminiAI","Mouser","LCSC","DigiKey"];
-let chipTimer=null,chipIdx=0;
-function resetChips(){SUPPLIERS.forEach(s=>{const el=document.getElementById("chip-"+s);if(el)el.className=s==="GeminiAI"?"sup-chip gemini":"sup-chip";});chipIdx=0;}
-function animateChips(){
-  chipTimer=setInterval(()=>{
-    if(chipIdx>0){const p=document.getElementById("chip-"+SUPPLIERS[chipIdx-1]);if(p)p.className="sup-chip miss";}
-    if(chipIdx<SUPPLIERS.length){const c=document.getElementById("chip-"+SUPPLIERS[chipIdx]);if(c)c.className="sup-chip checking";chipIdx++;}
-    else clearInterval(chipTimer);
-  },600);
+// ══════════════════════════════════════════════════════════════
+//  MANUAL PN ENTRY — triggers lookup after user stops typing
+// ══════════════════════════════════════════════════════════════
+function onManualPN(val) {
+  clearTimeout(manualLookupTimer);
+  const pn = val.trim().toUpperCase();
+  if (pn.length >= 4) {
+    document.getElementById("syncBtn").style.display = "block";
+    manualLookupTimer = setTimeout(() => {
+      // Auto-lookup after 1.5s of no typing
+      if (document.getElementById("editablePn").value.trim().toUpperCase() === pn) {
+        selectPN(pn);
+      }
+    }, 1500);
+  }
 }
-function stopChipAnimation(){if(chipTimer)clearInterval(chipTimer);SUPPLIERS.forEach(s=>{const el=document.getElementById("chip-"+s);if(el&&el.classList.contains("checking"))el.className="sup-chip miss";});}
-function markChip(src,state){const el=document.getElementById("chip-"+src.replace(/ /g,""));if(el)el.className="sup-chip "+state;}
 
-// HELPERS
-function setStatus(msg,type){const el=document.getElementById("status");el.innerHTML=msg;el.className="status-bar"+(type==="ok"?" status-ok":type==="err"?" status-err":type==="load"?" status-load":type==="warn"?" status-warn":"");}
-function setMode(m){currentMode=m;document.getElementById("modeAdd").className=m==="Add"?"active-add":"";document.getElementById("modeTake").className=m==="Take"?"active-take":"";}
-function clearAll(){document.getElementById("editablePn").value="";document.getElementById("finalDesc").value="";document.getElementById("syncBtn").style.display="none";document.getElementById("resultCard").style.display="none";document.getElementById("candidateSection").style.display="none";document.getElementById("supplierStatus").style.display="none";document.querySelectorAll(".candidate-btn").forEach(b=>b.disabled=false);resetChips();fetchedResult=null;setStatus("Cleared. Ready to scan.","");}
-function toggleDebug(){const el=document.getElementById("rawOcrDebug");el.style.display=el.style.display==="none"?"block":"none";}
+// ══════════════════════════════════════════════════════════════
+//  SELECT PN → FETCH DESCRIPTION
+// ══════════════════════════════════════════════════════════════
+async function selectPN(pn) {
+  pn = pn.trim().toUpperCase();
+  if (!pn) return;
+
+  document.getElementById("editablePn").value = pn;
+  document.getElementById("resultCard").style.display  = "none";
+  document.getElementById("syncBtn").style.display     = "none";
+  document.getElementById("finalDesc").value           = "";
+  fetchedResult = null;
+
+  document.getElementById("supplierStatus").style.display = "flex";
+  resetChips();
+  animateChips();
+
+  setStatus(`<span class="spinner"></span>Looking up <b>${pn}</b> via Gemini AI + suppliers…`, "load");
+
+  try {
+    const res  = await fetch(`${SCRIPT_URL}?action=lookup&pn=${encodeURIComponent(pn)}`);
+
+    // Handle no-cors or empty response gracefully
+    let info;
+    try { info = await res.json(); }
+    catch(jsonErr) { throw new Error("Bad response from server. Redeploy Apps Script."); }
+
+    stopChipAnimation();
+    if (info.error) throw new Error(info.error);
+
+    const source = info.source || "Unknown";
+    const desc   = info.desc   || "";
+    const mfr    = info.manufacturer || "—";
+    const dsUrl  = info.datasheet    || "";
+
+    fetchedResult = { pn, desc, source, mfr, datasheet: dsUrl };
+    markChip(source, "found");
+
+    document.getElementById("rMpn").textContent  = info.pn || pn;
+    document.getElementById("rDesc").textContent = desc || "—";
+    document.getElementById("rMfr").textContent  = mfr;
+    document.getElementById("rSource").innerHTML =
+      `<span class="source-badge source-${source.replace(/\s/g,"")}">${source}</span>`;
+
+    const ds = document.getElementById("rDatasheet");
+    if (dsUrl) { ds.href = dsUrl; ds.style.display = "inline-block"; }
+    else { ds.style.display = "none"; }
+
+    document.getElementById("resultCard").style.display = "block";
+    document.getElementById("finalDesc").value = desc;
+    document.getElementById("syncBtn").style.display = "block";
+
+    if (source === "Not Found" || !desc) {
+      setStatus(`⚠ No description found for <b>${pn}</b>. Enter manually then sync.`, "warn");
+    } else {
+      setStatus(`✅ Found via <b>${source}</b>: ${desc.substring(0,60)}…`, "ok");
+    }
+
+  } catch(e) {
+    stopChipAnimation();
+    document.getElementById("syncBtn").style.display = "block";
+    setStatus(`⚠ Lookup failed: ${e.message}. Enter description manually.`, "err");
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  SYNC TO GOOGLE SHEET
+// ══════════════════════════════════════════════════════════════
+async function syncToSheet() {
+  const pn   = document.getElementById("editablePn").value.trim().toUpperCase();
+  const qty  = document.getElementById("qtyInput").value || "1";
+  const desc = document.getElementById("finalDesc").value.trim() || "Electronic Component";
+  if (!pn) { setStatus("⚠ No part number entered.", "err"); return; }
+
+  setStatus('<span class="spinner"></span>Saving to Google Sheet…', "load");
+  document.getElementById("syncBtn").disabled = true;
+
+  try {
+    await fetch(SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify([new Date().toLocaleString("en-GB"), pn, desc, qty, currentMode])
+    });
+
+    setStatus(`✅ SYNCED: <b>${pn}</b> × ${qty} → Google Sheet`, "ok");
+    document.getElementById("syncBtn").style.display = "none";
+    document.getElementById("syncBtn").disabled = false;
+
+    // Flash qty input
+    const q = document.getElementById("qtyInput");
+    q.style.borderColor = "var(--accent2)";
+    setTimeout(() => { q.style.borderColor = ""; }, 1500);
+
+  } catch(e) {
+    setStatus("❌ Sync failed: " + e.message, "err");
+    document.getElementById("syncBtn").disabled = false;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  SUPPLIER CHIP ANIMATION
+// ══════════════════════════════════════════════════════════════
+const SUPPLIERS = ["GeminiAI", "Mouser", "LCSC", "DigiKey"];
+let chipTimer = null, chipIdx = 0;
+
+function resetChips() {
+  SUPPLIERS.forEach(s => {
+    const el = document.getElementById("chip-" + s);
+    if (el) el.className = s === "GeminiAI" ? "sup-chip gemini" : "sup-chip";
+  });
+  chipIdx = 0;
+}
+function animateChips() {
+  chipTimer = setInterval(() => {
+    if (chipIdx > 0) {
+      const prev = document.getElementById("chip-" + SUPPLIERS[chipIdx-1]);
+      if (prev) prev.className = "sup-chip miss";
+    }
+    if (chipIdx < SUPPLIERS.length) {
+      const cur = document.getElementById("chip-" + SUPPLIERS[chipIdx]);
+      if (cur) cur.className = "sup-chip checking";
+      chipIdx++;
+    } else { clearInterval(chipTimer); }
+  }, 700);
+}
+function stopChipAnimation() {
+  if (chipTimer) clearInterval(chipTimer);
+  SUPPLIERS.forEach(s => {
+    const el = document.getElementById("chip-" + s);
+    if (el && el.classList.contains("checking")) el.className = "sup-chip miss";
+  });
+}
+function markChip(source, state) {
+  const el = document.getElementById("chip-" + source.replace(/\s/g, ""));
+  if (el) el.className = "sup-chip " + state;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════════════════════
+function setStatus(msg, type) {
+  const el = document.getElementById("status");
+  el.innerHTML = msg;
+  el.className = "status-bar"
+    + (type==="ok"  ? " status-ok"
+    : type==="err"  ? " status-err"
+    : type==="load" ? " status-load"
+    : type==="warn" ? " status-warn" : "");
+}
+function setMode(m) {
+  currentMode = m;
+  document.getElementById("modeAdd").className  = m === "Add"  ? "active-add"  : "";
+  document.getElementById("modeTake").className = m === "Take" ? "active-take" : "";
+}
+function clearAll() {
+  clearTimeout(manualLookupTimer);
+  document.getElementById("editablePn").value = "";
+  document.getElementById("finalDesc").value  = "";
+  document.getElementById("syncBtn").style.display      = "none";
+  document.getElementById("resultCard").style.display   = "none";
+  document.getElementById("candidateSection").style.display = "none";
+  document.getElementById("supplierStatus").style.display   = "none";
+  document.querySelectorAll(".candidate-btn").forEach(b => b.disabled = false);
+  resetChips();
+  fetchedResult = null;
+  setStatus("Cleared. Ready to scan.", "");
+}
+function toggleDebug() {
+  const el = document.getElementById("rawOcrDebug");
+  el.style.display = el.style.display === "none" ? "block" : "none";
+}
 </script>
 </body>
 </html>
