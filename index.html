@@ -6,270 +6,122 @@
 <title>NEXWAH // Supplier Sync</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=DM+Sans:wght@400;500;600&display=swap');
-
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
 :root {
-  --bg:       #0d0f14;
-  --surface:  #161920;
-  --surface2: #1e2230;
-  --border:   #2a2f3f;
-  --accent:   #3b82f6;
-  --accent2:  #10b981;
-  --warn:     #f59e0b;
-  --danger:   #ef4444;
-  --text:     #e8eaf0;
-  --muted:    #6b7590;
-  --mono:     'JetBrains Mono', monospace;
-  --sans:     'DM Sans', sans-serif;
+  --bg:#0d0f14; --surface:#161920; --surface2:#1e2230; --border:#2a2f3f;
+  --accent:#3b82f6; --accent2:#10b981; --warn:#f59e0b; --danger:#ef4444;
+  --text:#e8eaf0; --muted:#6b7590;
+  --mono:'JetBrains Mono',monospace; --sans:'DM Sans',sans-serif;
 }
-
 body {
-  font-family: var(--sans);
-  background: var(--bg);
-  color: var(--text);
-  min-height: 100vh;
-  padding: 12px;
-  background-image: radial-gradient(ellipse 60% 40% at 50% -10%, rgba(59,130,246,0.12) 0%, transparent 70%);
+  font-family:var(--sans); background:var(--bg); color:var(--text);
+  min-height:100vh; padding:12px;
+  background-image:radial-gradient(ellipse 60% 40% at 50% -10%,rgba(59,130,246,0.12) 0%,transparent 70%);
 }
-
 .card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 20px;
-  max-width: 480px;
-  margin: auto;
-  box-shadow: 0 0 0 1px rgba(59,130,246,0.06), 0 20px 60px rgba(0,0,0,0.5);
+  background:var(--surface); border:1px solid var(--border); border-radius:16px;
+  padding:20px; max-width:480px; margin:auto;
+  box-shadow:0 0 0 1px rgba(59,130,246,0.06),0 20px 60px rgba(0,0,0,0.5);
 }
-
 /* HEADER */
-.header {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--border);
-}
-.logo {
-  font-family: var(--mono); font-size: 13px; font-weight: 800;
-  color: var(--accent); letter-spacing: 0.08em;
-  display: flex; align-items: center; gap: 8px;
-}
-.logo-dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--accent2); animation: pulse 2s ease-in-out infinite;
-}
+.header { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; padding-bottom:14px; border-bottom:1px solid var(--border); }
+.logo { font-family:var(--mono); font-size:13px; font-weight:800; color:var(--accent); letter-spacing:0.08em; display:flex; align-items:center; gap:8px; }
+.logo-dot { width:7px; height:7px; border-radius:50%; background:var(--accent2); animation:pulse 2s ease-in-out infinite; }
 @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
-
-.mode-pill {
-  display: flex; background: var(--surface2); border: 1px solid var(--border);
-  border-radius: 20px; overflow: hidden; font-family: var(--mono);
-  font-size: 10px; font-weight: 700;
-}
-.mode-pill button {
-  padding: 5px 12px; border: none; background: transparent;
-  color: var(--muted); cursor: pointer; transition: all 0.2s; letter-spacing: 0.05em;
-}
-.mode-pill button.active-add  { background: var(--accent2); color: #000; }
-.mode-pill button.active-take { background: var(--danger);  color: #fff; }
-
+.mode-pill { display:flex; background:var(--surface2); border:1px solid var(--border); border-radius:20px; overflow:hidden; font-family:var(--mono); font-size:10px; font-weight:700; }
+.mode-pill button { padding:5px 12px; border:none; background:transparent; color:var(--muted); cursor:pointer; transition:all 0.2s; letter-spacing:0.05em; }
+.mode-pill button.active-add  { background:var(--accent2); color:#000; }
+.mode-pill button.active-take { background:var(--danger);  color:#fff; }
 /* CAMERA */
-.video-wrap {
-  width: 100%; border-radius: 10px; overflow: hidden;
-  background: #000; aspect-ratio: 4/3; margin-bottom: 12px;
-  border: 1px solid var(--border); position: relative;
-}
-video { width: 100%; height: 100%; object-fit: cover; display: block; }
-.cam-overlay {
-  position: absolute; inset: 0; pointer-events: none;
-  display: flex; align-items: center; justify-content: center;
-}
-.cam-crosshair {
-  width: 140px; height: 80px;
-  border: 2px solid rgba(59,130,246,0.6); border-radius: 6px;
-  box-shadow: 0 0 0 1px rgba(59,130,246,0.2), inset 0 0 20px rgba(59,130,246,0.05);
-}
-.cam-crosshair::before, .cam-crosshair::after {
-  content: ''; position: absolute; background: var(--accent);
-}
+.video-wrap { width:100%; border-radius:10px; overflow:hidden; background:#000; aspect-ratio:4/3; margin-bottom:12px; border:1px solid var(--border); position:relative; }
+video { width:100%; height:100%; object-fit:cover; display:block; }
+.cam-overlay { position:absolute; inset:0; pointer-events:none; display:flex; align-items:center; justify-content:center; }
+.cam-crosshair { width:140px; height:80px; border:2px solid rgba(59,130,246,0.6); border-radius:6px; box-shadow:0 0 0 1px rgba(59,130,246,0.2),inset 0 0 20px rgba(59,130,246,0.05); }
+.cam-crosshair::before,.cam-crosshair::after { content:''; position:absolute; background:var(--accent); }
 .cam-crosshair::before { top:-1px; left:12px; right:12px; height:1px; }
 .cam-crosshair::after  { left:-1px; top:12px; bottom:12px; width:1px; }
-
 /* BUTTONS */
-.btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-.btn {
-  padding: 11px 14px; border: none; border-radius: 8px; font-weight: 600;
-  font-size: 13px; cursor: pointer; transition: all 0.15s;
-  display: flex; align-items: center; justify-content: center; gap: 6px;
-  font-family: var(--sans);
-}
-.btn:active { transform: scale(0.97); }
-.btn-cam  { background: var(--accent); color: #fff; }
-.btn-scan { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
-.btn-scan:hover { border-color: var(--accent); color: var(--accent); }
-
+.btn-row { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; }
+.btn { padding:11px 14px; border:none; border-radius:8px; font-weight:600; font-size:13px; cursor:pointer; transition:all 0.15s; display:flex; align-items:center; justify-content:center; gap:6px; font-family:var(--sans); }
+.btn:active { transform:scale(0.97); }
+.btn-cam  { background:var(--accent); color:#fff; }
+.btn-scan { background:var(--surface2); color:var(--text); border:1px solid var(--border); }
+.btn-scan:hover { border-color:var(--accent); color:var(--accent); }
 /* STATUS */
-.status-bar {
-  padding: 10px 14px; border-radius: 8px; font-size: 11px; font-family: var(--mono);
-  border: 1px solid var(--border); background: var(--surface2);
-  margin-bottom: 12px; min-height: 40px; line-height: 1.6; color: var(--muted); transition: all 0.3s;
-}
-.status-ok   { border-color: var(--accent2); background: rgba(16,185,129,0.08); color: #6ee7b7; }
-.status-err  { border-color: var(--danger);  background: rgba(239,68,68,0.08);  color: #fca5a5; }
-.status-load { border-color: var(--accent);  background: rgba(59,130,246,0.08); color: #93c5fd; }
-.status-warn { border-color: var(--warn);    background: rgba(245,158,11,0.08); color: #fcd34d; }
-
+.status-bar { padding:10px 14px; border-radius:8px; font-size:11px; font-family:var(--mono); border:1px solid var(--border); background:var(--surface2); margin-bottom:12px; min-height:40px; line-height:1.6; color:var(--muted); transition:all 0.3s; }
+.status-ok   { border-color:var(--accent2); background:rgba(16,185,129,0.08); color:#6ee7b7; }
+.status-err  { border-color:var(--danger);  background:rgba(239,68,68,0.08);  color:#fca5a5; }
+.status-load { border-color:var(--accent);  background:rgba(59,130,246,0.08); color:#93c5fd; }
+.status-warn { border-color:var(--warn);    background:rgba(245,158,11,0.08); color:#fcd34d; }
 /* CANDIDATES */
-.candidate-section {
-  display: none; margin-bottom: 14px; background: var(--surface2);
-  border: 1px solid var(--border); border-radius: 10px; padding: 12px;
-}
-.candidate-section label {
-  font-size: 9px; font-family: var(--mono); font-weight: 700;
-  color: var(--warn); letter-spacing: 0.1em; text-transform: uppercase;
-  display: block; margin-bottom: 8px;
-}
-.candidate-btn {
-  width: 100%; background: var(--surface); border: 1px solid var(--border);
-  border-radius: 7px; padding: 9px 12px; margin-bottom: 6px;
-  display: flex; justify-content: space-between; align-items: center;
-  font-family: var(--mono); font-weight: 700; font-size: 13px;
-  cursor: pointer; color: var(--text); transition: all 0.15s;
-}
-.candidate-btn:last-child { margin-bottom: 0; }
-.candidate-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); background: rgba(59,130,246,0.06); }
-.candidate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.badge { font-size: 9px; padding: 2px 8px; border-radius: 20px; font-family: var(--mono); font-weight: 700; letter-spacing: 0.06em; }
-.badge-HIGH { background: rgba(16,185,129,0.2); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); }
-.badge-MED  { background: rgba(245,158,11,0.2); color: #fcd34d; border: 1px solid rgba(245,158,11,0.3); }
-.badge-LOW  { background: rgba(239,68,68,0.2);  color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
-
+.candidate-section { display:none; margin-bottom:14px; background:var(--surface2); border:1px solid var(--border); border-radius:10px; padding:12px; }
+.candidate-section label { font-size:9px; font-family:var(--mono); font-weight:700; color:var(--warn); letter-spacing:0.1em; text-transform:uppercase; display:block; margin-bottom:8px; }
+.candidate-btn { width:100%; background:var(--surface); border:1px solid var(--border); border-radius:7px; padding:9px 12px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; font-family:var(--mono); font-weight:700; font-size:13px; cursor:pointer; color:var(--text); transition:all 0.15s; }
+.candidate-btn:last-child { margin-bottom:0; }
+.candidate-btn:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); background:rgba(59,130,246,0.06); }
+.candidate-btn:disabled { opacity:0.4; cursor:not-allowed; }
+.badge { font-size:9px; padding:2px 8px; border-radius:20px; font-family:var(--mono); font-weight:700; letter-spacing:0.06em; }
+.badge-HIGH { background:rgba(16,185,129,0.2); color:#6ee7b7; border:1px solid rgba(16,185,129,0.3); }
+.badge-MED  { background:rgba(245,158,11,0.2); color:#fcd34d; border:1px solid rgba(245,158,11,0.3); }
+.badge-LOW  { background:rgba(239,68,68,0.2);  color:#fca5a5; border:1px solid rgba(239,68,68,0.3); }
 /* FIELDS */
-.field { margin-bottom: 12px; }
-.field-label {
-  font-size: 9px; font-family: var(--mono); font-weight: 700; color: var(--muted);
-  letter-spacing: 0.1em; text-transform: uppercase; display: block; margin-bottom: 5px;
-}
-.input-row { display: flex; gap: 6px; }
-input[type="text"], input[type="number"] {
-  width: 100%; padding: 11px 14px; background: var(--surface2);
-  border: 1.5px solid var(--border); border-radius: 8px;
-  font-family: var(--mono); font-size: 15px; font-weight: 700;
-  color: var(--text); outline: none; transition: border-color 0.2s;
-}
-input:focus { border-color: var(--accent); }
-#editablePn { border-color: var(--accent); color: #fff; text-align: center; font-size: 17px; letter-spacing: 0.04em; }
-#qtyInput   { border-color: var(--accent2); color: var(--accent2); text-align: center; font-size: 22px; }
-.clear-btn {
-  padding: 0 13px; background: rgba(239,68,68,0.1); border: 1px solid var(--danger);
-  border-radius: 8px; cursor: pointer; font-size: 15px;
-  color: var(--danger); font-weight: 700; flex-shrink: 0; transition: background 0.15s;
-}
-.clear-btn:hover { background: rgba(239,68,68,0.2); }
-
+.field { margin-bottom:12px; }
+.field-label { font-size:9px; font-family:var(--mono); font-weight:700; color:var(--muted); letter-spacing:0.1em; text-transform:uppercase; display:block; margin-bottom:5px; }
+.input-row { display:flex; gap:6px; }
+input[type="text"],input[type="number"] { width:100%; padding:11px 14px; background:var(--surface2); border:1.5px solid var(--border); border-radius:8px; font-family:var(--mono); font-size:15px; font-weight:700; color:var(--text); outline:none; transition:border-color 0.2s; }
+input:focus { border-color:var(--accent); }
+#editablePn { border-color:var(--accent); color:#fff; text-align:center; font-size:17px; letter-spacing:0.04em; }
+#qtyInput   { border-color:var(--accent2); color:var(--accent2); text-align:center; font-size:22px; }
+.clear-btn { padding:0 13px; background:rgba(239,68,68,0.1); border:1px solid var(--danger); border-radius:8px; cursor:pointer; font-size:15px; color:var(--danger); font-weight:700; flex-shrink:0; transition:background 0.15s; }
+.clear-btn:hover { background:rgba(239,68,68,0.2); }
 /* RESULT CARD */
-.result-card {
-  display: none; background: var(--surface2); border: 1px solid var(--accent2);
-  border-radius: 10px; padding: 14px; margin-bottom: 14px;
-  position: relative; overflow: hidden;
-}
-.result-card::before {
-  content: ''; position: absolute; top:0; left:0; right:0; height: 2px;
-  background: linear-gradient(90deg, var(--accent), var(--accent2));
-}
-.result-grid {
-  display: grid; grid-template-columns: auto 1fr;
-  gap: 4px 10px; font-size: 11px; font-family: var(--mono);
-}
-.result-key   { color: var(--muted); font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; padding-top: 1px; }
-.result-value { color: var(--text); font-weight: 700; word-break: break-word; line-height: 1.4; }
-.result-value.desc-val { color: #c7d2fe; font-size: 12px; }
-.source-badge {
-  display: inline-block; font-size: 9px; padding: 1px 7px; border-radius: 20px;
-  font-family: var(--mono); font-weight: 700; letter-spacing: 0.06em; margin-top: 2px;
-}
-.source-ClaudeAI { background: rgba(168,85,247,0.2); color: #d8b4fe; border: 1px solid rgba(168,85,247,0.4); }
-.source-Mouser   { background: rgba(59,130,246,0.15); color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); }
-.source-DigiKey  { background: rgba(245,158,11,0.15); color: #fcd34d; border: 1px solid rgba(245,158,11,0.3); }
-.source-LCSC     { background: rgba(16,185,129,0.15); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); }
-.source-NotFound { background: rgba(239,68,68,0.1);   color: #fca5a5; border: 1px solid rgba(239,68,68,0.3); }
-
-.datasheet-link {
-  display: inline-block; margin-top: 8px; font-size: 10px; font-family: var(--mono);
-  color: var(--accent); text-decoration: none; padding: 3px 8px;
-  border: 1px solid rgba(59,130,246,0.3); border-radius: 4px;
-}
-.datasheet-link:hover { background: rgba(59,130,246,0.1); }
-
-#finalDesc {
-  background: var(--surface2); border-color: rgba(245,158,11,0.4);
-  color: var(--text); font-size: 12px; font-weight: 400;
-}
-#finalDesc:focus { border-color: var(--warn); }
-
+.result-card { display:none; background:var(--surface2); border:1px solid var(--accent2); border-radius:10px; padding:14px; margin-bottom:14px; position:relative; overflow:hidden; }
+.result-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--accent),var(--accent2)); }
+.result-grid { display:grid; grid-template-columns:auto 1fr; gap:4px 10px; font-size:11px; font-family:var(--mono); }
+.result-key   { color:var(--muted); font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; padding-top:1px; }
+.result-value { color:var(--text); font-weight:700; word-break:break-word; line-height:1.4; }
+.result-value.desc-val { color:#c7d2fe; font-size:12px; }
+.source-badge { display:inline-block; font-size:9px; padding:1px 7px; border-radius:20px; font-family:var(--mono); font-weight:700; letter-spacing:0.06em; margin-top:2px; }
+.source-GeminiAI { background:rgba(59,173,245,0.2); color:#7dd3fc; border:1px solid rgba(59,173,245,0.4); }
+.source-Mouser   { background:rgba(59,130,246,0.15); color:#93c5fd; border:1px solid rgba(59,130,246,0.3); }
+.source-DigiKey  { background:rgba(245,158,11,0.15); color:#fcd34d; border:1px solid rgba(245,158,11,0.3); }
+.source-LCSC     { background:rgba(16,185,129,0.15); color:#6ee7b7; border:1px solid rgba(16,185,129,0.3); }
+.source-NotFound { background:rgba(239,68,68,0.1);   color:#fca5a5; border:1px solid rgba(239,68,68,0.3); }
+.datasheet-link { display:inline-block; margin-top:8px; font-size:10px; font-family:var(--mono); color:var(--accent); text-decoration:none; padding:3px 8px; border:1px solid rgba(59,130,246,0.3); border-radius:4px; }
+.datasheet-link:hover { background:rgba(59,130,246,0.1); }
+#finalDesc { background:var(--surface2); border-color:rgba(245,158,11,0.4); color:var(--text); font-size:12px; font-weight:400; }
+#finalDesc:focus { border-color:var(--warn); }
 /* SYNC BUTTON */
-.btn-sync {
-  display: none; width: 100%; padding: 16px;
-  background: linear-gradient(135deg, #059669, #10b981);
-  border: none; border-radius: 10px; color: #fff;
-  font-size: 16px; font-weight: 700; cursor: pointer; margin-bottom: 12px;
-  box-shadow: 0 4px 20px rgba(16,185,129,0.3);
-  transition: all 0.2s; font-family: var(--sans);
-}
-.btn-sync:hover  { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(16,185,129,0.4); }
-.btn-sync:active { transform: scale(0.98); }
-
+.btn-sync { display:none; width:100%; padding:16px; background:linear-gradient(135deg,#059669,#10b981); border:none; border-radius:10px; color:#fff; font-size:16px; font-weight:700; cursor:pointer; margin-bottom:12px; box-shadow:0 4px 20px rgba(16,185,129,0.3); transition:all 0.2s; font-family:var(--sans); }
+.btn-sync:hover  { transform:translateY(-1px); box-shadow:0 6px 24px rgba(16,185,129,0.4); }
+.btn-sync:active { transform:scale(0.98); }
 /* SPINNER */
-.spinner {
-  display: inline-block; width: 11px; height: 11px;
-  border: 2px solid rgba(255,255,255,0.2); border-top-color: var(--accent);
-  border-radius: 50%; animation: spin 0.6s linear infinite;
-  margin-right: 6px; vertical-align: middle;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
+.spinner { display:inline-block; width:11px; height:11px; border:2px solid rgba(255,255,255,0.2); border-top-color:var(--accent); border-radius:50%; animation:spin 0.6s linear infinite; margin-right:6px; vertical-align:middle; }
+@keyframes spin { to { transform:rotate(360deg); } }
 /* DEBUG */
-.debug-toggle {
-  font-size: 10px; color: var(--muted); cursor: pointer;
-  text-decoration: underline; display: block; margin-bottom: 6px;
-  text-align: right; font-family: var(--mono);
-}
-#rawOcrDebug {
-  font-size: 10px; color: #555; font-family: var(--mono); white-space: pre-wrap;
-  background: var(--surface2); border: 1px dashed var(--border); border-radius: 6px;
-  padding: 8px; margin-bottom: 10px; max-height: 110px; overflow-y: auto; display: none;
-}
-
+.debug-toggle { font-size:10px; color:var(--muted); cursor:pointer; text-decoration:underline; display:block; margin-bottom:6px; text-align:right; font-family:var(--mono); }
+#rawOcrDebug { font-size:10px; color:#555; font-family:var(--mono); white-space:pre-wrap; background:var(--surface2); border:1px dashed var(--border); border-radius:6px; padding:8px; margin-bottom:10px; max-height:110px; overflow-y:auto; display:none; }
 /* SUPPLIER CHIPS */
-.supplier-status { display: none; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
-.sup-chip {
-  display: flex; align-items: center; gap: 5px;
-  font-size: 10px; font-family: var(--mono); font-weight: 700;
-  padding: 4px 10px; border-radius: 20px;
-  border: 1px solid var(--border); color: var(--muted);
-  background: var(--surface2); letter-spacing: 0.04em; transition: all 0.3s;
-}
-.sup-chip.checking { border-color: var(--accent);  color: var(--accent);  background: rgba(59,130,246,0.08); }
-.sup-chip.found    { border-color: var(--accent2); color: var(--accent2); background: rgba(16,185,129,0.08); }
-.sup-chip.miss     { border-color: var(--border);  color: #374151; }
-.sup-chip.claude   { border-color: rgba(168,85,247,0.5); color: #d8b4fe; background: rgba(168,85,247,0.08); }
-.sup-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.supplier-status { display:none; gap:6px; margin-bottom:12px; flex-wrap:wrap; }
+.sup-chip { display:flex; align-items:center; gap:5px; font-size:10px; font-family:var(--mono); font-weight:700; padding:4px 10px; border-radius:20px; border:1px solid var(--border); color:var(--muted); background:var(--surface2); letter-spacing:0.04em; transition:all 0.3s; }
+.sup-chip.checking { border-color:var(--accent);  color:var(--accent);  background:rgba(59,130,246,0.08); }
+.sup-chip.found    { border-color:var(--accent2); color:var(--accent2); background:rgba(16,185,129,0.08); }
+.sup-chip.miss     { border-color:var(--border);  color:#374151; }
+.sup-chip.gemini   { border-color:rgba(59,173,245,0.5); color:#7dd3fc; background:rgba(59,173,245,0.08); }
+.sup-dot { width:6px; height:6px; border-radius:50%; background:currentColor; }
 </style>
 </head>
 <body>
 <div class="card">
 
-  <!-- HEADER -->
   <div class="header">
-    <div class="logo">
-      <div class="logo-dot"></div>
-      NEXWAH // Inventory
-    </div>
+    <div class="logo"><div class="logo-dot"></div>NEXWAH // TRIAGE</div>
     <div class="mode-pill">
       <button id="modeAdd"  onclick="setMode('Add')"  class="active-add">ADD</button>
       <button id="modeTake" onclick="setMode('Take')">TAKE</button>
     </div>
   </div>
 
-  <!-- CAMERA -->
   <div class="video-wrap">
     <video id="video" autoplay playsinline muted></video>
     <div class="cam-overlay"><div class="cam-crosshair"></div></div>
@@ -279,20 +131,16 @@ input:focus { border-color: var(--accent); }
     <button class="btn btn-scan" onclick="captureAndScan()">⚡ Scan Label</button>
   </div>
 
-  <!-- STATUS -->
   <div id="status" class="status-bar">System Ready. Start camera and scan a label.</div>
 
-  <!-- DEBUG -->
   <span class="debug-toggle" onclick="toggleDebug()">[ raw OCR ]</span>
   <div id="rawOcrDebug"></div>
 
-  <!-- CANDIDATES -->
   <div id="candidateSection" class="candidate-section">
     <label>⚠ Multiple MPN Candidates — Select Correct One:</label>
     <div id="candidateList"></div>
   </div>
 
-  <!-- PART NUMBER -->
   <div class="field">
     <span class="field-label">Manufacturing Part Number</span>
     <div class="input-row">
@@ -301,15 +149,14 @@ input:focus { border-color: var(--accent); }
     </div>
   </div>
 
-  <!-- SUPPLIER CHIPS — Claude AI first, then fallbacks -->
+  <!-- Gemini AI first, then supplier fallbacks -->
   <div id="supplierStatus" class="supplier-status">
-    <div class="sup-chip claude" id="chip-ClaudeAI"><div class="sup-dot"></div>Claude AI</div>
+    <div class="sup-chip gemini" id="chip-GeminiAI"><div class="sup-dot"></div>Gemini AI</div>
     <div class="sup-chip" id="chip-Mouser">          <div class="sup-dot"></div>Mouser</div>
     <div class="sup-chip" id="chip-LCSC">            <div class="sup-dot"></div>LCSC</div>
     <div class="sup-chip" id="chip-DigiKey">         <div class="sup-dot"></div>DigiKey</div>
   </div>
 
-  <!-- RESULT CARD -->
   <div id="resultCard" class="result-card">
     <div class="result-grid">
       <span class="result-key">MPN</span>        <span class="result-value" id="rMpn">—</span>
@@ -320,339 +167,173 @@ input:focus { border-color: var(--accent); }
     <a id="rDatasheet" href="#" target="_blank" class="datasheet-link" style="display:none">📄 Datasheet</a>
   </div>
 
-  <!-- QTY -->
   <div class="field">
     <span class="field-label">Quantity</span>
     <input type="number" id="qtyInput" value="1" min="1">
   </div>
 
-  <!-- DESCRIPTION OVERRIDE -->
   <div class="field">
     <span class="field-label">Description (editable override)</span>
     <input type="text" id="finalDesc" placeholder="Auto-filled from lookup…" autocomplete="off">
   </div>
 
-  <!-- SYNC -->
-  <button id="syncBtn" class="btn-sync" onclick="syncToSheet()">
-     SYNC TO GOOGLE SHEET
-  </button>
+  <button id="syncBtn" class="btn-sync" onclick="syncToSheet()">🚀 SYNC TO GOOGLE SHEET</button>
 
 </div>
 <canvas id="canvas" style="display:none"></canvas>
-
 <script>
-// ══════════════════════════════════════════════════════════════
-//  CONFIG
-// ══════════════════════════════════════════════════════════════
 const GOOGLE_VISION_API_KEY = "AIzaSyBjzZf1DVzZFuaf9tC5SW8x9bjqp1t7HQQ";
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzGfmQCtAo0rHZ82BjM7BO-ZJm4bgw685hLX60bg8qC7uhSVbqBrpkL9doIgabF65eV/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzYSqnfI-_n4HObZyrtypdkioVlKIHXUZfqDAYT5mgJ6nWnBU2pfL4EQg_NCqz8w6Gi/exec";
 
-let currentMode = "Add";
-let fetchedResult = null;
+let currentMode = "Add", fetchedResult = null;
 
-// ══════════════════════════════════════════════════════════════
-//  MPN EXTRACTION
-// ══════════════════════════════════════════════════════════════
+// MPN EXTRACTION
 const MPN_LABEL_REGEX = /^(MANUFACTURER\s*PART\s*(NO?\.?|NUMBER)?|MFR\s*(PN|P\/N|NO?\.?)?|MFG\s*(PN|P\/N|NO?\.?)?|MPN|MNF\s*(PN|P\/N)?|MAN\s*(PN|P\/N)?|PART\s*(NO?\.?|NUMBER|#)?|P\s*\/?\s*N|CAT\s*(NO?\.?|#)?|ITEM\s*(NO?\.?|#)?|MODEL\s*(NO?\.?)?|REF\s*(NO?\.?|#)?)\s*[:#\-\.]?\s*/i;
-
-const DESCRIPTION_WORDS = [
-  "CAPACITOR","CAP","RESISTOR","RES","INDUCTOR","TRANSISTOR","DIODE","RELAY",
-  "CONNECTOR","MODULE","SENSOR","SWITCH","VOLTAGE","REGULATOR","AMPLIFIER",
-  "OSCILLATOR","CRYSTAL","FILTER","FUSE","DISPLAY","CONTROLLER","DRIVER",
-  "INTERFACE","ELECTROLYTIC","CERAMIC","FILM","TANTALUM","THROUGH","HOLE",
-  "SMD","SMT","WATT","VOLT","AMP","OHM","FARAD","HENRY","HERTZ",
-  "WITH","FOR","AND","THE","FROM","TYPE","PACK","REEL","TAPE","TRAY",
-  "BLACK","WHITE","RED","BLUE","GREEN","YELLOW","SILVER","GOLD",
-  "LEADED","LEADFREE","ROHS","COMPLIANT","GENUINE","ORIGINAL"
-];
-const NOISE_LINE_STARTS = [
-  "INV","S/O","DATE","LOT#","LOT ","QTY","SHIP","CUST","ORDER",
-  "PACK","PO#","REV ","SER ","SERIAL","ROHS","LEAD","INVOICE",
-  "PACKING","DELIVERY","PURCHASE","RECEIPT","BATCH"
-];
+const DESCRIPTION_WORDS = ["CAPACITOR","CAP","RESISTOR","RES","INDUCTOR","TRANSISTOR","DIODE","RELAY","CONNECTOR","MODULE","SENSOR","SWITCH","VOLTAGE","REGULATOR","AMPLIFIER","OSCILLATOR","CRYSTAL","FILTER","FUSE","DISPLAY","CONTROLLER","DRIVER","INTERFACE","ELECTROLYTIC","CERAMIC","FILM","TANTALUM","THROUGH","HOLE","SMD","SMT","WATT","VOLT","AMP","OHM","FARAD","HENRY","HERTZ","WITH","FOR","AND","THE","FROM","TYPE","PACK","REEL","TAPE","TRAY","BLACK","WHITE","RED","BLUE","GREEN","YELLOW","SILVER","GOLD","LEADED","LEADFREE","ROHS","COMPLIANT","GENUINE","ORIGINAL"];
+const NOISE_LINE_STARTS = ["INV","S/O","DATE","LOT#","LOT ","QTY","SHIP","CUST","ORDER","PACK","PO#","REV ","SER ","SERIAL","ROHS","LEAD","INVOICE","PACKING","DELIVERY","PURCHASE","RECEIPT","BATCH"];
 
 function scoreMPN(raw) {
-  const pn = raw.replace(/\s+/g,"").toUpperCase();
-  if (pn.length < 4 || pn.length > 30) return null;
-  if (!/[A-Z]/.test(pn) || !/[0-9]/.test(pn)) return null;
-  if (/^\d{2,4}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}$/.test(pn)) return null;
-  if (/^\d+$/.test(pn) || /^[A-Z]{2,4}\d{1}$/.test(pn)) return null;
-  if (pn.includes(" ")) return null;
-  if (DESCRIPTION_WORDS.some(w => pn===w || pn.startsWith(w+"-") || pn.endsWith("-"+w))) return null;
-
-  let score = 0;
-  const letters = (pn.match(/[A-Z]/g)||[]).length;
-  const digits  = (pn.match(/[0-9]/g)||[]).length;
-  const lr = letters/pn.length, dr = digits/pn.length;
-  if (pn.length >= 5 && pn.length <= 18) score += 30;
-  if (lr > 0.20 && lr < 0.85) score += 25;
-  if (dr > 0.15 && dr < 0.75) score += 25;
-  if (/^[A-Z]{2,5}/.test(pn)) score += 10;
-  if (/[TNRPSDABCEFGHIJKLMNQUVWXYZ]\d*$/.test(pn)) score += 8;
-  if (/[A-Z]\d+[A-Z]/.test(pn)) score += 15;
-  if (/^[A-Z]+$/.test(pn)) score -= 25;
-  if (pn.length > 20) score -= 15;
-  if (/^(MFR|MFG|MNF|MPN|MAN|PN)/.test(pn)) score -= 40;
-  const tier = score >= 60 ? "HIGH" : score >= 35 ? "MED" : "LOW";
-  return { pn, score, tier };
+  const pn=raw.replace(/\s+/g,"").toUpperCase();
+  if(pn.length<4||pn.length>30)return null;
+  if(!/[A-Z]/.test(pn)||!/[0-9]/.test(pn))return null;
+  if(/^\d{2,4}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}$/.test(pn))return null;
+  if(/^\d+$/.test(pn)||/^[A-Z]{2,4}\d{1}$/.test(pn))return null;
+  if(pn.includes(" "))return null;
+  if(DESCRIPTION_WORDS.some(w=>pn===w||pn.startsWith(w+"-")||pn.endsWith("-"+w)))return null;
+  let score=0;
+  const lr=(pn.match(/[A-Z]/g)||[]).length/pn.length, dr=(pn.match(/[0-9]/g)||[]).length/pn.length;
+  if(pn.length>=5&&pn.length<=18)score+=30;
+  if(lr>0.20&&lr<0.85)score+=25; if(dr>0.15&&dr<0.75)score+=25;
+  if(/^[A-Z]{2,5}/.test(pn))score+=10; if(/[TNRPSDABCEFGHIJKLMNQUVWXYZ]\d*$/.test(pn))score+=8;
+  if(/[A-Z]\d+[A-Z]/.test(pn))score+=15; if(/^[A-Z]+$/.test(pn))score-=25;
+  if(pn.length>20)score-=15; if(/^(MFR|MFG|MNF|MPN|MAN|PN)/.test(pn))score-=40;
+  return{pn,score,tier:score>=60?"HIGH":score>=35?"MED":"LOW"};
+}
+function extractMPNs(txt) {
+  const lines=txt.split('\n').map(l=>l.trim()).filter(Boolean), found=new Map();
+  const add=(raw,bonus=0,lbl=false)=>{const r=scoreMPN(raw);if(!r)return;r.score+=bonus;if(lbl){r.tier="HIGH";r.score+=50;}const ex=found.get(r.pn);if(!ex||r.score>ex.score)found.set(r.pn,r);};
+  for(let i=0;i<lines.length;i++){const up=lines[i].toUpperCase();if(MPN_LABEL_REGEX.test(up)){const af=up.replace(MPN_LABEL_REGEX,"").trim();if(af.length>=4)af.split(/\s+/).forEach(t=>add(t,0,true));if(i+1<lines.length){const n1=lines[i+1].toUpperCase().trim();if(!MPN_LABEL_REGEX.test(n1)&&n1.length>=4)n1.split(/\s+/).forEach(t=>add(t,0,true));}if(i+2<lines.length){const n2=lines[i+2].toUpperCase().trim();if(!MPN_LABEL_REGEX.test(n2)&&n2.length>=4)n2.split(/\s+/).forEach(t=>add(t,5,true));}}}
+  const hasHigh=[...found.values()].some(r=>r.tier==="HIGH");
+  if(!hasHigh){for(const line of lines){const up=line.toUpperCase();if(NOISE_LINE_STARTS.some(n=>up.startsWith(n)))continue;up.split(/[\s\/,;:|()\[\]]+/).forEach(t=>add(t));}}
+  return[...found.values()].sort((a,b)=>({HIGH:0,MED:1,LOW:2}[a.tier]-{HIGH:0,MED:1,LOW:2}[b.tier]||b.score-a.score)).slice(0,5);
 }
 
-function extractMPNs(ocrText) {
-  const lines = ocrText.split('\n').map(l=>l.trim()).filter(Boolean);
-  const found = new Map();
-  const add = (raw, bonus=0, fromLabel=false) => {
-    const r = scoreMPN(raw); if (!r) return;
-    r.score += bonus;
-    if (fromLabel) { r.tier="HIGH"; r.score+=50; }
-    const ex = found.get(r.pn);
-    if (!ex || r.score > ex.score) found.set(r.pn, r);
-  };
-  for (let i=0; i<lines.length; i++) {
-    const up = lines[i].toUpperCase();
-    if (MPN_LABEL_REGEX.test(up)) {
-      const after = up.replace(MPN_LABEL_REGEX,"").trim();
-      if (after.length>=4) after.split(/\s+/).forEach(t=>add(t,0,true));
-      if (i+1<lines.length) { const n1=lines[i+1].toUpperCase().trim(); if(!MPN_LABEL_REGEX.test(n1)&&n1.length>=4) n1.split(/\s+/).forEach(t=>add(t,0,true)); }
-      if (i+2<lines.length) { const n2=lines[i+2].toUpperCase().trim(); if(!MPN_LABEL_REGEX.test(n2)&&n2.length>=4) n2.split(/\s+/).forEach(t=>add(t,5,true)); }
-    }
-  }
-  const hasHigh = [...found.values()].some(r=>r.tier==="HIGH");
-  if (!hasHigh) {
-    for (const line of lines) {
-      const up = line.toUpperCase();
-      if (NOISE_LINE_STARTS.some(n=>up.startsWith(n))) continue;
-      up.split(/[\s\/,;:|()\[\]]+/).forEach(t=>add(t));
-    }
-  }
-  const order={HIGH:0,MED:1,LOW:2};
-  return [...found.values()].sort((a,b)=>order[a.tier]-order[b.tier]||b.score-a.score).slice(0,5);
-}
-
-// ══════════════════════════════════════════════════════════════
-//  CAMERA
-// ══════════════════════════════════════════════════════════════
+// CAMERA
 async function startCamera() {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode:"environment", width:{ideal:1920}, height:{ideal:1080} }
-    });
-    document.getElementById("video").srcObject = stream;
-    setStatus("📷 Camera active. Aim at the label and tap Scan.", "");
-  } catch(e) { setStatus("❌ Camera error: "+e.message,"err"); }
+    const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment",width:{ideal:1920},height:{ideal:1080}}});
+    document.getElementById("video").srcObject=s;
+    setStatus("📷 Camera active. Aim at label and tap Scan.","");
+  } catch(e){setStatus("❌ Camera: "+e.message,"err");}
 }
 
-// ══════════════════════════════════════════════════════════════
-//  SCAN
-// ══════════════════════════════════════════════════════════════
+// SCAN
 async function captureAndScan() {
-  const video = document.getElementById("video");
-  const canvas = document.getElementById("canvas");
-  if (!video.srcObject) { setStatus("⚠ Start the camera first.","err"); return; }
-
+  const video=document.getElementById("video"),canvas=document.getElementById("canvas");
+  if(!video.srcObject){setStatus("⚠ Start camera first.","err");return;}
   canvas.width=video.videoWidth; canvas.height=video.videoHeight;
   canvas.getContext("2d").drawImage(video,0,0);
-  const base64 = canvas.toDataURL("image/jpeg",0.9).split(',')[1];
+  const b64=canvas.toDataURL("image/jpeg",0.9).split(',')[1];
   setStatus('<span class="spinner"></span>Running OCR…',"load");
-
   try {
-    const res = await fetch(
-      `https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_VISION_API_KEY}`,
-      { method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ requests:[{image:{content:base64},features:[{type:"TEXT_DETECTION",maxResults:1}]}] }) }
-    );
-    const data = await res.json();
-    if (data.error) throw new Error(data.error.message);
-    const ann = data.responses[0].textAnnotations;
-    if (!ann||ann.length===0) throw new Error("No text found in image.");
-
-    const rawText = ann[0].description;
-    document.getElementById("rawOcrDebug").textContent = rawText;
-    const candidates = extractMPNs(rawText);
-    if (candidates.length===0) { setStatus("⚠ No MPN found. Enter manually.","warn"); return; }
-
-    if (candidates[0].tier==="HIGH") {
-      selectPN(candidates[0].pn);
-      document.getElementById("candidateSection").style.display="none";
-      return;
-    }
-
-    const list = document.getElementById("candidateList");
-    list.innerHTML="";
-    candidates.forEach(c => {
-      const btn = document.createElement("button");
-      btn.className="candidate-btn";
-      btn.innerHTML=`<span>${c.pn}</span><span class="badge badge-${c.tier}">${c.tier} · ${c.score}</span>`;
-      btn.onclick=()=>{
-        document.querySelectorAll(".candidate-btn").forEach(b=>b.disabled=true);
-        document.getElementById("candidateSection").style.display="none";
-        selectPN(c.pn);
-      };
+    const res=await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_VISION_API_KEY}`,
+      {method:"POST",headers:{"Content-Type":"application/json"},
+       body:JSON.stringify({requests:[{image:{content:b64},features:[{type:"TEXT_DETECTION",maxResults:1}]}]})});
+    const data=await res.json();
+    if(data.error)throw new Error(data.error.message);
+    const ann=data.responses[0].textAnnotations;
+    if(!ann||!ann.length)throw new Error("No text found.");
+    const raw=ann[0].description;
+    document.getElementById("rawOcrDebug").textContent=raw;
+    const cands=extractMPNs(raw);
+    if(!cands.length){setStatus("⚠ No MPN found. Enter manually.","warn");return;}
+    if(cands[0].tier==="HIGH"){selectPN(cands[0].pn);document.getElementById("candidateSection").style.display="none";return;}
+    const list=document.getElementById("candidateList"); list.innerHTML="";
+    cands.forEach(c=>{
+      const btn=document.createElement("button"); btn.className="candidate-btn";
+      btn.innerHTML=`<span>${c.pn}</span><span class="badge badge-${c.tier}">${c.tier}·${c.score}</span>`;
+      btn.onclick=()=>{document.querySelectorAll(".candidate-btn").forEach(b=>b.disabled=true);document.getElementById("candidateSection").style.display="none";selectPN(c.pn);};
       list.appendChild(btn);
     });
     document.getElementById("candidateSection").style.display="block";
-    setStatus(`Found ${candidates.length} candidate(s). Tap the correct MPN.`,"warn");
-  } catch(e) { setStatus("❌ OCR Error: "+e.message,"err"); }
+    setStatus(`Found ${cands.length} candidate(s). Tap the correct MPN.`,"warn");
+  } catch(e){setStatus("❌ OCR: "+e.message,"err");}
 }
 
-// ══════════════════════════════════════════════════════════════
-//  SELECT PN → FETCH DESCRIPTION
-// ══════════════════════════════════════════════════════════════
+// SELECT PN → FETCH
 async function selectPN(pn) {
-  document.getElementById("editablePn").value = pn;
-  document.getElementById("resultCard").style.display  = "none";
-  document.getElementById("syncBtn").style.display     = "none";
-  document.getElementById("finalDesc").value           = "";
-  fetchedResult = null;
-
-  document.getElementById("supplierStatus").style.display = "flex";
-  resetChips();
-  animateChips();
-
-  setStatus(`<span class="spinner"></span>Looking up <b>${pn}</b> via Claude AI + suppliers…`,"load");
-
-  try {
-    const res  = await fetch(`${SCRIPT_URL}?action=lookup&pn=${encodeURIComponent(pn)}`);
-    const info = await res.json();
-    stopChipAnimation();
-
-    if (info.error) throw new Error(info.error);
-
-    const source = info.source || "Unknown";
-    const desc   = info.desc   || "Electronic Component";
-    const mfr    = info.manufacturer || "—";
-    const dsUrl  = info.datasheet    || "";
-
-    fetchedResult = { pn, desc, source, mfr, datasheet: dsUrl };
-    markChip(source, "found");
-
-    document.getElementById("rMpn").textContent  = info.pn || pn;
-    document.getElementById("rDesc").textContent = desc;
-    document.getElementById("rMfr").textContent  = mfr;
-    document.getElementById("rSource").innerHTML =
-      `<span class="source-badge source-${source.replace(" ","")}">${source}</span>`;
-
-    const ds = document.getElementById("rDatasheet");
-    if (dsUrl) { ds.href=dsUrl; ds.style.display="inline-block"; }
-    else { ds.style.display="none"; }
-
-    document.getElementById("resultCard").style.display = "block";
-    document.getElementById("finalDesc").value  = desc;
-    document.getElementById("syncBtn").style.display = "block";
-
-    if (source==="Not Found") {
-      setStatus(`⚠ No description found for <b>${pn}</b>. Enter manually.`,"warn");
-    } else {
-      setStatus(`✅ Description found via <b>${source}</b>. Verify and sync.`,"ok");
-    }
-  } catch(e) {
-    stopChipAnimation();
-    document.getElementById("syncBtn").style.display = "block";
-    setStatus(`⚠ Lookup failed (${e.message}). Enter description manually.`,"err");
-  }
-}
-
-// ══════════════════════════════════════════════════════════════
-//  SYNC
-// ══════════════════════════════════════════════════════════════
-async function syncToSheet() {
-  const pn   = document.getElementById("editablePn").value.trim().toUpperCase();
-  const qty  = document.getElementById("qtyInput").value || "1";
-  const desc = document.getElementById("finalDesc").value.trim() || "Electronic Component";
-  if (!pn) { setStatus("⚠ No part number entered.","err"); return; }
-
-  setStatus('<span class="spinner"></span>Saving to Google Sheet…',"load");
-  document.getElementById("syncBtn").disabled = true;
-
-  try {
-    await fetch(SCRIPT_URL, {
-      method:"POST", mode:"no-cors",
-      headers:{"Content-Type":"application/json"},
-      body: JSON.stringify([new Date().toLocaleString("en-GB"), pn, desc, qty, currentMode])
-    });
-    setStatus(`✅ SYNCED: <b>${pn}</b> × ${qty} → Google Sheet`,"ok");
-    document.getElementById("syncBtn").style.display = "none";
-    document.getElementById("syncBtn").disabled = false;
-
-    const q = document.getElementById("qtyInput");
-    q.style.borderColor = "var(--accent2)";
-    setTimeout(()=>{ q.style.borderColor=""; }, 1500);
-  } catch(e) {
-    setStatus("❌ Sync failed: "+e.message,"err");
-    document.getElementById("syncBtn").disabled = false;
-  }
-}
-
-// ══════════════════════════════════════════════════════════════
-//  CHIP ANIMATION
-// ══════════════════════════════════════════════════════════════
-const SUPPLIERS = ["ClaudeAI","Mouser","LCSC","DigiKey"];
-let chipTimer=null, chipIdx=0;
-
-function resetChips() {
-  SUPPLIERS.forEach(s=>{
-    const el=document.getElementById("chip-"+s);
-    if (el) el.className = s==="ClaudeAI" ? "sup-chip claude" : "sup-chip";
-  });
-  chipIdx=0;
-}
-function animateChips() {
-  chipTimer = setInterval(()=>{
-    if (chipIdx>0) {
-      const prev=document.getElementById("chip-"+SUPPLIERS[chipIdx-1]);
-      if (prev) prev.className = (SUPPLIERS[chipIdx-1]==="ClaudeAI"?"sup-chip claude miss":"sup-chip miss");
-    }
-    if (chipIdx<SUPPLIERS.length) {
-      const cur=document.getElementById("chip-"+SUPPLIERS[chipIdx]);
-      if (cur) cur.className="sup-chip checking";
-      chipIdx++;
-    } else { clearInterval(chipTimer); }
-  }, 600);
-}
-function stopChipAnimation() {
-  if (chipTimer) clearInterval(chipTimer);
-  SUPPLIERS.forEach(s=>{
-    const el=document.getElementById("chip-"+s);
-    if (el&&el.classList.contains("checking")) el.className="sup-chip miss";
-  });
-}
-function markChip(source, state) {
-  const key = source.replace(" ","");
-  const el  = document.getElementById("chip-"+key);
-  if (el) el.className="sup-chip "+state;
-}
-
-// ══════════════════════════════════════════════════════════════
-//  HELPERS
-// ══════════════════════════════════════════════════════════════
-function setStatus(msg,type) {
-  const el=document.getElementById("status");
-  el.innerHTML=msg;
-  el.className="status-bar"
-    +(type==="ok"  ?" status-ok"
-    :type==="err"  ?" status-err"
-    :type==="load" ?" status-load"
-    :type==="warn" ?" status-warn":"");
-}
-function setMode(m) {
-  currentMode=m;
-  document.getElementById("modeAdd").className  = m==="Add"  ? "active-add"  : "";
-  document.getElementById("modeTake").className = m==="Take" ? "active-take" : "";
-}
-function clearAll() {
-  document.getElementById("editablePn").value="";
-  document.getElementById("finalDesc").value="";
-  document.getElementById("syncBtn").style.display="none";
+  document.getElementById("editablePn").value=pn;
   document.getElementById("resultCard").style.display="none";
-  document.getElementById("candidateSection").style.display="none";
-  document.getElementById("supplierStatus").style.display="none";
-  document.querySelectorAll(".candidate-btn").forEach(b=>b.disabled=false);
-  resetChips(); fetchedResult=null;
-  setStatus("Cleared. Ready to scan.","");
+  document.getElementById("syncBtn").style.display="none";
+  document.getElementById("finalDesc").value="";
+  fetchedResult=null;
+  document.getElementById("supplierStatus").style.display="flex";
+  resetChips(); animateChips();
+  setStatus(`<span class="spinner"></span>Looking up <b>${pn}</b> via Gemini AI…`,"load");
+  try {
+    const res=await fetch(`${SCRIPT_URL}?action=lookup&pn=${encodeURIComponent(pn)}`);
+    const info=await res.json();
+    stopChipAnimation();
+    if(info.error)throw new Error(info.error);
+    const source=info.source||"Unknown", desc=info.desc||"Electronic Component",
+          mfr=info.manufacturer||"—", dsUrl=info.datasheet||"";
+    fetchedResult={pn,desc,source,mfr,datasheet:dsUrl};
+    markChip(source,"found");
+    document.getElementById("rMpn").textContent=info.pn||pn;
+    document.getElementById("rDesc").textContent=desc;
+    document.getElementById("rMfr").textContent=mfr;
+    document.getElementById("rSource").innerHTML=`<span class="source-badge source-${source.replace(/ /g,"")}">${source}</span>`;
+    const ds=document.getElementById("rDatasheet");
+    if(dsUrl){ds.href=dsUrl;ds.style.display="inline-block";}else{ds.style.display="none";}
+    document.getElementById("resultCard").style.display="block";
+    document.getElementById("finalDesc").value=desc;
+    document.getElementById("syncBtn").style.display="block";
+    setStatus(source==="Not Found"?`⚠ Not found for <b>${pn}</b>. Enter manually.`:`✅ Found via <b>${source}</b>. Verify and sync.`,source==="Not Found"?"warn":"ok");
+  } catch(e) {
+    stopChipAnimation();
+    document.getElementById("syncBtn").style.display="block";
+    setStatus(`⚠ Lookup failed: ${e.message}. Enter manually.`,"err");
+  }
 }
-function toggleDebug() {
-  const el=document.getElementById("rawOcrDebug");
-  el.style.display=el.style.display==="none"?"block":"none";
+
+// SYNC
+async function syncToSheet() {
+  const pn=document.getElementById("editablePn").value.trim().toUpperCase();
+  const qty=document.getElementById("qtyInput").value||"1";
+  const desc=document.getElementById("finalDesc").value.trim()||"Electronic Component";
+  if(!pn){setStatus("⚠ No part number.","err");return;}
+  setStatus('<span class="spinner"></span>Saving to Google Sheet…',"load");
+  document.getElementById("syncBtn").disabled=true;
+  try {
+    await fetch(SCRIPT_URL,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify([new Date().toLocaleString("en-GB"),pn,desc,qty,currentMode])});
+    setStatus(`✅ SYNCED: <b>${pn}</b> × ${qty} → Sheet`,"ok");
+    document.getElementById("syncBtn").style.display="none";
+    document.getElementById("syncBtn").disabled=false;
+    const q=document.getElementById("qtyInput"); q.style.borderColor="var(--accent2)";
+    setTimeout(()=>{q.style.borderColor="";},1500);
+  } catch(e){setStatus("❌ Sync failed: "+e.message,"err");document.getElementById("syncBtn").disabled=false;}
 }
+
+// CHIPS
+const SUPPLIERS=["GeminiAI","Mouser","LCSC","DigiKey"];
+let chipTimer=null,chipIdx=0;
+function resetChips(){SUPPLIERS.forEach(s=>{const el=document.getElementById("chip-"+s);if(el)el.className=s==="GeminiAI"?"sup-chip gemini":"sup-chip";});chipIdx=0;}
+function animateChips(){
+  chipTimer=setInterval(()=>{
+    if(chipIdx>0){const p=document.getElementById("chip-"+SUPPLIERS[chipIdx-1]);if(p)p.className="sup-chip miss";}
+    if(chipIdx<SUPPLIERS.length){const c=document.getElementById("chip-"+SUPPLIERS[chipIdx]);if(c)c.className="sup-chip checking";chipIdx++;}
+    else clearInterval(chipTimer);
+  },600);
+}
+function stopChipAnimation(){if(chipTimer)clearInterval(chipTimer);SUPPLIERS.forEach(s=>{const el=document.getElementById("chip-"+s);if(el&&el.classList.contains("checking"))el.className="sup-chip miss";});}
+function markChip(src,state){const el=document.getElementById("chip-"+src.replace(/ /g,""));if(el)el.className="sup-chip "+state;}
+
+// HELPERS
+function setStatus(msg,type){const el=document.getElementById("status");el.innerHTML=msg;el.className="status-bar"+(type==="ok"?" status-ok":type==="err"?" status-err":type==="load"?" status-load":type==="warn"?" status-warn":"");}
+function setMode(m){currentMode=m;document.getElementById("modeAdd").className=m==="Add"?"active-add":"";document.getElementById("modeTake").className=m==="Take"?"active-take":"";}
+function clearAll(){document.getElementById("editablePn").value="";document.getElementById("finalDesc").value="";document.getElementById("syncBtn").style.display="none";document.getElementById("resultCard").style.display="none";document.getElementById("candidateSection").style.display="none";document.getElementById("supplierStatus").style.display="none";document.querySelectorAll(".candidate-btn").forEach(b=>b.disabled=false);resetChips();fetchedResult=null;setStatus("Cleared. Ready to scan.","");}
+function toggleDebug(){const el=document.getElementById("rawOcrDebug");el.style.display=el.style.display==="none"?"block":"none";}
 </script>
 </body>
 </html>
