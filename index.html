@@ -697,7 +697,7 @@ async function selectPN(pn) {
     if (source === "Not Found" || !desc) {
       setStatus(`⚠ No description found for <b>${pn}</b>. Enter manually then sync.`, "warn");
     } else {
-      setStatus(`✅ Found via <b>${source}</b>: ${desc.substring(0,60)}…`, "ok");
+      setStatus(`✅ Found `, "ok");
     }
 
   } catch(e) {
