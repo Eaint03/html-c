@@ -105,15 +105,12 @@
     .inv-action-info { font-size: 13px; font-family: var(--mono); line-height: 1.8; margin-bottom: 12px; }
     .qty-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
     .qty-row input { width: 80px; padding: 8px 10px; border: 1px solid var(--border2); border-radius: 8px; font-size: 13px; font-family: var(--mono); }
-    /* Scan history card */
-    .scan-hist-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
-    .scan-hist-img-wrap { width: 100%; height: 160px; background: #111; overflow: hidden; position: relative; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-    .scan-hist-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .scan-hist-img-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #1a1a2e; }
-    .scan-hist-body { padding: 12px 14px; flex: 1; display: flex; flex-direction: column; }
+    .scan-hist-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .scan-hist-img { width: 100%; height: 140px; object-fit: cover; background: #111; display: block; border-bottom: 1px solid var(--border); }
+    .scan-hist-body { padding: 12px 14px; }
     .scan-hist-pn { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--accent); word-break: break-all; margin-bottom: 4px; }
     .scan-hist-desc { font-size: 12px; color: var(--muted); margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .scan-hist-meta { display: flex; justify-content: space-between; align-items: center; margin-top: auto; }
+    .scan-hist-meta { display: flex; justify-content: space-between; align-items: center; }
     .scan-hist-date { font-size: 11px; color: var(--muted); font-family: var(--mono); }
     .scan-hist-delete { font-size: 11px; color: var(--error); cursor: pointer; margin-top: 8px; text-align: right; }
     .scan-hist-delete:hover { text-decoration: underline; }
@@ -127,6 +124,8 @@
     #toast.show { transform: translateX(-50%) translateY(0); }
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid #c3d9ff; border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 5px; }
+
+    /* ══ MERGED INVENTORY + MANUAL UPDATE ══ */
     .inv-drawer-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 200; }
     .inv-drawer-overlay.open { display: block; }
     .inv-drawer { position: fixed; top: 0; right: 0; width: 420px; max-width: 95vw; height: 100vh; background: var(--surface); border-left: 1px solid var(--border); box-shadow: -6px 0 40px rgba(0,0,0,0.15); z-index: 201; display: flex; flex-direction: column; transform: translateX(100%); transition: transform 0.28s cubic-bezier(0.4,0,0.2,1); }
@@ -154,10 +153,6 @@
     .inv-row-clickable { cursor: pointer; }
     .inv-row-clickable:hover td { background: #eef3ff !important; }
     .quick-btns { display: flex; gap: 5px; align-items: center; white-space: nowrap; }
-    /* Scan history image modal */
-    #imgModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9000; align-items: center; justify-content: center; cursor: zoom-out; }
-    #imgModal.open { display: flex; }
-    #imgModal img { max-width: 90vw; max-height: 90vh; border-radius: 10px; object-fit: contain; }
   </style>
 </head>
 <body>
@@ -277,7 +272,7 @@
     </div>
   </div>
 
-  <!-- INVENTORY -->
+  <!-- INVENTORY (merged with Manual Update) -->
   <div id="page-inventory" class="page">
     <div class="card" style="margin-bottom:14px">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px">
@@ -325,7 +320,7 @@
   <div id="page-bulkreceive" class="page">
     <div class="card">
       <div class="card-title">Bulk Receive &mdash; Add New Stock from CSV</div>
-      <div class="config-note">Upload a CSV file with new stock to add. The app auto-detects columns. <b>Part Number</b> and <b>Quantity</b> are required. New parts get auto-assigned locations (PB01, PB02&hellip; 50 items per box).</div>
+      <div class="config-note">Upload a CSV file with new stock to add. The app auto-detects columns &mdash; no renaming needed. <b>Part Number</b> and <b>Quantity</b> are required. If a part already exists, quantity is added to current stock. New parts are created automatically with auto-assigned location (PB01, PB02&hellip; 50 items per box).</div>
       <div class="field" style="max-width:400px;margin-bottom:14px"><label>Upload Stock CSV</label><input type="file" id="bulkCsvFile" accept=".csv" style="padding:6px" /></div>
       <div class="btn-row">
         <button class="btn btn-primary" onclick="processBulkReceive()">Preview Stock</button>
@@ -345,7 +340,7 @@
     </div>
   </div>
 
-  <!-- SCAN HISTORY — cloud-synced via window.storage -->
+  <!-- SCAN HISTORY -->
   <div id="page-scanhistory" class="page">
     <div class="card">
       <div class="card-title">Scan History</div>
@@ -353,13 +348,10 @@
         <input type="text" id="scanHistorySearch" placeholder="Search by part number&hellip;" oninput="renderScanHistory()" />
         <button class="btn btn-danger" onclick="clearScanHistory()">Clear All</button>
       </div>
-      <div style="font-size:12px;color:var(--muted)">
-        &#9729; Scan images are stored in cloud storage and visible on <b>all devices</b>.
-      </div>
+      <div style="font-size:12px;color:var(--muted)">Images are saved permanently in this browser.</div>
     </div>
     <div id="scanHistoryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;"></div>
     <div id="scanHistoryEmpty" class="card" style="display:none"><div class="empty-state">No scans saved yet. Start scanning labels to build your history.</div></div>
-    <div id="scanHistoryLoading" class="card"><div class="empty-state"><span class="spinner"></span> Loading scan history&hellip;</div></div>
   </div>
 
   <!-- SETTINGS -->
@@ -385,7 +377,7 @@
   </div>
 </div>
 
-<!-- INVENTORY DETAIL DRAWER -->
+<!-- INVENTORY DETAIL DRAWER (replaces Manual Update tab) -->
 <div class="inv-drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
 <div class="inv-drawer" id="invDrawer">
   <div class="inv-drawer-header">
@@ -493,61 +485,20 @@
   </div>
 </div>
 
-<!-- IMAGE ZOOM MODAL -->
-<div id="imgModal" onclick="this.classList.remove('open')">
-  <img id="imgModalSrc" src="" alt="Scan image" />
-</div>
-
 <div id="toast"></div>
 
 <script>
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwn4NtlsIHr25yN0tdm3heuY_ihdRMMgghxQClRlr74bBhhBATyEzKRCg6FKPYMbIp7/exec";
-const SCAN_STORAGE_PREFIX = "nexwah_scan:";
-const MAX_IMAGE_SIZE = 800; // px — resize before storing to stay under 5MB limit
 
 let cfg = { sheetName: "Sheet1", anthropicKey: "" };
 let currentStream = null;
 let currentScan = null;
 const SCAN_REGION = { x: 0.10, y: 0.15, w: 0.80, h: 0.70 };
+
+// Drawer state
 let drawerRowData = null;
 let drawerAction = "Receive";
 
-// ── STORAGE HELPERS (window.storage — cloud, cross-device) ──
-async function storageSave(key, value) {
-  try {
-    await window.storage.set(key, JSON.stringify(value));
-    return true;
-  } catch(e) {
-    console.error("storageSave failed:", e);
-    return false;
-  }
-}
-async function storageGet(key) {
-  try {
-    const result = await window.storage.get(key);
-    return result ? JSON.parse(result.value) : null;
-  } catch(e) {
-    return null;
-  }
-}
-async function storageDelete(key) {
-  try {
-    await window.storage.delete(key);
-    return true;
-  } catch(e) {
-    return false;
-  }
-}
-async function storageListKeys(prefix) {
-  try {
-    const result = await window.storage.list(prefix);
-    return result ? result.keys : [];
-  } catch(e) {
-    return [];
-  }
-}
-
-// ── INIT ──────────────────────────────────────────────────
 window.addEventListener("DOMContentLoaded", () => {
   cfg.anthropicKey = localStorage.getItem("nexwah_anthropic_key") || "";
   loadDashboard();
@@ -574,7 +525,7 @@ function saveModalKey() {
   toast("API key saved. Welcome to NEXWAH Inventory!");
 }
 
-// ── NAV ───────────────────────────────────────────────────
+// ── NAV (updated: btn param instead of event.target) ──────
 function showPage(name, btn) {
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
   document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
@@ -649,7 +600,7 @@ async function loadDashboard() {
   }
 }
 
-// ── INVENTORY ─────────────────────────────────────────────
+// ── INVENTORY — with clickable rows + quick +/- buttons ───
 function escQ(s) { return String(s).replace(/\\/g,"\\\\").replace(/'/g,"\\'"); }
 
 async function renderInventory() {
@@ -737,12 +688,14 @@ function openDrawer(rowIdx, mfrPn, suppPn, supplier, desc, location, qty, lastUp
   document.getElementById("invDrawer").classList.add("open");
   setTimeout(() => document.getElementById("drawerQty").focus(), 300);
 }
+
 function closeDrawer() {
   document.getElementById("drawerOverlay").classList.remove("open");
   document.getElementById("invDrawer").classList.remove("open");
   document.getElementById("newPartDrawer").classList.remove("open");
   drawerRowData = null;
 }
+
 function setDrawerAction(action) {
   drawerAction = action;
   const btnR = document.getElementById("drawerBtnReceive");
@@ -750,12 +703,13 @@ function setDrawerAction(action) {
   const sub  = document.getElementById("drawerSubmitBtn");
   if (action === "Receive") {
     btnR.className="action-toggle-btn active-receive"; btnU.className="action-toggle-btn";
-    sub.style.background="var(--accent)"; sub.innerHTML="&#128230; Receive Stock";
+    sub.style.background="var(--accent)"; sub.textContent="&#128230; Receive Stock";
   } else {
     btnR.className="action-toggle-btn"; btnU.className="action-toggle-btn active-use";
-    sub.style.background="#dc2626"; sub.innerHTML="&#128296; Use / Dispatch Stock";
+    sub.style.background="#dc2626"; sub.textContent="&#128296; Use / Dispatch Stock";
   }
 }
+
 async function submitDrawerUpdate() {
   if (!drawerRowData) return;
   const qty   = parseInt(document.getElementById("drawerQty").value)||0;
@@ -780,13 +734,14 @@ async function submitDrawerUpdate() {
     renderInventory();
   } catch(e) { statusEl.innerHTML="Error: "+e.message; statusEl.className="status-bar err"; }
 }
+
 function drawerPrintLabel() {
   if (!drawerRowData) return;
   const { mfrPn, suppPn, desc, location, qty } = drawerRowData;
   printLabel(mfrPn, suppPn, desc, location, qty);
 }
 
-// ── ADD NEW PART ───────────────────────────────────────────
+// ── ADD NEW PART DRAWER ───────────────────────────────────
 function openNewPartDrawer() {
   ["newPartMfrPn","newPartSupplier","newPartSupplierPn","newPartDesc","newPartNotes"].forEach(id => document.getElementById(id).value="");
   document.getElementById("newPartQty").value="1";
@@ -825,6 +780,7 @@ async function submitNewPart() {
     setTimeout(() => { document.getElementById("newPartMfrPn").value=""; document.getElementById("newPartQty").value="1"; }, 1500);
   } catch(e) { statusEl.innerHTML="Error: "+e.message; statusEl.className="status-bar err"; }
 }
+
 
 // ── TRANSACTIONS ──────────────────────────────────────────
 async function renderTransactions() {
@@ -923,26 +879,7 @@ async function captureAndExtract() {
   await extractWithClaude(cropUrl);
 }
 
-// ── IMAGE RESIZE — keeps images under storage limit ───────
-async function resizeImageForStorage(dataUrl, maxPx) {
-  return new Promise(resolve => {
-    const img = new Image();
-    img.onload = () => {
-      let w = img.width, h = img.height;
-      if (w <= maxPx && h <= maxPx) { resolve(dataUrl); return; }
-      const ratio = Math.min(maxPx / w, maxPx / h);
-      w = Math.round(w * ratio); h = Math.round(h * ratio);
-      const c = document.createElement("canvas");
-      c.width = w; c.height = h;
-      c.getContext("2d").drawImage(img, 0, 0, w, h);
-      resolve(c.toDataURL("image/jpeg", 0.82));
-    };
-    img.onerror = () => resolve(dataUrl);
-    img.src = dataUrl;
-  });
-}
-
-// ── OCR CHAIN (unchanged — Google Vision kept intact) ─────
+// ── OCR CHAIN ────────────────────────────────────────────
 const GOOGLE_VISION_API_KEY = "AIzaSyBjzZf1DVzZFuaf9tC5SW8x9bjqp1t7HQQ";
 const MPN_LABEL_REGEX = /^(MANUFACTURER\s*PART\s*(NO?\.?|NUMBER)?|MFR\s*(PN|P\/N|NO?\.?)?|MFG\s*(PN|P\/N|NO?\.?)?|MPN|MNF\s*(PN|P\/N)?|MAN\s*(PN|P\/N)?|PART\s*(NO?\.?|NUMBER|#)?|P\s*\/?\s*N|CAT\s*(NO?\.?|#)?|ITEM\s*(NO?\.?|#)?|MODEL\s*(NO?\.?)?|REF\s*(NO?\.?|#)?|\u578b\u53f7|\u6599\u53f7|\u7269\u6599\u7f16\u53f7|\u89c4\u683c\u578b\u53f7)\s*[:#\-\.\s]?\s*/i;
 const DESCRIPTION_WORDS = new Set(["CAPACITOR","CAP","RESISTOR","RES","INDUCTOR","IND","TRANSISTOR","DIODE","RELAY","CONNECTOR","CONN","MODULE","SENSOR","SWITCH","VOLTAGE","REGULATOR","REG","AMPLIFIER","AMP","OSCILLATOR","CRYSTAL","XTAL","FILTER","FUSE","DISPLAY","CONTROLLER","CTRL","DRIVER","DRV","INTERFACE","ELECTROLYTIC","ELEC","CERAMIC","FILM","TANTALUM","TANT","SMD","SMT","WATT","VOLT","OHM","FARAD","HENRY","HERTZ","WITH","FOR","AND","THE","FROM","TYPE","PACK","REEL","TAPE","TRAY","BLACK","WHITE","RED","BLUE","GREEN","YELLOW","SILVER","GOLD","LEADED","LEADFREE","ROHS","COMPLIANT","GENUINE","ORIGINAL","THROUGH","HOLE"]);
@@ -1018,7 +955,6 @@ function extractMPNs(ocrText) {
   const tierOrder={HIGH:0,MED:1,LOW:2};
   return [...found.values()].sort((a,b)=>tierOrder[a.tier]-tierOrder[b.tier]||b.score-a.score).slice(0,6);
 }
-
 async function extractWithClaude(dataUrl) {
   if (cfg.anthropicKey) {
     setCamStatus('<span class="spinner"></span>Reading label with Claude Vision\u2026', "loading");
@@ -1035,7 +971,6 @@ async function extractWithClaude(dataUrl) {
     setCamStatus("\u26a0 Could not read label. Try better lighting, hold steady, or get closer.", "err");
   } catch(err) { setCamStatus("OCR failed: " + err.message, "err"); }
 }
-
 async function tryGoogleVision(dataUrl) {
   const base64 = dataUrl.split(",")[1];
   const resp = await fetch(`https://vision.googleapis.com/v1/images:annotate?key=${GOOGLE_VISION_API_KEY}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({requests:[{image:{content:base64},features:[{type:"TEXT_DETECTION",maxResults:1},{type:"DOCUMENT_TEXT_DETECTION",maxResults:1}],imageContext:{languageHints:["en","zh"]}}]})});
@@ -1052,7 +987,6 @@ async function tryGoogleVision(dataUrl) {
   else if (fullText.toUpperCase().includes("MOUSER")) supplier = "Mouser";
   return { mfrPartNumber: top.pn, supplierPartNumber: "", supplier, description: "", category: "Other" };
 }
-
 async function tryClaudeVision(dataUrl) {
   const base64 = dataUrl.split(",")[1];
   const prompt = `You are an electronics label reader. Return ONLY a raw JSON object, no markdown:\n{"mfrPartNumber":"manufacturer part number","supplierPartNumber":"supplier order PN","supplier":"DigiKey or Mouser or Octopart or Unknown","description":"component description if visible, else empty string","category":"one of: Resistor, Capacitor, Inductor, IC, Transistor, Diode, Connector, Crystal, LED, Relay, Fuse, Other"}\nSet mfrPartNumber to NOT_FOUND if not visible.`;
@@ -1064,7 +998,6 @@ async function tryClaudeVision(dataUrl) {
   if (!parsed.mfrPartNumber||parsed.mfrPartNumber==="NOT_FOUND") return null;
   return parsed;
 }
-
 async function tryTesseract(dataUrl) {
   if (!window.Tesseract) {
     await new Promise((resolve,reject) => {
@@ -1091,7 +1024,6 @@ async function tryTesseract(dataUrl) {
   else if (fullText.includes("MOUSER")) supplier = "Mouser";
   return { mfrPartNumber: bestMatch, supplierPartNumber: "", supplier, description: "" };
 }
-
 async function preprocessImageForOCR(dataUrl) {
   return new Promise(resolve => {
     const img = new Image();
@@ -1110,7 +1042,6 @@ async function preprocessImageForOCR(dataUrl) {
     img.src=dataUrl;
   });
 }
-
 async function handleScanResult(parsed, dataUrl, method) {
   const today = todayStr();
   currentScan = { ...parsed, date: today };
@@ -1121,27 +1052,12 @@ async function handleScanResult(parsed, dataUrl, method) {
   showSupplierBadge("scanSupplierBadge", parsed.supplier);
   setCamStatus(`\u2713 Label read via <b>${method}</b>. Edit if needed, then check inventory.`, "ok");
   await lookupForScan(parsed.mfrPartNumber);
-  // Save scan to cloud storage (non-blocking)
-  setTimeout(async () => {
-    try {
-      const resized = await resizeImageForStorage(dataUrl, MAX_IMAGE_SIZE);
-      await saveScanToHistory({
-        mfrPn: parsed.mfrPartNumber,
-        supplierPn: parsed.supplierPartNumber||"",
-        supplier: parsed.supplier||"Unknown",
-        desc: parsed.description||"",
-        date: today,
-        image: resized   // actual scan photo, resized for storage
-      });
-    } catch(e) { console.warn("Scan history save failed:", e); }
-  }, 100);
+  setTimeout(() => { try { saveScanToHistory({mfrPn:parsed.mfrPartNumber,supplierPn:parsed.supplierPartNumber||"",supplier:parsed.supplier||"Unknown",desc:parsed.description||"",date:today,image:dataUrl}); } catch(e) {} }, 100);
 }
-
 function showSupplierBadge(elId, supplier) {
   const map={DigiKey:"badge-digikey",Mouser:"badge-mouser",Octopart:"badge-octopart"};
   document.getElementById(elId).innerHTML=`<span class="supplier-badge ${map[supplier]||"badge-unknown"}">${supplier||"Unknown"}</span>`;
 }
-
 async function recheckMfrPn() {
   const mfrPn = document.getElementById("scanMfrPn").value.trim();
   if (!mfrPn) { setCamStatus("Enter a part number to check.", "err"); return; }
@@ -1151,7 +1067,6 @@ async function recheckMfrPn() {
   setCamStatus('<span class="spinner"></span>Checking inventory\u2026',"loading");
   await lookupForScan(mfrPn);
 }
-
 async function lookupForScan(mfrPn) {
   try {
     const rows = await sheetRead();
@@ -1162,7 +1077,6 @@ async function lookupForScan(mfrPn) {
     else setCamStatus(foundRow?`\u2713 Found in inventory. Current stock: ${foundRow[4]||0} units at ${foundRow[5]||"no location"}.`:`"${mfrPn}" not in inventory yet \u2014 add it below.`, foundRow?"ok":"warn");
   } catch(e) { setCamStatus("Sheet lookup failed: "+e.message,"err"); showScanInvPanel(null,-1); }
 }
-
 function showScanInvPanel(row, rowIdx) {
   const panel = document.getElementById("scanInvPanel");
   panel.style.display="block";
@@ -1170,446 +1084,4 @@ function showScanInvPanel(row, rowIdx) {
     if (!row) { panel.className="inv-action notfound"; panel.innerHTML=`<div class="inv-action-title">\u26a0 Part Not Found</div><div class="inv-action-info">This part is not in inventory. Cannot dispatch.</div>`; return; }
     const qty=parseInt(row[4]||"0");
     panel.className="inv-action found";
-    panel.innerHTML=`<div class="inv-action-title">&#128666; Dispatch Stock</div>
-      <div class="inv-action-info">Location: <b>${row[5]||"\u2014"}</b><br>Available Stock: <b style="color:var(--accent)">${qty} units</b></div>
-      <div class="qty-row">
-        <div class="field"><label>Qty to Dispatch</label><input type="number" id="dispatchQty" min="1" max="${qty}" value="1" /></div>
-        <div class="field"><label>Notes</label><input type="text" id="dispatchNotes" placeholder="e.g. Project BOM-001" /></div>
-      </div>
-      <div class="btn-row" style="margin-top:12px">
-        <button class="btn btn-danger" onclick="confirmScanDispatch(${rowIdx},${qty})">&#128666; Dispatch</button>
-      </div>
-      <div id="scanDispatchStatus" class="status-bar" style="display:none;margin-top:8px"></div>`;
-  } else {
-    if (!row) {
-      panel.className="inv-action notfound";
-      panel.innerHTML=`<div class="inv-action-title">+ Add to Inventory</div>
-        <div class="inv-action-info">Not in inventory yet. Fill the form above and confirm below.</div>
-        <div class="qty-row">
-          <div class="field"><label>Initial Qty</label><input type="number" id="receiveQty" min="1" value="1" /></div>
-          <div class="field"><label>Notes</label><input type="text" id="receiveNotes" placeholder="e.g. Reel 1000pcs" /></div>
-        </div>
-        <div class="btn-row" style="margin-top:12px">
-          <button class="btn btn-primary" onclick="confirmScanReceiveNew()">&#128230; Add to Inventory</button>
-        </div>
-        <div id="scanReceiveStatus" class="status-bar" style="display:none;margin-top:8px"></div>`;
-    } else {
-      const qty=parseInt(row[4]||"0");
-      panel.className="inv-action found";
-      panel.innerHTML=`<div class="inv-action-title">&#128230; Add Stock</div>
-        <div class="inv-action-info">Location: <b>${row[5]||"\u2014"}</b><br>Current Stock: <b style="color:var(--accent)">${qty} units</b></div>
-        <div class="qty-row">
-          <div class="field"><label>Qty to Add</label><input type="number" id="receiveQty" min="1" value="1" /></div>
-          <div class="field"><label>Notes</label><input type="text" id="receiveNotes" placeholder="e.g. Restock" /></div>
-        </div>
-        <div class="btn-row" style="margin-top:12px">
-          <button class="btn btn-primary" onclick="confirmScanReceiveExisting(${rowIdx},${qty})">&#128230; Add Stock</button>
-        </div>
-        <div id="scanReceiveStatus" class="status-bar" style="display:none;margin-top:8px"></div>`;
-    }
-  }
-}
-
-async function confirmScanDispatch(rowIdx, currentQty) {
-  const qty = parseInt(document.getElementById("dispatchQty").value)||0;
-  const notes = document.getElementById("dispatchNotes").value.trim();
-  const statusEl = document.getElementById("scanDispatchStatus");
-  if (qty<=0||qty>currentQty) { statusEl.style.display="block"; statusEl.innerHTML=`Enter 1\u2013${currentQty}`; statusEl.className="status-bar err"; return; }
-  statusEl.style.display="block"; statusEl.innerHTML='<span class="spinner"></span>Processing\u2026'; statusEl.className="status-bar loading";
-  const newQty=currentQty-qty; const today=todayStr();
-  try {
-    await sheetUpdate(rowIdx,newQty,today);
-    const mfrPn=document.getElementById("scanMfrPn").value;
-    const supplier=document.getElementById("scanSupplierBadge").textContent.trim()||"Unknown";
-    await sheetAppendTx([today,mfrPn,supplier,"Use",qty,currentQty,newQty,notes||"Scan dispatch"]);
-    statusEl.innerHTML=`\u2713 Dispatched ${qty}. Remaining: ${newQty}`; statusEl.className="status-bar ok";
-    toast(`Dispatched ${qty} \u00d7 ${mfrPn}`);
-  } catch(e) { statusEl.innerHTML="Error: "+e.message; statusEl.className="status-bar err"; }
-}
-
-async function confirmScanReceiveExisting(rowIdx, currentQty) {
-  const qty = parseInt(document.getElementById("receiveQty").value)||0;
-  const notes = document.getElementById("receiveNotes").value.trim();
-  const statusEl = document.getElementById("scanReceiveStatus");
-  if (qty<=0) { statusEl.style.display="block"; statusEl.innerHTML="Enter qty \u2265 1"; statusEl.className="status-bar err"; return; }
-  statusEl.style.display="block"; statusEl.innerHTML='<span class="spinner"></span>Processing\u2026'; statusEl.className="status-bar loading";
-  const newQty=currentQty+qty; const today=todayStr();
-  try {
-    await sheetUpdate(rowIdx,newQty,today);
-    const mfrPn=document.getElementById("scanMfrPn").value;
-    const supplier=document.getElementById("scanSupplierBadge").textContent.trim()||"Unknown";
-    await sheetAppendTx([today,mfrPn,supplier,"Receive",qty,currentQty,newQty,notes||"Scan receive"]);
-    statusEl.innerHTML=`\u2713 Received ${qty}. New stock: ${newQty}`; statusEl.className="status-bar ok";
-    toast(`Received ${qty} \u00d7 ${mfrPn}`);
-  } catch(e) { statusEl.innerHTML="Error: "+e.message; statusEl.className="status-bar err"; }
-}
-
-async function confirmScanReceiveNew() {
-  const qty = parseInt(document.getElementById("receiveQty").value)||0;
-  const notes = document.getElementById("receiveNotes").value.trim();
-  const statusEl = document.getElementById("scanReceiveStatus");
-  const mfrPn = document.getElementById("scanMfrPn").value.trim();
-  const suppPn = document.getElementById("scanSupplierPn").value.trim();
-  const desc = document.getElementById("scanDesc").value.trim();
-  const location = document.getElementById("scanLocation").value.trim();
-  const supplier = document.getElementById("scanSupplierBadge").textContent.trim()||"Unknown";
-  if (!mfrPn||qty<=0) { statusEl.style.display="block"; statusEl.innerHTML="Part number and qty required"; statusEl.className="status-bar err"; return; }
-  statusEl.style.display="block"; statusEl.innerHTML='<span class="spinner"></span>Adding\u2026'; statusEl.className="status-bar loading";
-  const today=todayStr();
-  try {
-    const finalLocation = location || (await autoAssignLocation("Other")) || "";
-    const row=[suppPn,supplier,mfrPn,desc,qty,finalLocation,today];
-    const res=await sheetAppend(row);
-    if (res.trim()!=="ok") throw new Error(res);
-    await sheetAppendTx([today,mfrPn,supplier,"Receive",qty,0,qty,notes||"Scan receive new"]);
-    statusEl.innerHTML=`\u2713 Added ${mfrPn} \u00d7 ${qty} at ${finalLocation}`; statusEl.className="status-bar ok";
-    toast(`Added: ${mfrPn}`);
-  } catch(e) { statusEl.innerHTML="Error: "+e.message; statusEl.className="status-bar err"; }
-}
-
-// ── SCAN HISTORY — cloud storage (window.storage) ─────────
-async function saveScanToHistory(scan) {
-  // Generate a unique key using timestamp + part number
-  const id = `${Date.now()}_${(scan.mfrPn||"unknown").replace(/[^A-Z0-9]/gi,"")}`.slice(0, 80);
-  const key = `${SCAN_STORAGE_PREFIX}${id}`;
-  const record = {
-    id,
-    mfrPn:      scan.mfrPn || "",
-    supplierPn: scan.supplierPn || "",
-    supplier:   scan.supplier || "Unknown",
-    desc:       scan.desc || "",
-    date:       scan.date || todayStr(),
-    image:      scan.image || ""   // base64 data URL — actual photo
-  };
-  await storageSave(key, record);
-}
-
-async function loadAllScans() {
-  const keys = await storageListKeys(SCAN_STORAGE_PREFIX);
-  const scans = [];
-  for (const key of keys) {
-    const record = await storageGet(key);
-    if (record) scans.push({ key, ...record });
-  }
-  // Sort newest first
-  scans.sort((a,b) => (b.id||"").localeCompare(a.id||""));
-  return scans;
-}
-
-async function deleteScan(key) {
-  await storageDelete(key);
-  renderScanHistory();
-}
-
-async function clearScanHistory() {
-  if (!confirm("Delete all scan history from cloud storage? This cannot be undone.")) return;
-  const keys = await storageListKeys(SCAN_STORAGE_PREFIX);
-  for (const key of keys) await storageDelete(key);
-  toast("Scan history cleared.");
-  renderScanHistory();
-}
-
-async function renderScanHistory() {
-  const search = (document.getElementById("scanHistorySearch").value||"").trim().toUpperCase();
-  const grid = document.getElementById("scanHistoryGrid");
-  const empty = document.getElementById("scanHistoryEmpty");
-  const loading = document.getElementById("scanHistoryLoading");
-
-  grid.innerHTML = "";
-  empty.style.display = "none";
-  loading.style.display = "block";
-
-  const scans = await loadAllScans();
-  loading.style.display = "none";
-
-  const filtered = search
-    ? scans.filter(s => (s.mfrPn||"").toUpperCase().includes(search) || (s.desc||"").toUpperCase().includes(search) || (s.supplier||"").toUpperCase().includes(search))
-    : scans;
-
-  if (!filtered.length) {
-    empty.style.display = "block";
-    return;
-  }
-
-  grid.innerHTML = filtered.map(scan => {
-    const safeKey = scan.key.replace(/'/g, "\\'");
-    const hasImage = scan.image && scan.image.startsWith("data:");
-    const imgHtml = hasImage
-      ? `<img src="${scan.image}" alt="Scan of ${scan.mfrPn}" loading="lazy" onclick="openImgModal('${scan.key}')" style="cursor:zoom-in" />`
-      : `<div class="scan-hist-img-placeholder">
-           <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-             <rect x="8" y="12" width="32" height="24" rx="3" stroke="#444" stroke-width="2" fill="none"/>
-             <circle cx="24" cy="24" r="6" stroke="#444" stroke-width="2" fill="none"/>
-             <circle cx="36" cy="16" r="2" fill="#555"/>
-           </svg>
-         </div>`;
-    return `<div class="scan-hist-card">
-      <div class="scan-hist-img-wrap">${imgHtml}</div>
-      <div class="scan-hist-body">
-        <div class="scan-hist-pn">${scan.mfrPn||"\u2014"}</div>
-        <div class="scan-hist-desc">${scan.desc||"No description"}</div>
-        <div class="scan-hist-meta">
-          <span class="badge ${getBadgeClass(scan.supplier)}">${scan.supplier||"Unknown"}</span>
-          <span class="scan-hist-date">${formatDate(scan.date)}</span>
-        </div>
-        ${scan.supplierPn ? `<div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:4px">${scan.supplierPn}</div>` : ""}
-        <div class="scan-hist-delete" onclick="deleteScan('${safeKey}')">&#128465; Delete</div>
-      </div>
-    </div>`;
-  }).join("");
-}
-
-function getBadgeClass(supplier) {
-  const map={DigiKey:"badge-digikey",Mouser:"badge-mouser",Octopart:"badge-octopart"};
-  return map[supplier] || "badge-unknown";
-}
-
-async function openImgModal(key) {
-  const scan = await storageGet(key);
-  if (!scan || !scan.image) return;
-  document.getElementById("imgModalSrc").src = scan.image;
-  document.getElementById("imgModal").classList.add("open");
-}
-
-// ── SETTINGS ──────────────────────────────────────────────
-function loadSettingsPage() {
-  const hasKey = !!cfg.anthropicKey;
-  document.getElementById("settingsApiKey").value = hasKey ? cfg.anthropicKey : "";
-  const keyStatusEl = document.getElementById("apiKeyStatus");
-  keyStatusEl.innerHTML = hasKey
-    ? `<div class="alert alert-success">\u2713 API key saved. Claude Vision scanning enabled.</div>`
-    : `<div class="alert alert-warn">No API key set. Using free OCR (Google Vision \u2192 Tesseract fallback).</div>`;
-  document.getElementById("settingsStatus").innerHTML = `
-    API Key: <b>${hasKey ? "Set \u2713" : "Not set"}</b><br>
-    Sheet: <b>${cfg.sheetName || "Sheet1"}</b><br>
-    Scan History: <b>Cloud (window.storage, cross-device)</b>
-  `;
-}
-function saveSettingsKey() {
-  const val = document.getElementById("settingsApiKey").value.trim();
-  const msgEl = document.getElementById("settingsKeyMsg");
-  if (!val.startsWith("sk-ant-")) { msgEl.style.display="block"; msgEl.innerHTML="Key must start with sk-ant-"; msgEl.className="status-bar err"; return; }
-  cfg.anthropicKey = val;
-  localStorage.setItem("nexwah_anthropic_key", val);
-  msgEl.style.display="block"; msgEl.innerHTML="\u2713 Key saved."; msgEl.className="status-bar ok";
-  toast("API key saved.");
-  loadSettingsPage();
-}
-function removeSettingsKey() {
-  cfg.anthropicKey = "";
-  localStorage.removeItem("nexwah_anthropic_key");
-  document.getElementById("settingsApiKey").value = "";
-  const msgEl = document.getElementById("settingsKeyMsg");
-  msgEl.style.display="block"; msgEl.innerHTML="Key removed."; msgEl.className="status-bar warn";
-  toast("API key removed.");
-  loadSettingsPage();
-}
-
-// ── PRINT LABEL ───────────────────────────────────────────
-function printLabel(mfrPn, suppPn, desc, location, qty) {
-  document.getElementById("lblMfrPn").textContent = mfrPn||"";
-  document.getElementById("lblSuppPn").textContent = suppPn||"";
-  document.getElementById("lblDesc").textContent = desc||"";
-  document.getElementById("lblLoc").textContent = location||"—";
-  document.getElementById("lblQty").textContent = "QTY: " + (qty||0);
-  document.getElementById("lblDate").textContent = new Date().toLocaleDateString();
-  document.getElementById("printLocInput").value = location||"";
-  document.getElementById("printQtyInput").value = qty||"";
-  document.getElementById("printModal").style.display = "flex";
-}
-function doPrint() {
-  const printArea = document.getElementById("labelPreview").outerHTML;
-  const win = window.open("","_blank","width=400,height=350");
-  win.document.write(`<!DOCTYPE html><html><head><title>Label</title><style>
-    body{font-family:'IBM Plex Mono',monospace;margin:20px;background:#fff}
-    @media print{body{margin:0}}
-  </style><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet"></head><body>${printArea}<script>window.onload=()=>{window.print();setTimeout(()=>window.close(),500)}<\/script></body></html>`);
-}
-
-// ── CSV EXPORT ────────────────────────────────────────────
-async function exportInventoryCSV() {
-  try {
-    const rows = await sheetRead();
-    const csv = rows.map(r => r.map(c => `"${(c||"").toString().replace(/"/g,'""')}"`).join(",")).join("\n");
-    downloadFile("nexwah_inventory_" + todayStr() + ".csv", "text/csv", csv);
-  } catch(e) { toast("Export failed: " + e.message); }
-}
-async function exportTransactionsCSV() {
-  try {
-    const resp = await fetch(`${APPS_SCRIPT_URL}?action=read&sheet=Transactions`);
-    const rows = await resp.json();
-    const csv = rows.map(r => r.map(c => `"${(c||"").toString().replace(/"/g,'""')}"`).join(",")).join("\n");
-    downloadFile("nexwah_transactions_" + todayStr() + ".csv", "text/csv", csv);
-  } catch(e) { toast("Export failed: " + e.message); }
-}
-function downloadFile(name, type, content) {
-  const a = document.createElement("a");
-  a.href = "data:" + type + ";charset=utf-8," + encodeURIComponent(content);
-  a.download = name; a.click();
-}
-
-// ── BOM / ORDER CHECK ─────────────────────────────────────
-let bomPendingDispatch = [];
-function processCSV() {
-  const file = document.getElementById("csvFile").files[0];
-  if (!file) { document.getElementById("bomStatus").innerHTML="Please select a CSV file."; document.getElementById("bomStatus").className="status-bar err"; return; }
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    document.getElementById("bomStatus").innerHTML='<span class="spinner"></span>Processing BOM\u2026'; document.getElementById("bomStatus").className="status-bar loading";
-    const lines = e.target.result.split(/\r?\n/).filter(l=>l.trim());
-    if (lines.length<2) { document.getElementById("bomStatus").innerHTML="CSV must have header + data rows."; document.getElementById("bomStatus").className="status-bar err"; return; }
-    const headers = lines[0].split(",").map(h=>h.replace(/"/g,"").trim().toUpperCase());
-    const pnIdx  = headers.findIndex(h=>/PART\s*(NO?|NUMBER|#|PN|MPN)/i.test(h)||h==="PN"||h==="MPN"||h==="PART");
-    const qtyIdx = headers.findIndex(h=>/QTY|QUANTITY|REQ/i.test(h));
-    if (pnIdx<0||qtyIdx<0) { document.getElementById("bomStatus").innerHTML="Cannot find Part Number or Quantity columns. Headers found: "+headers.join(", "); document.getElementById("bomStatus").className="status-bar err"; return; }
-    const items = lines.slice(1).map(l=>{ const cols=l.split(",").map(c=>c.replace(/"/g,"").trim()); return {pn:cols[pnIdx]||"",qty:parseInt(cols[qtyIdx])||0}; }).filter(i=>i.pn&&i.qty>0);
-    try {
-      const rows = await sheetRead();
-      const inv = {}; rows.slice(1).forEach((r,i)=>{ if(r[2]) inv[(r[2]||"").toUpperCase()]={rowIdx:i+2,qty:parseInt(r[4])||0,location:r[5]||""}; });
-      let html=""; let allOk=true; bomPendingDispatch=[];
-      items.forEach(({pn,qty})=>{
-        const key=pn.toUpperCase(); const stock=inv[key];
-        if (!stock) { html+=`<div class="alert alert-error"><b>${pn}</b>: NOT IN INVENTORY</div>`; allOk=false; }
-        else if (stock.qty<qty) { html+=`<div class="alert alert-warn"><b>${pn}</b>: Need ${qty}, have ${stock.qty} at ${stock.location||"?"}. Shortage: ${qty-stock.qty}</div>`; allOk=false; }
-        else { html+=`<div class="alert alert-success"><b>${pn}</b>: OK \u2014 ${stock.qty} in stock at ${stock.location||"?"}. Need: ${qty}</div>`; bomPendingDispatch.push({pn,qty,rowIdx:stock.rowIdx,currentQty:stock.qty}); }
-      });
-      document.getElementById("bomResults").innerHTML = `<div class="card"><div class="card-title">Availability Results</div>${html}</div>`;
-      if (bomPendingDispatch.length>0) {
-        document.getElementById("bomConfirmPanel").style.display="block";
-        document.getElementById("bomConfirmSummary").innerHTML=`Ready to deduct stock for <b>${bomPendingDispatch.length}</b> available part(s):<br>${bomPendingDispatch.map(i=>`${i.pn} &times; ${i.qty}`).join("<br>")}`;
-        document.getElementById("bomConfirmStatus").style.display="none";
-      }
-      document.getElementById("bomStatus").innerHTML=allOk?"\u2713 All parts available.":"\u26a0 Some parts unavailable or insufficient."; document.getElementById("bomStatus").className="status-bar "+(allOk?"ok":"warn");
-    } catch(e) { document.getElementById("bomStatus").innerHTML="Error: "+e.message; document.getElementById("bomStatus").className="status-bar err"; }
-  };
-  reader.readAsText(file);
-}
-async function confirmOrderDispatch() {
-  const statusEl = document.getElementById("bomConfirmStatus");
-  statusEl.style.display="block"; statusEl.innerHTML='<span class="spinner"></span>Deducting stock\u2026'; statusEl.className="status-bar loading";
-  const today=todayStr();
-  try {
-    for (const item of bomPendingDispatch) {
-      const newQty=item.currentQty-item.qty;
-      await sheetUpdate(item.rowIdx,newQty,today);
-      await sheetAppendTx([today,item.pn,"Order Check","Use",item.qty,item.currentQty,newQty,"Order dispatch"]);
-    }
-    statusEl.innerHTML=`\u2713 Stock deducted for ${bomPendingDispatch.length} parts.`; statusEl.className="status-bar ok";
-    toast("Order dispatched.");
-    bomPendingDispatch=[];
-    document.getElementById("bomConfirmPanel").style.display="none";
-  } catch(e) { statusEl.innerHTML="Error: "+e.message; statusEl.className="status-bar err"; }
-}
-function cancelOrderDispatch() { document.getElementById("bomConfirmPanel").style.display="none"; bomPendingDispatch=[]; }
-function downloadSampleCSV() {
-  downloadFile("sample_order_bom.csv","text/csv","Part Number,Quantity,Description\nSN74LVC1G08DCKR,100,IC Gate AND\nGRM188R71H104KA93D,500,Cap 100nF 50V\n");
-}
-
-// ── BULK RECEIVE ──────────────────────────────────────────
-let bulkPendingItems = [];
-async function autoAssignLocation(category) {
-  try {
-    const rows = await sheetRead();
-    const used = new Set(rows.slice(1).map(r=>(r[5]||"").trim().toUpperCase()));
-    for (let i=1;i<=999;i++) {
-      const loc = "PB" + String(i).padStart(2,"0");
-      const count = rows.slice(1).filter(r=>(r[5]||"").trim().toUpperCase()===loc).length;
-      if (count<50&&!used.has(loc+"_FULL")) return loc;
-    }
-    return "PB001";
-  } catch(e) { return "PB001"; }
-}
-function processBulkReceive() {
-  const file = document.getElementById("bulkCsvFile").files[0];
-  if (!file) { document.getElementById("bulkStatus").innerHTML="Please select a CSV file."; document.getElementById("bulkStatus").className="status-bar err"; return; }
-  const reader=new FileReader();
-  reader.onload = async (e) => {
-    document.getElementById("bulkStatus").innerHTML='<span class="spinner"></span>Parsing\u2026'; document.getElementById("bulkStatus").className="status-bar loading";
-    const lines=e.target.result.split(/\r?\n/).filter(l=>l.trim());
-    if (lines.length<2) { document.getElementById("bulkStatus").innerHTML="CSV must have header + data."; document.getElementById("bulkStatus").className="status-bar err"; return; }
-    const headers=lines[0].split(",").map(h=>h.replace(/"/g,"").trim().toUpperCase());
-    const pnIdx  =headers.findIndex(h=>/PART\s*(NO?|NUMBER|#|PN|MPN)/i.test(h)||h==="PN"||h==="MPN"||h==="PART");
-    const qtyIdx =headers.findIndex(h=>/QTY|QUANTITY/i.test(h));
-    const descIdx=headers.findIndex(h=>/DESC/i.test(h));
-    const supIdx =headers.findIndex(h=>/SUPPLIER/i.test(h)||h==="SUP");
-    const supPnIdx=headers.findIndex(h=>/SUPPLIER\s*PN|SUPPLIER\s*PART/i.test(h)||h==="SUPPLIERPN");
-    const locIdx =headers.findIndex(h=>/LOCATION|LOC/i.test(h));
-    if (pnIdx<0||qtyIdx<0) { document.getElementById("bulkStatus").innerHTML="Cannot find Part Number or Quantity columns."; document.getElementById("bulkStatus").className="status-bar err"; return; }
-    const items=lines.slice(1).map(l=>{ const c=l.split(",").map(x=>x.replace(/"/g,"").trim()); return {mfrPn:c[pnIdx]||"",qty:parseInt(c[qtyIdx])||0,desc:descIdx>=0?c[descIdx]||"":"",supplier:supIdx>=0?c[supIdx]||"":"",supplierPn:supPnIdx>=0?c[supPnIdx]||"":"",location:locIdx>=0?c[locIdx]||"":""}; }).filter(i=>i.mfrPn&&i.qty>0);
-    try {
-      const rows=await sheetRead();
-      const existing={};
-      rows.slice(1).forEach((r,i)=>{ if(r[2]) existing[(r[2]||"").toUpperCase()]={rowIdx:i+2,qty:parseInt(r[4])||0}; });
-      bulkPendingItems=[];
-      let html="";
-      for (const item of items) {
-        const key=item.mfrPn.toUpperCase();
-        if (existing[key]) { html+=`<div class="alert alert-info"><b>${item.mfrPn}</b>: Exists \u2014 will add ${item.qty} (current: ${existing[key].qty})</div>`; bulkPendingItems.push({...item,isNew:false,rowIdx:existing[key].rowIdx,currentQty:existing[key].qty}); }
-        else { const loc=item.location||(await autoAssignLocation("Other")); html+=`<div class="alert alert-success"><b>${item.mfrPn}</b>: NEW \u2014 will add ${item.qty} at ${loc}</div>`; bulkPendingItems.push({...item,isNew:true,finalLocation:loc}); }
-      }
-      document.getElementById("bulkResults").innerHTML=`<div class="card"><div class="card-title">Preview</div>${html}</div>`;
-      document.getElementById("bulkConfirmPanel").style.display="block";
-      document.getElementById("bulkConfirmSummary").innerHTML=`${bulkPendingItems.length} parts ready: ${bulkPendingItems.filter(i=>i.isNew).length} new, ${bulkPendingItems.filter(i=>!i.isNew).length} existing.`;
-      document.getElementById("bulkConfirmStatus").style.display="none";
-      document.getElementById("bulkStatus").innerHTML=`\u2713 ${bulkPendingItems.length} parts parsed.`; document.getElementById("bulkStatus").className="status-bar ok";
-    } catch(e) { document.getElementById("bulkStatus").innerHTML="Error: "+e.message; document.getElementById("bulkStatus").className="status-bar err"; }
-  };
-  reader.readAsText(file);
-}
-async function confirmBulkReceive() {
-  const statusEl=document.getElementById("bulkConfirmStatus");
-  statusEl.style.display="block"; statusEl.innerHTML='<span class="spinner"></span>Processing\u2026'; statusEl.className="status-bar loading";
-  const today=todayStr(); let done=0;
-  try {
-    for (const item of bulkPendingItems) {
-      if (item.isNew) {
-        const row=[item.supplierPn,item.supplier,item.mfrPn,item.desc,item.qty,item.finalLocation,today];
-        await sheetAppend(row);
-        await sheetAppendTx([today,item.mfrPn,item.supplier,"Receive",item.qty,0,item.qty,"Bulk receive"]);
-      } else {
-        const newQty=item.currentQty+item.qty;
-        await sheetUpdate(item.rowIdx,newQty,today);
-        await sheetAppendTx([today,item.mfrPn,item.supplier,"Receive",item.qty,item.currentQty,newQty,"Bulk receive"]);
-      }
-      done++;
-    }
-    statusEl.innerHTML=`\u2713 Done. ${done} parts updated.`; statusEl.className="status-bar ok";
-    toast(`Bulk receive: ${done} parts added.`);
-    bulkPendingItems=[];
-    document.getElementById("bulkConfirmPanel").style.display="none";
-  } catch(e) { statusEl.innerHTML="Error at part "+(done+1)+": "+e.message; statusEl.className="status-bar err"; }
-}
-function cancelBulkReceive() { document.getElementById("bulkConfirmPanel").style.display="none"; bulkPendingItems=[]; }
-function downloadBulkSampleCSV() {
-  downloadFile("sample_bulk_receive.csv","text/csv","Part Number,Quantity,Description,Supplier,Supplier PN,Location\nSN74LVC1G08DCKR,500,IC Gate AND,DigiKey,296-1234-1-ND,PB01\nGRM188R71H104KA93D,2000,Cap 100nF,Mouser,81-GRM188R71H104KA93D,PB01\n");
-}
-
-// ── CONFIRM CLEAR ─────────────────────────────────────────
-async function confirmClear() {
-  if (!confirm("This will delete ALL inventory and transaction data from Google Sheets. Are you sure?")) return;
-  if (!confirm("SECOND CONFIRMATION: This cannot be undone. Proceed?")) return;
-  toast("Clear not implemented — manage data in Google Sheets directly for safety.");
-}
-
-// ── UTILS ─────────────────────────────────────────────────
-function todayStr() { return new Date().toISOString().split("T")[0]; }
-function formatDate(d) {
-  if (!d) return "";
-  try { const dt=new Date(d); if (isNaN(dt)) return d; return dt.toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"}); }
-  catch(e) { return d; }
-}
-function setCamStatus(msg, type) {
-  const el=document.getElementById("camStatus");
-  el.innerHTML=msg;
-  el.className="status-bar"+(type?" "+type:"");
-}
-let toastTimer;
-function toast(msg) {
-  const el=document.getElementById("toast");
-  el.textContent=msg; el.classList.add("show");
-  clearTimeout(toastTimer);
-  toastTimer=setTimeout(()=>el.classList.remove("show"),3000);
-}
-</script>
-</body>
-</html>
+    panel.innerHTML=`<div class="inv-action-title">&#128666; Dispatch Stock</div><div class="inv-action-info">Location: <b>${row[5]||"\u2014"}</b><br>Available Stock: <b style="color:var(--accent)">${qty} units</b></div><div class="qty-row"><div class="field"><label>Qty to Dispatch</label>
