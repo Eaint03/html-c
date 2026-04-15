@@ -1372,23 +1372,26 @@ async function confirmScanReceiveNew() {
   } catch(e) { statusEl.innerHTML="Error: "+e.message; statusEl.className="status-bar err"; }
 }
 
-// ── SCAN HISTORY — stored in Google Sheets "ScanHistory" tab ──
-// Columns: [0]=Date [1]=MfrPN [2]=SupplierPN [3]=Supplier [4]=Description [5]=ImageBase64
-// This works on ALL devices — same backend as inventory & transactions.
+// ── SCAN HISTORY — image stored in Google Drive, URL in ScanHistory sheet ──
+// Columns: [0]=Date [1]=MfrPN [2]=SupplierPN [3]=Supplier [4]=Description [5]=DriveImageURL
+// Images are uploaded via POST to Apps Script → saved to Google Drive → public URL stored in sheet
 
 async function saveScanToHistory(scan) {
-  // Images are stored as base64 in column F of ScanHistory sheet
-  const row = [
-    scan.date       || todayStr(),
-    scan.mfrPn      || "",
-    scan.supplierPn || "",
-    scan.supplier   || "Unknown",
-    scan.desc       || "",
-    scan.image      || ""   // base64 data URL — full photo
-  ];
   try {
-    const url = `${APPS_SCRIPT_URL}?action=append&sheet=${encodeURIComponent(SCAN_HISTORY_SHEET)}&row=${encodeURIComponent(JSON.stringify(row))}`;
-    await fetch(url);
+    // Use POST so the full base64 image can be sent (GET URLs are limited to ~2000 chars)
+    const payload = {
+      action: "uploadScanImage",
+      date:       scan.date       || todayStr(),
+      mfrPn:      scan.mfrPn      || "",
+      supplierPn: scan.supplierPn || "",
+      supplier:   scan.supplier   || "Unknown",
+      desc:       scan.desc       || "",
+      imageBase64: scan.image     || ""   // full base64 data URL
+    };
+    await fetch(APPS_SCRIPT_URL, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
   } catch(e) {
     console.warn("Scan history save failed:", e);
   }
@@ -1455,14 +1458,16 @@ async function renderScanHistory() {
     return;
   }
 
-  // Each row: [date, mfrPn, supplierPn, supplier, desc, imageBase64]
+  // Each row: [date, mfrPn, supplierPn, supplier, desc, driveImageUrl]
   grid.innerHTML = filtered.map((row, i) => {
-    const [date, mfrPn, supplierPn, supplier, desc, imageData] = row;
-    const hasImage = imageData && imageData.startsWith("data:");
+    const [date, mfrPn, supplierPn, supplier, desc, imageUrl] = row;
+    // imageUrl is a Google Drive direct-view URL returned by Apps Script
+    const hasImage = imageUrl && (imageUrl.startsWith("http") || imageUrl.startsWith("data:"));
     const imgHtml = hasImage
-      ? `<img src="${imageData}" alt="Scan of ${mfrPn||''}" loading="lazy"
-             onclick="openImgModalDirect(${JSON.stringify(imageData).replace(/'/g,'&#39;')})"
-             style="cursor:zoom-in;width:100%;height:100%;object-fit:cover;display:block;" />`
+      ? `<img src="${imageUrl}" alt="Scan of ${mfrPn||''}" loading="lazy"
+             onclick="openImgModalDirect('${imageUrl.replace(/'/g,"&#39;")}')"
+             style="cursor:zoom-in;width:100%;height:100%;object-fit:cover;display:block;"
+             onerror="this.parentNode.innerHTML='<div class=\'scan-hist-img-placeholder\'><svg width=\'48\' height=\'48\' viewBox=\'0 0 48 48\' fill=\'none\'><rect x=\'8\' y=\'12\' width=\'32\' height=\'24\' rx=\'3\' stroke=\'#555\' stroke-width=\'2\' fill=\'none\'/><circle cx=\'24\' cy=\'24\' r=\'6\' stroke=\'#555\' stroke-width=\'2\' fill=\'none\'/></svg><div style=\'color:#666;font-size:11px;margin-top:8px\'>Image unavailable</div></div>'" />`
       : `<div class="scan-hist-img-placeholder">
            <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
              <rect x="8" y="12" width="32" height="24" rx="3" stroke="#555" stroke-width="2" fill="none"/>
