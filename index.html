@@ -37,6 +37,7 @@
 
     body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; }
 
+    /* ── TOP BAR ── */
     .topbar {
       background: var(--surface);
       border-bottom: 1px solid var(--border);
@@ -53,6 +54,7 @@
     .topbar-brand { font-family: var(--mono); font-size: 15px; font-weight: 500; color: var(--accent); letter-spacing: -0.3px; }
     .topbar-brand span { color: var(--muted); font-weight: 400; }
 
+    /* ── NAV TABS ── */
     .nav {
       background: var(--surface);
       border-bottom: 1px solid var(--border);
@@ -77,10 +79,12 @@
     .nav-btn:hover { color: var(--text); }
     .nav-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
 
+    /* ── LAYOUT ── */
     .page-wrap { max-width: 1100px; margin: 28px auto; padding: 0 20px; }
     .page { display: none; }
     .page.active { display: block; }
 
+    /* ── STAT CARDS ── */
     .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 24px; }
     .stat-card {
       background: var(--surface);
@@ -92,6 +96,7 @@
     .stat-card .value { font-family: var(--mono); font-size: 28px; font-weight: 500; color: var(--accent); margin-top: 4px; }
     .stat-card.warn .value { color: #d97706; }
 
+    /* ── CARDS ── */
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
@@ -101,6 +106,7 @@
     }
     .card-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
 
+    /* ── FORMS ── */
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     @media(max-width:600px){ .form-grid { grid-template-columns: 1fr; } }
     .field { display: flex; flex-direction: column; gap: 5px; }
@@ -119,6 +125,7 @@
     .field input:focus, .field select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26,86,219,0.08); }
     .field .hint { font-size: 11px; color: var(--muted); }
 
+    /* ── BUTTONS ── */
     .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
     .btn {
       font-family: var(--sans); font-size: 13px; font-weight: 600;
@@ -135,12 +142,14 @@
     .btn-success { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
     .btn-success:hover { background: #d1fae5; }
 
+    /* ── ALERTS ── */
     .alert { padding: 11px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 14px; }
     .alert-success { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
     .alert-error   { background: var(--error-bg);   color: var(--error);   border: 1px solid var(--error-border); }
     .alert-warn    { background: var(--warn-bg);    color: var(--warn);    border: 1px solid var(--warn-border); }
     .alert-info    { background: var(--accent-light); color: var(--accent); border: 1px solid #c3d9ff; }
 
+    /* ── TABLE ── */
     .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
     table { width: 100%; border-collapse: collapse; font-size: 13px; background: var(--surface); }
     th { background: var(--surface2); padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
@@ -156,10 +165,12 @@
     .badge-add     { background: var(--accent-light); color: var(--accent); border: 1px solid #c3d9ff; }
     .empty-state { text-align: center; padding: 40px; color: var(--muted); font-size: 13px; }
 
+    /* ── SEARCH BAR ── */
     .search-bar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
     .search-bar input { flex: 1; min-width: 200px; padding: 9px 12px; border: 1px solid var(--border2); border-radius: 8px; font-size: 13px; font-family: var(--sans); outline: none; }
     .search-bar input:focus { border-color: var(--accent); }
 
+    /* ── CAMERA / SCANNER ── */
     .scanner-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
     @media(max-width:700px){ .scanner-layout { grid-template-columns: 1fr; } }
     .video-wrap { position: relative; width: 100%; border-radius: 10px; overflow: hidden; background: #111; aspect-ratio: 4/3; border: 1px solid var(--border); }
@@ -175,6 +186,7 @@
     img.preview { width: 100%; border-radius: 8px; border: 1px solid var(--border); background: #f0f0f0; display: block; min-height: 80px; object-fit: contain; }
     .preview-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 5px; }
 
+    /* ── RESULT PANEL ── */
     .result-pn { font-family: var(--mono); font-size: 22px; font-weight: 500; color: var(--accent); letter-spacing: 1px; word-break: break-all; min-height: 30px; }
     .result-pn.empty { color: var(--muted); font-size: 14px; }
     .supplier-badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; font-family: var(--mono); margin-top: 5px; }
@@ -193,38 +205,31 @@
     .qty-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
     .qty-row input { width: 80px; padding: 8px 10px; border: 1px solid var(--border2); border-radius: 8px; font-size: 13px; font-family: var(--mono); }
 
-    /* ── SCAN HISTORY CARDS ── */
-    .scan-hist-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: box-shadow 0.2s; }
-    .scan-hist-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+    /* ── SCAN HISTORY ── */
+    .scan-hist-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
     .scan-hist-img { width: 100%; height: 140px; object-fit: cover; background: #111; display: block; border-bottom: 1px solid var(--border); }
-    .scan-hist-img-placeholder { width: 100%; height: 140px; background: linear-gradient(135deg, #1a56db18, #1a56db08); display: flex; align-items: center; justify-content: center; border-bottom: 1px solid var(--border); font-size: 32px; }
     .scan-hist-body { padding: 12px 14px; }
     .scan-hist-pn { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--accent); word-break: break-all; margin-bottom: 4px; }
     .scan-hist-desc { font-size: 12px; color: var(--muted); margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .scan-hist-meta { display: flex; justify-content: space-between; align-items: center; }
     .scan-hist-date { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+    .scan-hist-status { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
+    .scan-hist-status.found    { background: var(--success-bg); color: var(--success); border: 1px solid var(--success-border); }
+    .scan-hist-status.notfound { background: var(--accent-light); color: var(--accent); border: 1px solid #c3d9ff; }
     .scan-hist-delete { font-size: 11px; color: var(--error); cursor: pointer; margin-top: 8px; text-align: right; }
     .scan-hist-delete:hover { text-decoration: underline; }
 
-    /* ── CLOUD SYNC INDICATOR ── */
-    .cloud-badge {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600;
-      font-family: var(--mono); border: 1px solid;
-    }
-    .cloud-badge.synced   { background: var(--success-bg); color: var(--success); border-color: var(--success-border); }
-    .cloud-badge.syncing  { background: var(--accent-light); color: var(--accent); border-color: #c3d9ff; }
-    .cloud-badge.error    { background: var(--error-bg); color: var(--error); border-color: var(--error-border); }
-    .cloud-badge.local    { background: var(--warn-bg); color: var(--warn); border-color: var(--warn-border); }
-
+    /* ── STATUS BAR ── */
     .status-bar { padding: 10px 14px; border-radius: 8px; font-size: 12px; font-family: var(--mono); margin-top: 12px; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); min-height: 40px; }
     .status-bar.ok      { background: var(--success-bg); border-color: var(--success-border); color: var(--success); }
     .status-bar.err     { background: var(--error-bg);   border-color: var(--error-border);   color: var(--error); }
     .status-bar.loading { background: var(--accent-light); border-color: #c3d9ff; color: var(--accent); }
     .status-bar.warn    { background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn); }
 
+    /* ── CONFIG ── */
     .config-note { font-size: 12px; color: var(--muted); padding: 10px 14px; background: var(--surface2); border-radius: 8px; border: 1px solid var(--border); margin-bottom: 16px; line-height: 1.6; }
 
+    /* ── GLOBAL TOAST ── */
     #toast {
       position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
       background: #111827; color: #fff; padding: 12px 22px; border-radius: 10px;
@@ -235,14 +240,6 @@
 
     @keyframes spin { to { transform: rotate(360deg); } }
     .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid #c3d9ff; border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 5px; }
-
-    /* ── PAGINATION ── */
-    .pagination { display: flex; gap: 8px; align-items: center; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
-    .page-btn { padding: 6px 14px; border: 1px solid var(--border2); border-radius: 8px; background: var(--surface); font-size: 13px; font-family: var(--mono); cursor: pointer; color: var(--text); transition: all 0.15s; }
-    .page-btn:hover { border-color: var(--accent); color: var(--accent); }
-    .page-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-    .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .page-info { font-size: 12px; color: var(--muted); font-family: var(--mono); }
   </style>
 </head>
 <body>
@@ -294,6 +291,8 @@
   <div id="page-scanner" class="page">
     <div class="card">
       <div class="card-title">Scan Label</div>
+
+      <!-- Mode Toggle -->
       <div style="display:flex;gap:0;margin-bottom:18px;border:1px solid var(--border2);border-radius:9px;overflow:hidden;width:fit-content">
         <button id="modeReceive" onclick="setScanMode('receive')"
           style="padding:9px 24px;font-size:13px;font-weight:600;font-family:var(--sans);border:none;cursor:pointer;background:var(--accent);color:#fff;transition:all 0.15s">
@@ -307,6 +306,7 @@
       <div id="scanModeLabel" style="font-size:12px;color:var(--muted);margin-bottom:14px">
         📦 <b>Receive mode</b> — scan incoming delivery labels to add stock
       </div>
+
       <div class="scanner-layout">
         <div>
           <div class="video-wrap">
@@ -326,13 +326,15 @@
         <div>
           <div class="preview-label">Cropped Region</div>
           <img id="cropPreview" class="preview" alt="" style="margin-bottom:14px" />
+
           <div class="preview-label">Detected Part</div>
           <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">
             <input type="text" id="scanMfrPn" placeholder="Manufacturer PN" style="font-family:var(--mono);font-size:16px;font-weight:500;color:var(--accent);flex:1;padding:8px 12px;border:2px solid var(--border2);border-radius:8px;outline:none;" oninput="this.style.borderColor='var(--warn)'" />
             <button class="btn btn-secondary" onclick="recheckMfrPn()" title="Re-check inventory with edited PN" style="white-space:nowrap;padding:8px 12px;font-size:12px">🔍 Re-check</button>
           </div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">✏️ Edit if misread, then click Re-check</div>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">✏️ Edit if Claude misread a character, then click Re-check</div>
           <div id="scanSupplierBadge" style="margin:4px 0 10px"></div>
+
           <div class="form-grid" style="margin-bottom:10px">
             <div class="field">
               <label>Supplier PN</label>
@@ -351,6 +353,7 @@
               <input type="text" id="scanNotes" placeholder="e.g. Project BOM-001" />
             </div>
           </div>
+
           <div id="scanInvPanel" style="display:none"></div>
         </div>
       </div>
@@ -412,7 +415,9 @@
       </div>
       <div id="bomStatus" class="status-bar" style="margin-top:14px">Upload a BOM to check stock availability.</div>
     </div>
+
     <div id="bomResults"></div>
+
     <div id="bomConfirmPanel" style="display:none" class="card">
       <div class="card-title">Confirm Stock Deduction</div>
       <div id="bomConfirmSummary" style="margin-bottom:16px;font-size:13px;line-height:1.8"></div>
@@ -460,6 +465,7 @@
     </div>
   </div>
 
+
   <!-- ══ BULK RECEIVE ══ -->
   <div id="page-bulkreceive" class="page">
     <div class="card">
@@ -479,7 +485,9 @@
       </div>
       <div id="bulkStatus" class="status-bar" style="margin-top:14px">Upload a CSV to add new stock.</div>
     </div>
+
     <div id="bulkResults"></div>
+
     <div id="bulkConfirmPanel" style="display:none" class="card">
       <div class="card-title">Confirm Stock Addition</div>
       <div id="bulkConfirmSummary" style="margin-bottom:16px;font-size:13px;line-height:1.8"></div>
@@ -491,47 +499,28 @@
     </div>
   </div>
 
-  <!-- ══ SCAN HISTORY — CLOUD STORAGE ══ -->
+  <!-- ══ SCAN HISTORY ══ -->
   <div id="page-scanhistory" class="page">
     <div class="card">
-      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-        <span>Scan History</span>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span id="cloudSyncBadge" class="cloud-badge syncing">☁ Connecting…</span>
-          <button class="btn btn-secondary" style="padding:6px 12px;font-size:12px" onclick="refreshScanHistory()">↻ Refresh</button>
-        </div>
-      </div>
+      <div class="card-title">Scan History</div>
       <div class="search-bar">
-        <input type="text" id="scanHistorySearch" placeholder="Search by part number or description…" oninput="filterScanHistory()" />
+        <input type="text" id="scanHistorySearch" placeholder="Search by part number…" oninput="renderScanHistory()" />
         <button class="btn btn-danger" onclick="clearScanHistory()">Clear All</button>
       </div>
-      <div style="font-size:12px;color:var(--muted)">
-        ☁ Scan history is stored in <b>Google Sheets (ScanHistory tab)</b> — shared across all devices automatically.
-      </div>
-    </div>
-
-    <!-- Stats row -->
-    <div class="stat-grid" style="margin-bottom:18px" id="scanHistoryStats" style="display:none">
-      <div class="stat-card"><div class="label">Total Scans</div><div class="value" id="shStat-total">—</div></div>
-      <div class="stat-card"><div class="label">Today</div><div class="value" id="shStat-today">—</div></div>
-      <div class="stat-card"><div class="label">Unique Parts</div><div class="value" id="shStat-unique">—</div></div>
-      <div class="stat-card warn"><div class="label">Not Found</div><div class="value" id="shStat-notfound">—</div></div>
-    </div>
-
-    <div id="scanHistoryLoading" class="card">
-      <div class="empty-state"><span class="spinner"></span> Loading scan history from cloud…</div>
+      <div style="font-size:12px;color:var(--muted)">Images are saved permanently in this browser.</div>
     </div>
     <div id="scanHistoryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;"></div>
     <div id="scanHistoryEmpty" class="card" style="display:none">
       <div class="empty-state">No scans saved yet. Start scanning labels to build your history.</div>
     </div>
-    <div class="pagination" id="scanHistoryPagination" style="display:none"></div>
   </div>
 
   <!-- ══ SETTINGS ══ -->
   <div id="page-settings" class="page">
     <div class="card">
       <div class="card-title">⚙ Settings</div>
+
+      <!-- API Key Section -->
       <div style="margin-bottom:24px">
         <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Anthropic API Key (Claude Vision)</div>
         <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6">
@@ -549,6 +538,8 @@
         </div>
         <div id="settingsKeyMsg" class="status-bar" style="margin-top:14px;display:none"></div>
       </div>
+
+      <!-- Current Status -->
       <div style="border-top:1px solid var(--border);padding-top:18px">
         <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px">Current Status</div>
         <div id="settingsStatus" style="font-size:13px;color:var(--muted);line-height:2"></div>
@@ -591,6 +582,8 @@
 <div id="printModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999;align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:14px;padding:28px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.2)">
     <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:16px">🖨 Print Location Label</div>
+
+    <!-- Label Preview -->
     <div id="labelPreview" style="border:2px dashed var(--border2);border-radius:10px;padding:16px;margin-bottom:18px;background:#fff">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
         <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1px">NEXWAH TECHNOLOGY</div>
@@ -608,6 +601,8 @@
       </div>
       <div style="font-size:9px;color:var(--muted);margin-top:8px;text-align:right" id="lblDate"></div>
     </div>
+
+    <!-- Editable fields -->
     <div class="form-grid" style="margin-bottom:16px">
       <div class="field">
         <label>Location</label>
@@ -618,6 +613,7 @@
         <input type="number" id="printQtyInput" oninput="document.getElementById('lblQty').textContent='QTY: '+(this.value||0)" />
       </div>
     </div>
+
     <div style="display:flex;gap:10px">
       <button class="btn btn-primary" style="flex:1" onclick="doPrint()">🖨 Print Label</button>
       <button class="btn btn-secondary" onclick="document.getElementById('printModal').style.display='none'">Cancel</button>
@@ -629,7 +625,7 @@
 
 <script>
 // ════════════════════════════════════════════════════════════
-// APPS SCRIPT URL
+// APPS SCRIPT URL — hardcoded, no need to change
 // ════════════════════════════════════════════════════════════
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwn4NtlsIHr25yN0tdm3heuY_ihdRMMgghxQClRlr74bBhhBATyEzKRCg6FKPYMbIp7/exec";
 
@@ -638,12 +634,6 @@ let cfg = { sheetName: "Sheet1", anthropicKey: "" };
 let currentStream = null;
 let currentScan = null;
 const SCAN_REGION = { x: 0.10, y: 0.15, w: 0.80, h: 0.70 };
-
-// ── Scan History State ─────────────────────────────────────
-let scanHistoryCloud = [];       // all records loaded from cloud
-let scanHistoryFiltered = [];    // after search filter
-const SCAN_HISTORY_PAGE_SIZE = 20;
-let scanHistoryPage = 1;
 
 // ════════════════════════════════════════════════════════════
 // INIT
@@ -690,9 +680,8 @@ function showPage(name) {
   if (name === "inventory")    renderInventory();
   if (name === "transactions") renderTransactions();
   if (name === "dashboard")    loadDashboard();
-  if (name === "scanhistory")  refreshScanHistory();
-  if (name === "settings")     loadSettingsPage();
-}
+  if (name === "scanhistory")  renderScanHistory();
+  if (name === "settings")     loadSettingsPage();}
 
 // ════════════════════════════════════════════════════════════
 // APPS SCRIPT HELPERS
@@ -710,275 +699,16 @@ async function sheetAppend(row) {
 }
 
 async function sheetUpdate(rowIndex, qty, date) {
+  // Qty now in col F (6), LastUpdated in col G (7)
   const url = `${APPS_SCRIPT_URL}?action=update&sheet=${encodeURIComponent(cfg.sheetName || "Sheet1")}&rowIndex=${rowIndex}&qty=${qty}&date=${encodeURIComponent(date)}`;
   const resp = await fetch(url);
   return await resp.text();
 }
 
+// Also write to a Transactions sheet
 async function sheetAppendTx(row) {
   const url = `${APPS_SCRIPT_URL}?action=append&sheet=Transactions&row=${encodeURIComponent(JSON.stringify(row))}`;
-  await fetch(url);
-}
-
-// ════════════════════════════════════════════════════════════
-// ☁ CLOUD SCAN HISTORY — Google Sheets (ScanHistory tab)
-// ════════════════════════════════════════════════════════════
-// Sheet columns for ScanHistory:
-// A=ScanID  B=Date  C=MfrPN  D=Supplier  E=SupplierPN  F=Description  G=Device  H=Status  I=ImageData (base64, truncated to 45000 chars)
-
-const MAX_IMAGE_CHARS = 45000; // ~33KB — safe for Google Sheets cell limit (50000 chars)
-
-/**
- * Save a scan record to the cloud (ScanHistory sheet).
- * Image is stored as truncated base64. Text metadata is always stored in full.
- * This runs asynchronously and never blocks the scanning flow.
- */
-async function saveScanToCloud(scan) {
-  try {
-    const device = /iPhone|iPad|Android/i.test(navigator.userAgent) ? "Mobile" : "Desktop";
-    const scanId  = `SCN-${Date.now()}`; // unique ID per scan
-
-    // Truncate image data if too large for Sheets cell
-    let imageData = scan.image || "";
-    if (imageData.length > MAX_IMAGE_CHARS) {
-      imageData = imageData.substring(0, MAX_IMAGE_CHARS); // truncate — still viewable as partial
-    }
-
-    const row = [
-      scanId,
-      scan.date,
-      scan.mfrPn || "",
-      scan.supplier || "Unknown",
-      scan.supplierPn || "",
-      scan.desc || "",
-      device,
-      scan.status || "Scanned",
-      imageData
-    ];
-
-    const url = `${APPS_SCRIPT_URL}?action=append&sheet=ScanHistory&row=${encodeURIComponent(JSON.stringify(row))}`;
-    await fetch(url);
-    return scanId;
-  } catch (e) {
-    console.warn("Cloud scan history save failed:", e);
-    return null;
-  }
-}
-
-/**
- * Load all scan history from cloud (ScanHistory sheet).
- * Returns array of parsed scan objects, newest first.
- */
-async function loadScanHistoryFromCloud() {
-  const url = `${APPS_SCRIPT_URL}?action=read&sheet=ScanHistory`;
-  const resp = await fetch(url);
-  const rows = await resp.json();
-
-  // Skip header row, reverse for newest first
-  const data = rows.slice(1).reverse();
-
-  return data.map(r => ({
-    id:         r[0] || "",
-    date:       r[1] || "",
-    mfrPn:      r[2] || "",
-    supplier:   r[3] || "Unknown",
-    supplierPn: r[4] || "",
-    desc:       r[5] || "",
-    device:     r[6] || "",
-    status:     r[7] || "",
-    image:      r[8] || ""  // may be truncated — still shows partial preview
-  }));
-}
-
-/**
- * Delete a single scan record from cloud by ScanID.
- * Uses a new Apps Script action: deleteScanHistory.
- */
-async function deleteScanFromCloud(scanId) {
-  const url = `${APPS_SCRIPT_URL}?action=deleteScanHistory&sheet=ScanHistory&scanId=${encodeURIComponent(scanId)}`;
-  const resp = await fetch(url);
-  return await resp.text();
-}
-
-/**
- * Clear ALL scan history from cloud.
- */
-async function clearScanHistoryCloud() {
-  const url = `${APPS_SCRIPT_URL}?action=clearSheet&sheet=ScanHistory`;
-  const resp = await fetch(url);
-  return await resp.text();
-}
-
-// ════════════════════════════════════════════════════════════
-// SCAN HISTORY PAGE — RENDER
-// ════════════════════════════════════════════════════════════
-async function refreshScanHistory() {
-  const loadingEl = document.getElementById("scanHistoryLoading");
-  const gridEl    = document.getElementById("scanHistoryGrid");
-  const emptyEl   = document.getElementById("scanHistoryEmpty");
-  const paginEl   = document.getElementById("scanHistoryPagination");
-  const badge     = document.getElementById("cloudSyncBadge");
-
-  loadingEl.style.display = "block";
-  gridEl.innerHTML = "";
-  emptyEl.style.display = "none";
-  paginEl.style.display = "none";
-  badge.className = "cloud-badge syncing";
-  badge.innerHTML = '<span class="spinner"></span> Syncing…';
-
-  try {
-    scanHistoryCloud = await loadScanHistoryFromCloud();
-    scanHistoryPage = 1;
-    scanHistoryFiltered = [...scanHistoryCloud];
-
-    badge.className = "cloud-badge synced";
-    badge.innerHTML = `☁ Cloud — ${scanHistoryCloud.length} scans`;
-
-    updateScanHistoryStats();
-    renderScanHistoryPage();
-    loadingEl.style.display = "none";
-  } catch (e) {
-    badge.className = "cloud-badge error";
-    badge.innerHTML = "⚠ Cloud unavailable";
-    loadingEl.innerHTML = `<div class="empty-state" style="color:var(--error)">
-      Could not load from cloud. Check your internet connection.<br>
-      <small>${e.message}</small>
-    </div>`;
-  }
-}
-
-function filterScanHistory() {
-  const search = (document.getElementById("scanHistorySearch").value || "").trim().toUpperCase();
-  if (!search) {
-    scanHistoryFiltered = [...scanHistoryCloud];
-  } else {
-    scanHistoryFiltered = scanHistoryCloud.filter(s =>
-      (s.mfrPn || "").toUpperCase().includes(search) ||
-      (s.desc || "").toUpperCase().includes(search) ||
-      (s.supplier || "").toUpperCase().includes(search) ||
-      (s.supplierPn || "").toUpperCase().includes(search)
-    );
-  }
-  scanHistoryPage = 1;
-  renderScanHistoryPage();
-}
-
-function updateScanHistoryStats() {
-  const today = todayStr();
-  const todayScans = scanHistoryCloud.filter(s => s.date === today).length;
-  const uniqueParts = new Set(scanHistoryCloud.map(s => s.mfrPn).filter(Boolean)).size;
-  const notFound   = scanHistoryCloud.filter(s => (s.status||"").toLowerCase().includes("not found")).length;
-
-  document.getElementById("shStat-total").textContent   = scanHistoryCloud.length;
-  document.getElementById("shStat-today").textContent   = todayScans;
-  document.getElementById("shStat-unique").textContent  = uniqueParts;
-  document.getElementById("shStat-notfound").textContent = notFound;
-  document.getElementById("scanHistoryStats").style.display = "";
-}
-
-function renderScanHistoryPage() {
-  const gridEl  = document.getElementById("scanHistoryGrid");
-  const emptyEl = document.getElementById("scanHistoryEmpty");
-  const paginEl = document.getElementById("scanHistoryPagination");
-
-  if (!scanHistoryFiltered.length) {
-    gridEl.innerHTML = "";
-    emptyEl.style.display = "block";
-    paginEl.style.display = "none";
-    return;
-  }
-
-  emptyEl.style.display = "none";
-  const totalPages = Math.ceil(scanHistoryFiltered.length / SCAN_HISTORY_PAGE_SIZE);
-  const start = (scanHistoryPage - 1) * SCAN_HISTORY_PAGE_SIZE;
-  const pageData = scanHistoryFiltered.slice(start, start + SCAN_HISTORY_PAGE_SIZE);
-
-  gridEl.innerHTML = pageData.map(s => {
-    const imgHtml = s.image
-      ? `<img class="scan-hist-img" src="${s.image}" alt="Scan" onerror="this.parentElement.innerHTML='<div class=scan-hist-img-placeholder>📷</div>'" />`
-      : `<div class="scan-hist-img-placeholder">📷</div>`;
-
-    const supplierClass = (s.supplier || "unknown").toLowerCase().replace(/[^a-z]/g,"");
-    const deviceIcon = s.device === "Mobile" ? "📱" : "💻";
-
-    return `<div class="scan-hist-card">
-      ${imgHtml}
-      <div class="scan-hist-body">
-        <div class="scan-hist-pn">${s.mfrPn || "—"}</div>
-        <div class="scan-hist-desc" title="${s.desc || s.supplierPn || ""}">${s.desc || s.supplierPn || "—"}</div>
-        <div class="scan-hist-meta">
-          <span class="scan-hist-date">${s.date || "—"}</span>
-          <span class="supplier-badge badge-${supplierClass}">${s.supplier || "Unknown"}</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
-          <span style="font-size:11px;color:var(--muted)">${deviceIcon} ${s.device || "—"}</span>
-          ${s.status ? `<span style="font-size:11px;padding:2px 8px;border-radius:20px;font-family:var(--mono);
-            background:${s.status.toLowerCase().includes('not found')?'var(--error-bg)':'var(--success-bg)'};
-            color:${s.status.toLowerCase().includes('not found')?'var(--error)':'var(--success)'};
-            border:1px solid ${s.status.toLowerCase().includes('not found')?'var(--error-border)':'var(--success-border)'}">
-            ${s.status}</span>` : ""}
-        </div>
-        <div class="scan-hist-delete" onclick="confirmDeleteScan('${s.id.replace(/'/g,"\\'")}', this)">🗑 Delete</div>
-      </div>
-    </div>`;
-  }).join("");
-
-  // Pagination
-  if (totalPages > 1) {
-    paginEl.style.display = "flex";
-    let html = `<span class="page-info">${scanHistoryFiltered.length} scans, page ${scanHistoryPage}/${totalPages}</span>`;
-    html += `<button class="page-btn" onclick="goScanHistoryPage(1)" ${scanHistoryPage===1?"disabled":""}>«</button>`;
-    html += `<button class="page-btn" onclick="goScanHistoryPage(${scanHistoryPage-1})" ${scanHistoryPage===1?"disabled":""}>‹ Prev</button>`;
-
-    // Show page numbers around current
-    for (let p = Math.max(1, scanHistoryPage-2); p <= Math.min(totalPages, scanHistoryPage+2); p++) {
-      html += `<button class="page-btn ${p===scanHistoryPage?"active":""}" onclick="goScanHistoryPage(${p})">${p}</button>`;
-    }
-
-    html += `<button class="page-btn" onclick="goScanHistoryPage(${scanHistoryPage+1})" ${scanHistoryPage===totalPages?"disabled":""}>Next ›</button>`;
-    html += `<button class="page-btn" onclick="goScanHistoryPage(${totalPages})" ${scanHistoryPage===totalPages?"disabled":""}>»</button>`;
-    paginEl.innerHTML = html;
-  } else {
-    paginEl.style.display = "none";
-  }
-}
-
-function goScanHistoryPage(p) {
-  const totalPages = Math.ceil(scanHistoryFiltered.length / SCAN_HISTORY_PAGE_SIZE);
-  scanHistoryPage = Math.max(1, Math.min(p, totalPages));
-  renderScanHistoryPage();
-  document.getElementById("page-scanhistory").scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-async function confirmDeleteScan(scanId, el) {
-  if (!confirm("Delete this scan record from cloud?")) return;
-  el.textContent = "Deleting…";
-  try {
-    await deleteScanFromCloud(scanId);
-    scanHistoryCloud = scanHistoryCloud.filter(s => s.id !== scanId);
-    scanHistoryFiltered = scanHistoryFiltered.filter(s => s.id !== scanId);
-    updateScanHistoryStats();
-    renderScanHistoryPage();
-    toast("Scan deleted from cloud.");
-  } catch(e) {
-    el.textContent = "🗑 Delete";
-    toast("Delete failed: " + e.message);
-  }
-}
-
-async function clearScanHistory() {
-  if (!confirm("Clear ALL scan history from the cloud? This cannot be undone.")) return;
-  try {
-    await clearScanHistoryCloud();
-    scanHistoryCloud = [];
-    scanHistoryFiltered = [];
-    updateScanHistoryStats();
-    renderScanHistoryPage();
-    document.getElementById("cloudSyncBadge").innerHTML = "☁ Cloud — 0 scans";
-    toast("All scan history cleared from cloud.");
-  } catch(e) {
-    toast("Clear failed: " + e.message);
-  }
+  await fetch(url); // fire and forget
 }
 
 // ════════════════════════════════════════════════════════════
@@ -986,17 +716,23 @@ async function clearScanHistory() {
 // ════════════════════════════════════════════════════════════
 async function loadDashboard() {
   document.getElementById("topbarStatus").textContent = "Loading…";
+  document.getElementById("stat-parts").textContent = "—";
+  document.getElementById("stat-qty").textContent = "—";
+  document.getElementById("stat-low").textContent = "—";
+  document.getElementById("stat-tx").textContent = "—";
   try {
     const rows = await sheetRead();
     const data = rows.slice(1);
-    const totalQty = data.reduce((s, r) => s + (parseInt(r[4]) || 0), 0);
-    const lowStock = data.filter(r => (parseInt(r[4]) || 0) <= 5);
-    document.getElementById("stat-parts").textContent = data.length;
+    const totalParts = data.length;
+    // Sheet cols: A=PartNumber B=Supplier C=MfrPN D=Location E=Description F=Quantity G=LastUpdated
+    const totalQty   = data.reduce((s, r) => s + (parseInt(r[4]) || 0), 0);
+    const lowStock   = data.filter(r => (parseInt(r[4]) || 0) <= 5);
+    document.getElementById("stat-parts").textContent = totalParts;
     document.getElementById("stat-qty").textContent   = totalQty;
     document.getElementById("stat-low").textContent   = lowStock.length;
 
     try {
-      const txUrl  = `${APPS_SCRIPT_URL}?action=read&sheet=Transactions`;
+      const txUrl = `${APPS_SCRIPT_URL}?action=read&sheet=Transactions`;
       const txResp = await fetch(txUrl);
       const txRows = await txResp.json();
       const txData = txRows.slice(1).reverse().slice(0, 10);
@@ -1013,7 +749,9 @@ async function loadDashboard() {
           <td class="mono">${r[5]||"—"}</td>
         </tr>`).join("");
       }
-    } catch(e) { document.getElementById("stat-tx").textContent = "—"; }
+    } catch(e) {
+      document.getElementById("stat-tx").textContent = "—";
+    }
 
     const lowEl = document.getElementById("lowStockList");
     if (!lowStock.length) {
@@ -1022,22 +760,32 @@ async function loadDashboard() {
       lowEl.innerHTML = `<div class="table-wrap"><table>
         <thead><tr><th>Mfr Part Number</th><th>Description</th><th>Location</th><th>Stock</th></tr></thead>
         <tbody>${lowStock.map(r => `<tr class="low-stock">
-          <td class="mono">${r[2]||"—"}</td><td>${r[3]||"—"}</td>
-          <td>${r[5]||"—"}</td><td class="mono" style="font-weight:600">${r[4]||0}</td>
+          <td class="mono">${r[2]||"—"}</td>
+          <td>${r[3]||"—"}</td>
+          <td>${r[5]||"—"}</td>
+          <td class="mono" style="font-weight:600">${r[4]||0}</td>
         </tr>`).join("")}</tbody>
       </table></div>`;
     }
 
-    document.getElementById("topbarStatus").textContent = `${data.length} parts · ${totalQty} units`;
+    document.getElementById("topbarStatus").textContent = `${totalParts} parts · ${totalQty} units`;
   } catch(e) {
     document.getElementById("topbarStatus").textContent = "⚠ Sheet unavailable";
-    document.getElementById("lowStockList").innerHTML = `<div class="alert alert-warn">Could not connect to Google Sheets.<br><small>${e.message||""}</small></div>`;
+    document.getElementById("stat-parts").textContent = "—";
+    document.getElementById("stat-qty").textContent = "—";
+    document.getElementById("stat-low").textContent = "—";
+    document.getElementById("lowStockList").innerHTML = `
+      <div class="alert alert-warn">
+        Could not connect to Google Sheets. Check your internet connection or try refreshing.<br>
+        <small style="color:var(--muted)">${e.message||""}</small>
+      </div>`;
     document.getElementById("recentTxBody").innerHTML = `<tr><td colspan="5" class="empty-state">Could not load.</td></tr>`;
   }
 }
 
 // ════════════════════════════════════════════════════════════
 // INVENTORY PAGE
+// Sheet cols: A=PartNumber B=Supplier C=MfrPN D=Description E=Quantity F=Location G=LastUpdated
 // ════════════════════════════════════════════════════════════
 async function renderInventory() {
   const search = (document.getElementById("invSearch").value || "").trim().toUpperCase();
@@ -1047,28 +795,35 @@ async function renderInventory() {
     const rows = await sheetRead();
     let data = rows.slice(1);
     if (search) data = data.filter(r =>
-      (r[0]||"").toUpperCase().includes(search) || (r[2]||"").toUpperCase().includes(search) ||
-      (r[3]||"").toUpperCase().includes(search) || (r[5]||"").toUpperCase().includes(search)
+      (r[0]||"").toUpperCase().includes(search) ||
+      (r[2]||"").toUpperCase().includes(search) ||
+      (r[3]||"").toUpperCase().includes(search) ||
+      (r[5]||"").toUpperCase().includes(search)
     );
     data.sort((a,b) => (a[2]||"").localeCompare(b[2]||""));
     if (!data.length) { tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No results.</td></tr>`; return; }
     tbody.innerHTML = data.map(r => {
       const qty = parseInt(r[4]) || 0;
       const low = qty <= 5;
+      const dateRaw = r[6] || "";
+      const date = formatDate(r[6] || "");
       const mfrPn = (r[2]||"").replace(/'/g, "\\'");
       const suppPn = (r[0]||"").replace(/'/g, "\\'");
       const desc = (r[3]||"").replace(/'/g, "\\'");
       const loc = (r[5]||"").replace(/'/g, "\\'");
-      return `<tr class="${low?"low-stock":""}">
-        <td class="mono">${r[2]||"—"}</td><td class="mono">${r[0]||"—"}</td>
-        <td>${r[1]||"—"}</td><td>${r[3]||"—"}</td><td>${r[5]||"—"}</td>
+      return `<tr class="${low ? "low-stock" : ""}">
+        <td class="mono">${r[2]||"—"}</td>
+        <td class="mono">${r[0]||"—"}</td>
+        <td>${r[1]||"—"}</td>
+        <td>${r[3]||"—"}</td>
+        <td>${r[5]||"—"}</td>
         <td class="mono" style="font-weight:600${low?";color:var(--error)":""}">${qty}</td>
-        <td class="mono" style="color:var(--muted)">${formatDate(r[6]||"")}</td>
+        <td class="mono" style="color:var(--muted)">${date}</td>
         <td><button class="btn btn-secondary" style="padding:5px 10px;font-size:11px" onclick="printLabel('${mfrPn}','${suppPn}','${desc}','${loc}','${qty}')">🖨 Print</button></td>
       </tr>`;
     }).join("");
   } catch(e) {
-    tbody.innerHTML = `<tr><td colspan="8" class="empty-state" style="color:var(--error)">Failed to load.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-state" style="color:var(--error)">Failed to load. Check config.</td></tr>`;
   }
 }
 
@@ -1080,20 +835,28 @@ async function renderTransactions() {
   const tbody = document.getElementById("txTableBody");
   tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><span class="spinner"></span>Loading…</td></tr>`;
   try {
-    const resp = await fetch(`${APPS_SCRIPT_URL}?action=read&sheet=Transactions`);
+    const txUrl = `${APPS_SCRIPT_URL}?action=read&sheet=Transactions`;
+    const resp = await fetch(txUrl);
     const rows = await resp.json();
     let data = rows.slice(1).reverse();
     if (search) data = data.filter(r => r.some(c => (c||"").toString().toUpperCase().includes(search)));
     if (!data.length) { tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No transactions yet.</td></tr>`; return; }
-    tbody.innerHTML = data.map(r => `<tr>
-      <td class="mono" style="color:var(--muted)">${formatDate(r[0]||"")}</td>
-      <td class="mono">${r[1]||"—"}</td><td>${r[2]||"—"}</td>
+    tbody.innerHTML = data.map(r => {
+      const dateRaw = r[0] || "";
+      const date = formatDate(dateRaw);
+      return `<tr>
+      <td class="mono" style="color:var(--muted)">${date}</td>
+      <td class="mono">${r[1]||"—"}</td>
+      <td>${r[2]||"—"}</td>
       <td><span class="badge badge-${(r[3]||"").toLowerCase()}">${r[3]||"—"}</span></td>
-      <td class="mono">${r[4]||"—"}</td><td class="mono">${r[5]||"—"}</td>
-      <td class="mono">${r[6]||"—"}</td><td style="color:var(--muted)">${r[7]||"—"}</td>
-    </tr>`).join("");
+      <td class="mono">${r[4]||"—"}</td>
+      <td class="mono">${r[5]||"—"}</td>
+      <td class="mono">${r[6]||"—"}</td>
+      <td style="color:var(--muted)">${r[7]||"—"}</td>
+    </tr>`;
+    }).join("");
   } catch(e) {
-    tbody.innerHTML = `<tr><td colspan="8" class="empty-state" style="color:var(--error)">Could not load.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-state" style="color:var(--error)">Could not load transactions sheet.</td></tr>`;
   }
 }
 
@@ -1169,10 +932,10 @@ async function captureAndExtract() {
     const g = Math.max(0, Math.min(255, (0.299*d[i]+0.587*d[i+1]+0.114*d[i+2]-128)*1.4+128));
     d[i] = d[i+1] = d[i+2] = g;
   }
-  cctx.putImageData(imgData, 0, 0);
   const cropUrl = crop.toDataURL("image/jpeg", 0.95);
   document.getElementById("cropPreview").src = cropUrl;
 
+  // Reset UI
   document.getElementById("scanMfrPn").value = "";
   document.getElementById("scanMfrPn").style.borderColor = "var(--border2)";
   document.getElementById("scanSupplierBadge").innerHTML = "";
@@ -1184,10 +947,48 @@ async function captureAndExtract() {
 }
 
 // ════════════════════════════════════════════════════════════
-// GOOGLE VISION — full smart MPN extraction engine (UNCHANGED)
+// CLAUDE VISION → GOOGLE VISION → TESSERACT FALLBACK CHAIN
 // ════════════════════════════════════════════════════════════
 const GOOGLE_VISION_API_KEY = "AIzaSyBjzZf1DVzZFuaf9tC5SW8x9bjqp1t7HQQ";
 
+async function extractWithClaude(dataUrl) {
+
+  // 1st — Claude Vision (most accurate)
+  if (cfg.anthropicKey) {
+    setCamStatus('<span class="spinner"></span>Reading label with Claude Vision…', "loading");
+    try {
+      const result = await tryClaudeVision(dataUrl);
+      if (result) { await handleScanResult(result, dataUrl, "Claude Vision"); return; }
+    } catch(err) {
+      setCamStatus('<span class="spinner"></span>Claude unavailable — trying Google Vision…', "warn");
+      await new Promise(r => setTimeout(r, 600));
+    }
+  }
+
+  // 2nd — Google Vision (backup)
+  setCamStatus('<span class="spinner"></span>Trying Google Vision…', "loading");
+  try {
+    const result = await tryGoogleVision(dataUrl);
+    if (result) { await handleScanResult(result, dataUrl, "Google Vision"); return; }
+  } catch(err) {
+    setCamStatus('<span class="spinner"></span>Google Vision unavailable — trying Tesseract…', "warn");
+    await new Promise(r => setTimeout(r, 600));
+  }
+
+  // 3rd — Tesseract OCR (free, runs in browser)
+  setCamStatus('<span class="spinner"></span>Running Tesseract OCR… (free, no API needed)', "loading");
+  try {
+    const result = await tryTesseract(dataUrl);
+    if (result) { await handleScanResult(result, dataUrl, "Tesseract OCR (Free)"); return; }
+    setCamStatus("⚠ Could not read label. Try better lighting, hold steady, or get closer.", "err");
+  } catch(err) {
+    setCamStatus("OCR failed: " + err.message, "err");
+  }
+}
+
+// ════════════════════════════════════════════════════════════
+// GOOGLE VISION — full smart MPN extraction engine
+// ════════════════════════════════════════════════════════════
 const MPN_LABEL_REGEX = /^(MANUFACTURER\s*PART\s*(NO?\.?|NUMBER)?|MFR\s*(PN|P\/N|NO?\.?)?|MFG\s*(PN|P\/N|NO?\.?)?|MPN|MNF\s*(PN|P\/N)?|MAN\s*(PN|P\/N)?|PART\s*(NO?\.?|NUMBER|#)?|P\s*\/?\s*N|CAT\s*(NO?\.?|#)?|ITEM\s*(NO?\.?|#)?|MODEL\s*(NO?\.?)?|REF\s*(NO?\.?|#)?|型号|料号|物料编号|规格型号)\s*[:#\-\.\s]?\s*/i;
 
 const DESCRIPTION_WORDS = new Set([
@@ -1225,8 +1026,8 @@ function scoreMPN(raw) {
   if (pn.length<4||pn.length>32) return null;
   if (!/[A-Z]/.test(pn)) return null;
   if (!/[0-9]/.test(pn)) return null;
-  if (/^\d{2,4}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}$/.test(pn)) return null;
-  if (/^\d{1,2}-[A-Z]{3}-\d{2,4}$/.test(pn)) return null;
+  if (/^\d{2,4}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}$/.test(pn)) return null; // date pattern
+  if (/^\d{1,2}-[A-Z]{3}-\d{2,4}$/.test(pn)) return null;              // 19-DEC-2025 pattern
   if (/^\d+$/.test(pn)) return null;
   if (/^[A-Z]{1,3}\d{1,2}$/.test(pn)) return null;
   if (DESCRIPTION_WORDS.has(pn)) return null;
@@ -1271,6 +1072,7 @@ function extractMPNs(ocrText) {
     if (!ex||r.score>ex.score) found.set(r.pn,r);
   };
 
+  // Pass 1: Label-aware (highest priority)
   for (let i=0; i<lines.length; i++) {
     const up=lines[i].toUpperCase();
     if (!MPN_LABEL_REGEX.test(up)) continue;
@@ -1289,11 +1091,13 @@ function extractMPNs(ocrText) {
     }
   }
 
+  // Pass 2: Colon-pattern
   for (const line of lines) {
     const m=line.match(/(?:MPN|P\/N|PART\s*NO?\.?|MODEL)\s*[:\-]\s*([A-Z0-9][A-Z0-9\-\.\/]{3,29})/i);
     if (m) add(m[1].toUpperCase(),20,true);
   }
 
+  // Pass 3: Fallback token scan (only if no HIGH found)
   const hasHigh=[...found.values()].some(r=>r.tier==="HIGH");
   if (!hasHigh) {
     for (const line of lines) {
@@ -1357,6 +1161,7 @@ async function tryClaudeVision(dataUrl) {
   "description": "component description if visible, else empty string",
   "category": "one of: Resistor, Capacitor, Inductor, IC, Transistor, Diode, Connector, Crystal, LED, Relay, Fuse, Other"
 }
+Detect category from the description (e.g. 'RES SMD' = Resistor, 'CAP CER' = Capacitor, 'IC GATE' = IC).
 Set mfrPartNumber to NOT_FOUND if not visible.`;
 
   const resp = await fetch("https://api.anthropic.com/v1/messages", {
@@ -1378,6 +1183,7 @@ Set mfrPartNumber to NOT_FOUND if not visible.`;
 
   const data = await resp.json();
   if (!resp.ok) throw new Error(data?.error?.message || "Claude API error");
+
   const raw = (data.content||[]).map(b=>b.text||"").join("").trim();
   const parsed = JSON.parse(raw.replace(/```json|```/g,"").trim());
   if (!parsed.mfrPartNumber || parsed.mfrPartNumber === "NOT_FOUND") return null;
@@ -1385,43 +1191,67 @@ Set mfrPartNumber to NOT_FOUND if not visible.`;
 }
 
 async function tryTesseract(dataUrl) {
+  // Dynamically load Tesseract if not already loaded
   if (!window.Tesseract) {
     await new Promise((resolve, reject) => {
       const script = document.createElement("script");
       script.src = "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
-      script.onload = resolve; script.onerror = reject;
+      script.onload = resolve;
+      script.onerror = reject;
       document.head.appendChild(script);
     });
   }
+
   setCamStatus('<span class="spinner"></span>Tesseract OCR running…', "loading");
+
+  // Preprocess image for better OCR accuracy
   const processedUrl = await preprocessImageForOCR(dataUrl);
+
   const worker = await Tesseract.createWorker("eng");
   await worker.setParameters({
     tessedit_pageseg_mode: "6",
     tessedit_char_whitelist: "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/"
   });
+
   const { data: { text } } = await worker.recognize(processedUrl);
   await worker.terminate();
 
-  const fullText = text.toUpperCase().split("\n").map(l=>l.trim()).filter(l=>l.length>3).join(" ");
+  const lines = text.toUpperCase().split("\n").map(l => l.trim()).filter(l => l.length > 3);
+  const fullText = lines.join(" ");
+
+  // Try multiple patterns to find part numbers
   const patterns = [
+    // DigiKey style: 296-11602-1-ND
     /\b(\d{3}-\d{4,6}-\d-[A-Z]{2})\b/,
+    // Mouser style: 595-SN74LVC1G08DCKR
     /\b(\d{3}-[A-Z0-9]{6,})\b/,
+    // General alphanumeric PN: SN74LVC1G08DCKR, CL10A105KA8N
     /\b([A-Z]{2,4}\d{2,}[A-Z0-9]{4,})\b/,
+    // Dashed PN: MB10S-13, HDS10M-13
     /\b([A-Z]{2,}[0-9]{2,}[A-Z0-9]*[-][A-Z0-9]+)\b/,
+    // Any long alphanumeric 6+ chars
     /\b([A-Z0-9]{6,})\b/
   ];
+
   let bestMatch = null;
   for (const pattern of patterns) {
     const matches = fullText.match(pattern);
     if (matches) { bestMatch = matches[1]; break; }
   }
+
   if (!bestMatch) return null;
 
+  // Try to detect supplier from text
   let supplier = "Unknown";
-  if (fullText.includes("DIGIKEY")||fullText.includes("DIGI-KEY")) supplier = "DigiKey";
+  if (fullText.includes("DIGIKEY") || fullText.includes("DIGI-KEY")) supplier = "DigiKey";
   else if (fullText.includes("MOUSER")) supplier = "Mouser";
-  return { mfrPartNumber: bestMatch, supplierPartNumber: "", supplier, description: "" };
+
+  return {
+    mfrPartNumber: bestMatch,
+    supplierPartNumber: "",
+    supplier,
+    description: ""
+  };
 }
 
 async function preprocessImageForOCR(dataUrl) {
@@ -1429,14 +1259,20 @@ async function preprocessImageForOCR(dataUrl) {
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement("canvas");
-      canvas.width = img.width * 2; canvas.height = img.height * 2;
+      // Scale up 2x for better OCR
+      canvas.width  = img.width * 2;
+      canvas.height = img.height * 2;
       const ctx = canvas.getContext("2d");
-      ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      // Convert to grayscale + increase contrast
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const d = imageData.data;
       for (let i = 0; i < d.length; i += 4) {
         let gray = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
+        // High contrast threshold
         gray = gray > 128 ? 255 : 0;
         d[i] = d[i+1] = d[i+2] = gray;
       }
@@ -1445,40 +1281,6 @@ async function preprocessImageForOCR(dataUrl) {
     };
     img.src = dataUrl;
   });
-}
-
-// ════════════════════════════════════════════════════════════
-// EXTRACTION CHAIN: Claude → Google Vision → Tesseract
-// ════════════════════════════════════════════════════════════
-async function extractWithClaude(dataUrl) {
-  if (cfg.anthropicKey) {
-    setCamStatus('<span class="spinner"></span>Reading label with Claude Vision…', "loading");
-    try {
-      const result = await tryClaudeVision(dataUrl);
-      if (result) { await handleScanResult(result, dataUrl, "Claude Vision"); return; }
-    } catch(err) {
-      setCamStatus('<span class="spinner"></span>Claude unavailable — trying Google Vision…', "warn");
-      await new Promise(r => setTimeout(r, 600));
-    }
-  }
-
-  setCamStatus('<span class="spinner"></span>Trying Google Vision…', "loading");
-  try {
-    const result = await tryGoogleVision(dataUrl);
-    if (result) { await handleScanResult(result, dataUrl, "Google Vision"); return; }
-  } catch(err) {
-    setCamStatus('<span class="spinner"></span>Google Vision unavailable — trying Tesseract…', "warn");
-    await new Promise(r => setTimeout(r, 600));
-  }
-
-  setCamStatus('<span class="spinner"></span>Running Tesseract OCR…', "loading");
-  try {
-    const result = await tryTesseract(dataUrl);
-    if (result) { await handleScanResult(result, dataUrl, "Tesseract OCR"); return; }
-    setCamStatus("⚠ Could not read label. Try better lighting or get closer.", "err");
-  } catch(err) {
-    setCamStatus("OCR failed: " + err.message, "err");
-  }
 }
 
 async function handleScanResult(parsed, dataUrl, method) {
@@ -1492,29 +1294,21 @@ async function handleScanResult(parsed, dataUrl, method) {
   showSupplierBadge("scanSupplierBadge", parsed.supplier);
   setCamStatus(`✓ Label read via <b>${method}</b>. Edit if needed, then check inventory.`, "ok");
 
-  // Lookup inventory (determines status for cloud record)
-  const rows = await sheetRead().catch(() => []);
-  let status = "Not Found";
-  for (let i = 1; i < rows.length; i++) {
-    if ((rows[i][2]||"").trim().toUpperCase() === parsed.mfrPartNumber.trim().toUpperCase()) {
-      status = "Found"; break;
-    }
-  }
-
   await lookupForScan(parsed.mfrPartNumber);
 
-  // ── CLOUD SAVE — fire and forget, never blocks scanning ──
+  // Save to history AFTER lookup — never blocks scanning
   setTimeout(() => {
-    saveScanToCloud({
-      mfrPn:      parsed.mfrPartNumber,
-      supplierPn: parsed.supplierPartNumber || "",
-      supplier:   parsed.supplier || "Unknown",
-      desc:       parsed.description || "",
-      date:       today,
-      image:      dataUrl,
-      status:     status
-    });
-  }, 200);
+    try {
+      saveScanToHistory({
+        mfrPn: parsed.mfrPartNumber,
+        supplierPn: parsed.supplierPartNumber || "",
+        supplier: parsed.supplier || "Unknown",
+        desc: parsed.description || "",
+        date: today,
+        image: dataUrl
+      });
+    } catch(e) {}
+  }, 100);
 }
 
 function showSupplierBadge(elId, supplier) {
@@ -1565,14 +1359,19 @@ function showScanInvPanel(row, rowIdx) {
   if (scanMode === "dispatch") {
     if (!row) {
       panel.className = "inv-action notfound";
-      panel.innerHTML = `<div class="inv-action-title">⚠ Part Not Found</div><div class="inv-action-info">This part is not in inventory. Cannot dispatch.</div>`;
+      panel.innerHTML = `
+        <div class="inv-action-title">⚠ Part Not Found</div>
+        <div class="inv-action-info">This part is not in inventory. Cannot dispatch.</div>`;
       return;
     }
     const qty = parseInt(row[4]||"0");
     panel.className = "inv-action found";
     panel.innerHTML = `
       <div class="inv-action-title">🚚 Dispatch Stock</div>
-      <div class="inv-action-info">Location: <b>${row[5]||"—"}</b><br>Available Stock: <b style="color:var(--accent)">${qty} units</b></div>
+      <div class="inv-action-info">
+        Location: <b>${row[5]||"—"}</b><br>
+        Available Stock: <b style="color:var(--accent)">${qty} units</b>
+      </div>
       <div class="qty-row">
         <div class="field"><label>Qty to Dispatch</label><input type="number" id="scanQty" value="1" min="1" max="${qty}" /></div>
         <button class="btn btn-danger" onclick="scanDispatch(${rowIdx}, ${qty})">🚚 Dispatch</button>
@@ -1580,17 +1379,22 @@ function showScanInvPanel(row, rowIdx) {
     return;
   }
 
+  // Receive mode
   if (row) {
     const qty = parseInt(row[4]||"0");
     panel.className = "inv-action found";
     panel.innerHTML = `
       <div class="inv-action-title">✓ Part Found in Inventory</div>
-      <div class="inv-action-info">Location: <b>${row[5]||"—"}</b><br>Stock: <b>${qty} units</b> &nbsp;|&nbsp; Last updated: ${row[6]||"—"}</div>
+      <div class="inv-action-info">
+        Location: <b>${row[5]||"—"}</b><br>
+        Stock: <b>${qty} units</b> &nbsp;|&nbsp; Last updated: ${row[6]||"—"}
+      </div>
       <div class="qty-row">
         <div class="field"><label>Qty to Add</label><input type="number" id="scanQty" value="1" min="1" /></div>
         <button class="btn btn-success" onclick="scanAddStock(${rowIdx}, ${qty})">+ Add Stock</button>
       </div>`;
   } else {
+    // Auto-assign location in background
     const category = currentScan?.category || "Other";
     panel.className = "inv-action notfound";
     panel.innerHTML = `
@@ -1602,12 +1406,15 @@ function showScanInvPanel(row, rowIdx) {
       </div>
       <div id="autoLocationStatus" style="font-size:12px;color:var(--muted);margin-top:8px">🔍 Detecting category and assigning location…</div>`;
 
+    // Auto assign location async
     autoAssignLocation(category).then(loc => {
       if (loc) {
         document.getElementById("scanLocation").value = loc;
-        document.getElementById("autoLocationStatus").innerHTML = `📍 Auto-assigned: <b style="color:var(--accent)">${loc}</b> (${category}) — edit if needed`;
+        document.getElementById("autoLocationStatus").innerHTML =
+          `📍 Auto-assigned: <b style="color:var(--accent)">${loc}</b> (${category}) — edit if needed`;
       } else {
-        document.getElementById("autoLocationStatus").innerHTML = `⚠ Could not auto-assign — enter location manually`;
+        document.getElementById("autoLocationStatus").innerHTML =
+          `⚠ Could not auto-assign — enter location manually`;
       }
       const btn = document.getElementById("scanAddNewBtn");
       if (btn) btn.disabled = false;
@@ -1621,9 +1428,15 @@ async function scanAddNew() {
   const desc     = document.getElementById("scanDesc").value.trim();
   const suppPn   = document.getElementById("scanSupplierPn").value.trim();
   const location = document.getElementById("scanLocation").value.trim();
+
   setCamStatus('<span class="spinner"></span>Adding to inventory…', "loading");
+
+  // If no location yet, try auto-assign one more time
   let finalLocation = location;
-  if (!finalLocation) finalLocation = await autoAssignLocation(currentScan.category || "Other") || "";
+  if (!finalLocation) {
+    finalLocation = await autoAssignLocation(currentScan.category || "Other") || "";
+  }
+
   const row = [suppPn, currentScan.supplier, currentScan.mfrPartNumber, desc, qty, finalLocation, currentScan.date];
   const res = await sheetAppend(row);
   if (res.trim() !== "ok") { setCamStatus("Sheet error: " + res, "err"); return; }
@@ -1648,7 +1461,9 @@ async function scanAddStock(rowIdx, currentQty) {
 
 async function scanDispatch(rowIdx, currentQty) {
   const delta = parseInt(document.getElementById("scanQty").value)||1;
-  if (delta > currentQty) { setCamStatus(`Not enough stock. Available: ${currentQty} units.`, "err"); return; }
+  if (delta > currentQty) {
+    setCamStatus(`Not enough stock. Available: ${currentQty} units.`, "err"); return;
+  }
   const newQty = currentQty - delta;
   const today  = todayStr();
   const notes  = document.getElementById("scanNotes").value.trim() || "Dispatched";
@@ -1669,7 +1484,9 @@ async function manualUpdate() {
   const action = document.getElementById("manualAction").value;
   const qty    = parseInt(document.getElementById("manualQty").value)||0;
   const notes  = document.getElementById("manualNotes").value.trim();
+
   if (!mfrPn || qty <= 0) { setStatus("manualStatus", "Fill in all fields correctly.", "err"); return; }
+
   setStatus("manualStatus", '<span class="spinner"></span>Looking up part…', "loading");
   try {
     const rows = await sheetRead();
@@ -1679,13 +1496,17 @@ async function manualUpdate() {
         foundRow = rows[i]; foundIdx = i + 1; break;
       }
     }
+
     if (!foundRow) { setStatus("manualStatus", `"${mfrPn}" not found in inventory.`, "err"); return; }
-    const oldQty = parseInt(foundRow[4]||"0");
+
+    const oldQty = parseInt(foundRow[4]||"0"); // col E = Quantity
     let newQty = action === "Receive" ? oldQty + qty : oldQty - qty;
     if (newQty < 0) { setStatus("manualStatus", `Not enough stock. Current: ${oldQty} units.`, "err"); return; }
+
     const today = todayStr();
     await sheetUpdate(foundIdx, newQty, today);
     await sheetAppendTx([today, mfrPn, foundRow[1]||"—", action, qty, oldQty, newQty, notes]);
+
     setStatus("manualStatus", `✓ ${mfrPn} updated: ${oldQty} → ${newQty} units.`, "ok");
     toast(`${action}: ${mfrPn} → ${newQty} units`);
     document.getElementById("manualMfrPn").value = "";
@@ -1696,13 +1517,15 @@ async function manualUpdate() {
 }
 
 // ════════════════════════════════════════════════════════════
-// BOM ORDER CHECK
+// BOM ORDER CHECK — AVAILABILITY + CONFIRMATION
 // ════════════════════════════════════════════════════════════
-let pendingOrderItems = [];
+
+let pendingOrderItems = []; // holds items ready to dispatch after confirmation
 
 async function processCSV() {
   const file = document.getElementById("csvFile").files[0];
   if (!file) { setStatus("bomStatus", "No file selected.", "err"); return; }
+
   setStatus("bomStatus", '<span class="spinner"></span>Reading and analysing BOM…', "loading");
   document.getElementById("bomResults").innerHTML = "";
   document.getElementById("bomConfirmPanel").style.display = "none";
@@ -1714,9 +1537,15 @@ async function processCSV() {
 
   const headers = parseCSVLine(lines[0]);
   const { mapping } = detectColumns(headers);
-  const missing = ["MfrPN","Quantity"].filter(f => !mapping[f]);
-  if (missing.length > 0) { setStatus("bomStatus", `⚠ Could not detect: <b>${missing.join(", ")}</b>. Found columns: <i>${headers.join(", ")}</i>`, "err"); return; }
 
+  const missing = ["MfrPN","Quantity"].filter(f => !mapping[f]);
+  if (missing.length > 0) {
+    setStatus("bomStatus",
+      `⚠ Could not detect: <b>${missing.join(", ")}</b>. Found columns: <i>${headers.join(", ")}</i>`, "err");
+    return;
+  }
+
+  // Parse rows
   const bomRows = [];
   for (let i = 1; i < lines.length; i++) {
     if (!lines[i].trim()) continue;
@@ -1727,36 +1556,69 @@ async function processCSV() {
   }
 
   setStatus("bomStatus", '<span class="spinner"></span>Checking inventory…', "loading");
-  let sheetRows;
-  try { sheetRows = await sheetRead(); }
-  catch(e) { setStatus("bomStatus", "Could not read sheet: " + e.message, "err"); return; }
 
+  // Load inventory
+  let sheetRows;
+  try {
+    sheetRows = await sheetRead();
+  } catch(e) { setStatus("bomStatus", "Could not read sheet: " + e.message, "err"); return; }
+
+  // Build inventory lookup map: mfrPN → { qty, rowIdx, supplier, location }
   const invMap = {};
   for (let i = 1; i < sheetRows.length; i++) {
     const mfrPn = (sheetRows[i][2]||"").trim().toUpperCase();
-    if (mfrPn) invMap[mfrPn] = { qty: parseInt(sheetRows[i][4]||"0"), rowIdx: i+1, supplier: sheetRows[i][1]||"—", location: sheetRows[i][5]||"—", desc: sheetRows[i][3]||"—" };
+    if (mfrPn) invMap[mfrPn] = {
+      qty: parseInt(sheetRows[i][4]||"0"),
+      rowIdx: i + 1,
+      supplier: sheetRows[i][1]||"—",
+      location: sheetRows[i][5]||"—",
+      desc: sheetRows[i][3]||"—"
+    };
   }
 
+  // Check each BOM row against inventory
   const inStock = [], partial = [], outOfStock = [], skipped = [];
+
   for (const row of bomRows) {
     const mfrPn = (row[mapping.MfrPN]||"").trim();
     const needed = parseInt((row[mapping.Quantity]||"").replace(/[^0-9]/g,""))||0;
     const desc   = (row[mapping.Description]||"").trim();
+
     if (!mfrPn) { skipped.push("Blank part number row"); continue; }
     if (needed <= 0) { skipped.push(`${mfrPn}: invalid quantity`); continue; }
+
     const inv = invMap[mfrPn.toUpperCase()];
-    if (!inv)                  outOfStock.push({ mfrPn, needed, have: 0, desc });
-    else if (inv.qty >= needed) inStock.push({ mfrPn, needed, have: inv.qty, rowIdx: inv.rowIdx, supplier: inv.supplier, location: inv.location, desc: desc||inv.desc });
-    else if (inv.qty > 0)       partial.push({ mfrPn, needed, have: inv.qty, rowIdx: inv.rowIdx, supplier: inv.supplier, location: inv.location, desc: desc||inv.desc });
-    else                        outOfStock.push({ mfrPn, needed, have: 0, desc: desc||inv.desc });
+    if (!inv) {
+      outOfStock.push({ mfrPn, needed, have: 0, desc });
+    } else if (inv.qty >= needed) {
+      inStock.push({ mfrPn, needed, have: inv.qty, rowIdx: inv.rowIdx, supplier: inv.supplier, location: inv.location, desc: desc||inv.desc });
+    } else if (inv.qty > 0) {
+      partial.push({ mfrPn, needed, have: inv.qty, rowIdx: inv.rowIdx, supplier: inv.supplier, location: inv.location, desc: desc||inv.desc });
+    } else {
+      outOfStock.push({ mfrPn, needed, have: 0, desc: desc||inv.desc });
+    }
   }
 
+  // Store items that can be dispatched (in stock + partial)
   pendingOrderItems = [...inStock, ...partial];
+
   setStatus("bomStatus", `✓ BOM checked. ${inStock.length} in stock · ${partial.length} partial · ${outOfStock.length} out of stock.`, "ok");
 
+  // Render availability report
   document.getElementById("bomResults").innerHTML = `
     <div class="card">
+      <div class="card-title">Column Detection</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${Object.entries(mapping).map(([f,h]) =>
+          `<span style="background:var(--success-bg);color:var(--success);border:1px solid var(--success-border);padding:3px 10px;border-radius:20px;font-size:12px;font-family:var(--mono)">${f} ← "${h}"</span>`
+        ).join("")}
+      </div>
+    </div>
+
+    <div class="card">
       <div class="card-title">Availability Report</div>
+
+      <!-- Summary bar -->
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">
         <div style="flex:1;min-width:120px;background:var(--success-bg);border:1px solid var(--success-border);border-radius:10px;padding:12px;text-align:center">
           <div style="font-size:24px;font-weight:700;color:var(--success)">${inStock.length}</div>
@@ -1771,44 +1633,86 @@ async function processCSV() {
           <div style="font-size:11px;color:var(--error);font-weight:600">❌ Out of Stock</div>
         </div>
       </div>
-      ${inStock.length?`<div style="font-size:12px;font-weight:700;color:var(--success);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">✅ In Stock</div>
-      <div class="table-wrap" style="margin-bottom:16px"><table><thead><tr><th>Mfr Part Number</th><th>Description</th><th>Location</th><th>Needed</th><th>Available</th></tr></thead>
-      <tbody>${inStock.map(r=>`<tr><td class="mono">${r.mfrPn}</td><td>${r.desc}</td><td>${r.location}</td><td class="mono">${r.needed}</td><td class="mono" style="color:var(--success);font-weight:600">${r.have}</td></tr>`).join("")}</tbody></table></div>`:""}
-      ${partial.length?`<div style="font-size:12px;font-weight:700;color:var(--warn);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">⚠ Partial</div>
-      <div class="table-wrap" style="margin-bottom:16px"><table><thead><tr><th>Mfr Part Number</th><th>Description</th><th>Location</th><th>Needed</th><th>Available</th><th>Shortfall</th></tr></thead>
-      <tbody>${partial.map(r=>`<tr><td class="mono">${r.mfrPn}</td><td>${r.desc}</td><td>${r.location}</td><td class="mono">${r.needed}</td><td class="mono" style="color:var(--warn);font-weight:600">${r.have}</td><td class="mono" style="color:var(--error)">${r.needed-r.have} short</td></tr>`).join("")}</tbody></table></div>`:""}
-      ${outOfStock.length?`<div style="font-size:12px;font-weight:700;color:var(--error);margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">❌ Out of Stock</div>
-      <div class="table-wrap"><table><thead><tr><th>Mfr Part Number</th><th>Description</th><th>Needed</th></tr></thead>
-      <tbody>${outOfStock.map(r=>`<tr><td class="mono">${r.mfrPn}</td><td>${r.desc}</td><td class="mono" style="color:var(--error)">${r.needed}</td></tr>`).join("")}</tbody></table></div>`:""}
+
+      ${inStock.length ? `
+        <div style="font-size:12px;font-weight:700;color:var(--success);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">✅ In Stock</div>
+        <div class="table-wrap" style="margin-bottom:16px">
+          <table><thead><tr><th>Mfr Part Number</th><th>Description</th><th>Location</th><th>Needed</th><th>Available</th></tr></thead>
+          <tbody>${inStock.map(r => `<tr>
+            <td class="mono">${r.mfrPn}</td>
+            <td>${r.desc}</td>
+            <td>${r.location}</td>
+            <td class="mono">${r.needed}</td>
+            <td class="mono" style="color:var(--success);font-weight:600">${r.have}</td>
+          </tr>`).join("")}</tbody></table>
+        </div>` : ""}
+
+      ${partial.length ? `
+        <div style="font-size:12px;font-weight:700;color:var(--warn);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">⚠ Partial Stock</div>
+        <div class="table-wrap" style="margin-bottom:16px">
+          <table><thead><tr><th>Mfr Part Number</th><th>Description</th><th>Location</th><th>Needed</th><th>Available</th><th>Shortfall</th></tr></thead>
+          <tbody>${partial.map(r => `<tr>
+            <td class="mono">${r.mfrPn}</td>
+            <td>${r.desc}</td>
+            <td>${r.location}</td>
+            <td class="mono">${r.needed}</td>
+            <td class="mono" style="color:var(--warn);font-weight:600">${r.have}</td>
+            <td class="mono" style="color:var(--error)">${r.needed - r.have} short</td>
+          </tr>`).join("")}</tbody></table>
+        </div>` : ""}
+
+      ${outOfStock.length ? `
+        <div style="font-size:12px;font-weight:700;color:var(--error);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">❌ Out of Stock</div>
+        <div class="table-wrap" style="margin-bottom:16px">
+          <table><thead><tr><th>Mfr Part Number</th><th>Description</th><th>Needed</th></tr></thead>
+          <tbody>${outOfStock.map(r => `<tr>
+            <td class="mono">${r.mfrPn}</td>
+            <td>${r.desc}</td>
+            <td class="mono" style="color:var(--error)">${r.needed}</td>
+          </tr>`).join("")}</tbody></table>
+        </div>` : ""}
+
+      ${skipped.length ? `<div style="font-size:12px;color:var(--muted);margin-top:8px">Skipped: ${skipped.join(", ")}</div>` : ""}
     </div>`;
 
+  // Show confirm panel if there's anything to dispatch
   if (pendingOrderItems.length > 0) {
+    const totalParts = pendingOrderItems.length;
     const totalUnits = pendingOrderItems.reduce((s,r) => s + Math.min(r.needed, r.have), 0);
     document.getElementById("bomConfirmSummary").innerHTML = `
-      Ready to deduct: <b style="color:var(--success)">${pendingOrderItems.length} part types · ${totalUnits} total units</b><br>
-      ${partial.length?`<span style="color:var(--warn)">⚠ ${partial.length} parts will be partially fulfilled</span><br>`:""}
-      ${outOfStock.length?`<span style="color:var(--error)">❌ ${outOfStock.length} parts cannot be fulfilled</span>`:""}`;
+      Ready to deduct: <b style="color:var(--success)">${totalParts} part types · ${totalUnits} total units</b><br>
+      ${partial.length ? `<span style="color:var(--warn)">⚠ ${partial.length} parts will be partially fulfilled</span><br>` : ""}
+      ${outOfStock.length ? `<span style="color:var(--error)">❌ ${outOfStock.length} parts cannot be fulfilled</span>` : ""}`;
     document.getElementById("bomConfirmPanel").style.display = "block";
   }
 }
 
 async function confirmOrderDispatch() {
   if (!pendingOrderItems.length) return;
+
   const today = todayStr();
+  const notes = "Order Dispatch";
+
   const statusEl = document.getElementById("bomConfirmStatus");
-  statusEl.style.display = "block"; statusEl.innerHTML = '<span class="spinner"></span>Deducting stock…'; statusEl.className = "status-bar loading";
+  statusEl.style.display = "block";
+  statusEl.innerHTML = '<span class="spinner"></span>Deducting stock…';
+  statusEl.className = "status-bar loading";
+
   let done = 0;
   for (const item of pendingOrderItems) {
     const dispatchQty = Math.min(item.needed, item.have);
     const newQty = item.have - dispatchQty;
     try {
       await sheetUpdate(item.rowIdx, newQty, today);
-      await sheetAppendTx([today, item.mfrPn, item.supplier, "Dispatch", dispatchQty, item.have, newQty, "Order Dispatch"]);
+      await sheetAppendTx([today, item.mfrPn, item.supplier, "Dispatch", dispatchQty, item.have, newQty, notes]);
       done++;
     } catch(e) { console.error("Failed to dispatch", item.mfrPn, e); }
   }
-  statusEl.innerHTML = `✅ Done! Stock deducted for ${done} part types.`; statusEl.className = "status-bar ok";
+
+  statusEl.innerHTML = `✅ Done! Stock deducted for ${done} part types.`;
+  statusEl.className = "status-bar ok";
   toast(`Order fulfilled: ${done} parts deducted`);
+
   pendingOrderItems = [];
   document.getElementById("csvFile").value = "";
   document.querySelector("#bomConfirmPanel .btn-row").style.display = "none";
@@ -1822,13 +1726,14 @@ function cancelOrderDispatch() {
 }
 
 // ════════════════════════════════════════════════════════════
-// BULK RECEIVE
+// BULK RECEIVE — Add new stock from CSV
 // ════════════════════════════════════════════════════════════
 let pendingBulkItems = [];
 
 async function processBulkReceive() {
   const file = document.getElementById("bulkCsvFile").files[0];
   if (!file) { setStatus("bulkStatus", "No file selected.", "err"); return; }
+
   setStatus("bulkStatus", '<span class="spinner"></span>Reading CSV…', "loading");
   document.getElementById("bulkResults").innerHTML = "";
   document.getElementById("bulkConfirmPanel").style.display = "none";
@@ -1836,11 +1741,19 @@ async function processBulkReceive() {
 
   const text = await file.text();
   const lines = text.split(/\r?\n/).filter(l => l.trim());
-  if (lines.length < 2) { setStatus("bulkStatus", "CSV is empty.", "err"); return; }
+  if (lines.length < 2) { setStatus("bulkStatus", "CSV is empty or has no data rows.", "err"); return; }
 
   const headers = parseCSVLine(lines[0]);
   const { mapping } = detectColumns(headers);
-  if (!mapping.MfrPN || !mapping.Quantity) { setStatus("bulkStatus", `Could not detect required columns. Found: <i>${headers.join(", ")}</i>`, "err"); return; }
+
+  if (!mapping.MfrPN) {
+    setStatus("bulkStatus", `Could not detect Part Number column. Found: <i>${headers.join(", ")}</i>`, "err");
+    return;
+  }
+  if (!mapping.Quantity) {
+    setStatus("bulkStatus", `Could not detect Quantity column. Found: <i>${headers.join(", ")}</i>`, "err");
+    return;
+  }
 
   const csvRows = [];
   for (let i = 1; i < lines.length; i++) {
@@ -1851,7 +1764,8 @@ async function processBulkReceive() {
     csvRows.push(obj);
   }
 
-  setStatus("bulkStatus", '<span class="spinner"></span>Checking inventory…', "loading");
+  setStatus("bulkStatus", '<span class="spinner"></span>Checking inventory and assigning locations…', "loading");
+
   let sheetRows;
   try { sheetRows = await sheetRead(); }
   catch(e) { setStatus("bulkStatus", "Could not read inventory: " + e.message, "err"); return; }
@@ -1859,10 +1773,11 @@ async function processBulkReceive() {
   const invMap = {};
   for (let i = 1; i < sheetRows.length; i++) {
     const mfrPn = (sheetRows[i][2]||"").trim().toUpperCase();
-    if (mfrPn) invMap[mfrPn] = { qty: parseInt(sheetRows[i][4]||"0"), rowIdx: i+1, supplier: sheetRows[i][1]||"", desc: sheetRows[i][3]||"", location: sheetRows[i][5]||"" };
+    if (mfrPn) invMap[mfrPn] = { qty: parseInt(sheetRows[i][4]||"0"), rowIdx: i + 1, supplier: sheetRows[i][1]||"", desc: sheetRows[i][3]||"", location: sheetRows[i][5]||"" };
   }
 
   const toUpdate = [], toAdd = [], skipped = [];
+
   for (const row of csvRows) {
     const mfrPn    = (row[mapping.MfrPN]||"").trim().toUpperCase();
     const qty      = parseInt((row[mapping.Quantity]||"").replace(/[^0-9]/g,""))||0;
@@ -1870,21 +1785,40 @@ async function processBulkReceive() {
     const supplier = (row[mapping.Supplier]||"").trim();
     const suppPn   = (row[mapping.SupplierPN]||"").trim();
     const location = (row[mapping.Location]||"").trim();
+
     if (!mfrPn) { skipped.push("Blank part number"); continue; }
     if (qty <= 0) { skipped.push(`${mfrPn}: invalid qty`); continue; }
+
     const inv = invMap[mfrPn];
-    if (inv) toUpdate.push({ mfrPn, qty, currentQty: inv.qty, newQty: inv.qty + qty, rowIdx: inv.rowIdx, desc: desc||inv.desc, supplier: supplier||inv.supplier, location: location||inv.location });
-    else     toAdd.push({ mfrPn, qty, desc, supplier, suppPn, location, autoLocation: "" });
+    if (inv) {
+      toUpdate.push({ mfrPn, qty, currentQty: inv.qty, newQty: inv.qty + qty, rowIdx: inv.rowIdx, desc: desc||inv.desc, supplier: supplier||inv.supplier, location: location||inv.location });
+    } else {
+      toAdd.push({ mfrPn, qty, desc, supplier, suppPn, location, autoLocation: "" });
+    }
   }
 
+  // Auto-assign locations for new parts (from CSV location or auto PB system)
   for (const item of toAdd) {
-    item.autoLocation = item.location || await autoAssignLocation("Other") || "";
+    if (!item.location) {
+      item.autoLocation = await autoAssignLocation("Other") || "";
+    } else {
+      item.autoLocation = item.location;
+    }
   }
 
   pendingBulkItems = { toUpdate, toAdd };
-  setStatus("bulkStatus", `Preview ready. ${toUpdate.length} existing · ${toAdd.length} new parts.`, "ok");
+  setStatus("bulkStatus", `Preview ready. ${toUpdate.length} existing parts · ${toAdd.length} new parts.`, "ok");
 
   document.getElementById("bulkResults").innerHTML = `
+    <div class="card">
+      <div class="card-title">Column Detection</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        ${Object.entries(mapping).map(([f,h]) =>
+          `<span style="background:var(--success-bg);color:var(--success);border:1px solid var(--success-border);padding:3px 10px;border-radius:20px;font-size:12px;font-family:var(--mono)">${f} — "${h}"</span>`
+        ).join("")}
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-title">Stock Preview</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">
@@ -1897,24 +1831,47 @@ async function processBulkReceive() {
           <div style="font-size:11px;color:var(--accent);font-weight:600">Add New Parts</div>
         </div>
       </div>
-      ${toUpdate.length?`<div style="font-size:12px;font-weight:700;color:var(--success);margin-bottom:8px">Existing Parts — Quantity Will Be Added</div>
-      <div class="table-wrap" style="margin-bottom:16px"><table><thead><tr><th>Mfr Part Number</th><th>Description</th><th>Location</th><th>Current</th><th>Adding</th><th>New Total</th></tr></thead>
-      <tbody>${toUpdate.map((r,i)=>`<tr><td class="mono">${r.mfrPn}</td><td>${r.desc||"—"}</td>
-      <td><input type="text" value="${r.location||""}" onchange="pendingBulkItems.toUpdate[${i}].location=this.value" style="width:100%;padding:5px 8px;border:1px solid var(--border2);border-radius:6px;font-family:var(--mono);font-size:12px" /></td>
-      <td class="mono">${r.currentQty}</td><td class="mono" style="color:var(--success);font-weight:600">+${r.qty}</td><td class="mono" style="font-weight:600">${r.newQty}</td></tr>`).join("")}</tbody></table></div>`:""}
-      ${toAdd.length?`<div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:8px">New Parts</div>
-      <div class="table-wrap"><table><thead><tr><th>Mfr Part Number</th><th>Description</th><th>Supplier</th><th>Qty</th><th>Location</th></tr></thead>
-      <tbody>${toAdd.map((r,i)=>`<tr><td class="mono">${r.mfrPn}</td><td>${r.desc||"—"}</td><td>${r.supplier||"—"}</td><td class="mono" style="color:var(--accent);font-weight:600">${r.qty}</td>
-      <td><input type="text" value="${r.autoLocation}" onchange="pendingBulkItems.toAdd[${i}].autoLocation=this.value" style="width:100%;padding:5px 8px;border:1px solid var(--border2);border-radius:6px;font-family:var(--mono);font-size:12px" /></td></tr>`).join("")}</tbody></table></div>`:""}
-      ${skipped.length?`<div style="font-size:12px;color:var(--muted);margin-top:8px">Skipped: ${skipped.join(", ")}</div>`:""}
+
+      ${toUpdate.length ? `
+        <div style="font-size:12px;font-weight:700;color:var(--success);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">Existing Parts — Quantity Will Be Added</div>
+        <div class="table-wrap" style="margin-bottom:16px">
+          <table><thead><tr><th>Mfr Part Number</th><th>Description</th><th>Location (editable)</th><th>Current</th><th>Adding</th><th>New Total</th></tr></thead>
+          <tbody>${toUpdate.map((r,i)=>`<tr>
+            <td class="mono">${r.mfrPn}</td>
+            <td>${r.desc||"—"}</td>
+            <td><input type="text" value="${r.location||""}" placeholder="e.g. PB01-01 : Resistor"
+              onchange="pendingBulkItems.toUpdate[${i}].location=this.value"
+              style="width:100%;padding:5px 8px;border:1px solid var(--border2);border-radius:6px;font-family:var(--mono);font-size:12px" /></td>
+            <td class="mono">${r.currentQty}</td>
+            <td class="mono" style="color:var(--success);font-weight:600">+${r.qty}</td>
+            <td class="mono" style="font-weight:600">${r.newQty}</td>
+          </tr>`).join("")}</tbody></table>
+        </div>` : ""}
+
+      ${toAdd.length ? `
+        <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">New Parts — Edit Location if Needed</div>
+        <div class="table-wrap" style="margin-bottom:16px">
+          <table><thead><tr><th>Mfr Part Number</th><th>Description</th><th>Supplier</th><th>Qty</th><th>Location (editable)</th></tr></thead>
+          <tbody>${toAdd.map((r,i)=>`<tr>
+            <td class="mono">${r.mfrPn}</td>
+            <td>${r.desc||"—"}</td>
+            <td>${r.supplier||"—"}</td>
+            <td class="mono" style="color:var(--accent);font-weight:600">${r.qty}</td>
+            <td><input type="text" value="${r.autoLocation}" onchange="pendingBulkItems.toAdd[${i}].autoLocation=this.value"
+              style="width:100%;padding:5px 8px;border:1px solid var(--border2);border-radius:6px;font-family:var(--mono);font-size:12px" /></td>
+          </tr>`).join("")}</tbody></table>
+        </div>
+        <div style="font-size:11px;color:var(--muted)">Locations are auto-assigned using the PB system (50 items per box). Edit any location above before confirming.</div>` : ""}
+
+      ${skipped.length ? `<div style="font-size:12px;color:var(--muted);margin-top:8px">Skipped: ${skipped.join(", ")}</div>` : ""}
     </div>`;
 
   if (toUpdate.length > 0 || toAdd.length > 0) {
-    const totalUnits = [...toUpdate,...toAdd].reduce((s,r)=>s+r.qty,0);
+    const totalUnits = [...toUpdate, ...toAdd].reduce((s,r) => s + r.qty, 0);
     document.getElementById("bulkConfirmSummary").innerHTML =
-      `Ready to receive: <b style="color:var(--success)">${toUpdate.length+toAdd.length} part types · ${totalUnits} total units</b><br>
-      ${toUpdate.length?`${toUpdate.length} existing parts will be updated<br>`:""}
-      ${toAdd.length?`${toAdd.length} new parts will be created`:""}`;
+      `Ready to receive: <b style="color:var(--success)">${toUpdate.length + toAdd.length} part types · ${totalUnits} total units</b><br>
+      ${toUpdate.length ? `${toUpdate.length} existing parts will be updated<br>` : ""}
+      ${toAdd.length ? `${toAdd.length} new parts will be created` : ""}`;
     document.getElementById("bulkConfirmPanel").style.display = "block";
   }
 }
@@ -1923,16 +1880,26 @@ async function confirmBulkReceive() {
   if (!pendingBulkItems || (!pendingBulkItems.toUpdate.length && !pendingBulkItems.toAdd.length)) return;
   const today = todayStr();
   const statusEl = document.getElementById("bulkConfirmStatus");
-  statusEl.style.display = "block"; statusEl.innerHTML = '<span class="spinner"></span>Adding stock…'; statusEl.className = "status-bar loading";
+  statusEl.style.display = "block";
+  statusEl.innerHTML = '<span class="spinner"></span>Adding stock to inventory…';
+  statusEl.className = "status-bar loading";
+
   let done = 0;
+
+  // Update existing parts
   for (const item of pendingBulkItems.toUpdate) {
     try {
       await sheetUpdate(item.rowIdx, item.newQty, today);
-      if (item.location) await fetch(`${APPS_SCRIPT_URL}?action=updateInventoryLocation&sheet=${encodeURIComponent(cfg.sheetName)}&rowIndex=${item.rowIdx}&location=${encodeURIComponent(item.location)}`);
+      // Update location if it was changed
+      if (item.location) {
+        await fetch(`${APPS_SCRIPT_URL}?action=updateInventoryLocation&sheet=${encodeURIComponent(cfg.sheetName)}&rowIndex=${item.rowIdx}&location=${encodeURIComponent(item.location)}`);
+      }
       await sheetAppendTx([today, item.mfrPn, item.supplier, "Receive", item.qty, item.currentQty, item.newQty, "Bulk Receive"]);
       done++;
     } catch(e) { console.error("Failed to update:", item.mfrPn, e); }
   }
+
+  // Add new parts
   for (const item of pendingBulkItems.toAdd) {
     try {
       const row = [item.suppPn||"", item.supplier||"", item.mfrPn, item.desc||"", item.qty, item.autoLocation||"", today];
@@ -1941,7 +1908,9 @@ async function confirmBulkReceive() {
       done++;
     } catch(e) { console.error("Failed to add:", item.mfrPn, e); }
   }
-  statusEl.innerHTML = `✅ Done! ${done} parts added.`; statusEl.className = "status-bar ok";
+
+  statusEl.innerHTML = `✅ Done! ${done} parts added to inventory.`;
+  statusEl.className = "status-bar ok";
   toast(`Bulk receive: ${done} parts added`);
   pendingBulkItems = [];
   document.getElementById("bulkCsvFile").value = "";
@@ -1957,15 +1926,13 @@ function cancelBulkReceive() {
 
 function downloadBulkSampleCSV() {
   exportCSV("sample_bulk_receive.csv", [
-    { "Manufacturer Part":"SN74LVC1G08DCKR", "Qty":100, "Supplier":"DigiKey", "Supplier PN":"296-11602-1-ND", "Description":"IC GATE AND 1CH SC70-5" },
-    { "Manufacturer Part":"CL10A105KA8N",    "Qty":200, "Supplier":"DigiKey", "Supplier PN":"",               "Description":"CAP CER 1UF 10V 0603" },
-    { "Manufacturer Part":"GRM188R61A226ME15D","Qty":50, "Supplier":"Mouser",  "Supplier PN":"",               "Description":"CAP 22UF 10V" }
+    { "Manufacturer Part":"SN74LVC1G08DCKR",   "Qty":100, "Supplier":"DigiKey", "Supplier PN":"296-11602-1-ND", "Description":"IC GATE AND 1CH SC70-5", "Location":"" },
+    { "Manufacturer Part":"CL10A105KA8N",       "Qty":200, "Supplier":"DigiKey", "Supplier PN":"",              "Description":"CAP CER 1UF 10V 0603",   "Location":"" },
+    { "Manufacturer Part":"GRM188R61A226ME15D", "Qty":50,  "Supplier":"Mouser",  "Supplier PN":"",              "Description":"CAP 22UF 10V",            "Location":"" }
   ]);
 }
 
-// ════════════════════════════════════════════════════════════
-// COLUMN DETECTION & CSV HELPERS
-// ════════════════════════════════════════════════════════════
+// Keyword maps for fuzzy matching — ORDER MATTERS (most specific first)
 const COLUMN_KEYWORDS = {
   MfrPN:       ["manufacturer part number","manufacturer part no","manufacturer part","mfr part number","mfr part no","mfr part","mfr pn","mfr#","manufacturer pn","mpn","part number","part no","partno","part#","pn","component pn","item number","item no"],
   Quantity:    ["quantity","qty","count","amount","units","unit","num","pieces","pcs","how many","number of","order qty","order quantity","order amount","order"],
@@ -1979,38 +1946,73 @@ const COLUMN_KEYWORDS = {
 function detectColumns(headers) {
   const mapping = {};
   const usedHeaders = new Set();
+
   for (const [field, keywords] of Object.entries(COLUMN_KEYWORDS)) {
     let bestMatch = null, bestScore = 0;
+
     for (const header of headers) {
       if (usedHeaders.has(header)) continue;
-      const h = header.toLowerCase().trim().replace(/[_\-\.]+/g," ").replace(/[^a-z0-9\s]/g,"").trim();
+      const h = header.toLowerCase().trim().replace(/[_\-\.]+/g, " ").replace(/[^a-z0-9\s]/g, "").trim();
+
       let score = 0;
       for (let ki = 0; ki < keywords.length; ki++) {
         const kw = keywords[ki];
+        // Priority bonus — earlier keywords are more specific
         const priorityBonus = Math.max(0, 30 - ki * 2);
-        if (h === kw) { score = Math.max(score, 100 + priorityBonus); break; }
-        if (h.includes(kw)) { score = Math.max(score, 85 + priorityBonus); }
-        else if (kw.includes(h) && h.length >= 3) { score = Math.max(score, Math.round(60 * h.length/kw.length) + priorityBonus); }
-        else {
+
+        if (h === kw) {
+          score = Math.max(score, 100 + priorityBonus); break;
+        }
+        if (h.includes(kw)) {
+          score = Math.max(score, 85 + priorityBonus);
+        } else if (kw.includes(h) && h.length >= 3) {
+          // Avoid short matches like "part" matching "manufacturer part number" too greedily
+          const specificity = h.length / kw.length;
+          score = Math.max(score, Math.round(60 * specificity) + priorityBonus);
+        } else {
+          // Word-level partial match
           const hWords = h.split(/\s+/);
           const kWords = kw.split(/\s+/);
-          const matchedWords = hWords.filter(w => w.length>=3 && kWords.some(k=>k===w));
-          if (matchedWords.length > 0) score = Math.max(score, Math.round((matchedWords.length/Math.max(hWords.length,kWords.length))*50) + priorityBonus);
+          const matchedWords = hWords.filter(w => w.length >= 3 && kWords.some(k => k === w));
+          if (matchedWords.length > 0) {
+            const wordScore = Math.round((matchedWords.length / Math.max(hWords.length, kWords.length)) * 50);
+            score = Math.max(score, wordScore + priorityBonus);
+          }
         }
       }
+
       if (score > bestScore) { bestScore = score; bestMatch = header; }
     }
-    if (bestMatch && bestScore >= 45) { mapping[field] = bestMatch; usedHeaders.add(bestMatch); }
+
+    // Only accept if score is high enough
+    if (bestMatch && bestScore >= 45) {
+      mapping[field] = bestMatch;
+      usedHeaders.add(bestMatch);
+    }
   }
   return { mapping };
 }
 
+function normalizeAction(value) {
+  if (!value) return null;
+  const v = value.toLowerCase().trim();
+  // Direct match
+  if (ACTION_MAP[v]) return ACTION_MAP[v];
+  // Partial match
+  for (const [key, normalized] of Object.entries(ACTION_MAP)) {
+    if (v.includes(key) || key.includes(v)) return normalized;
+  }
+  // If column only has one unique value type, infer
+  return null;
+}
+
 function downloadSampleCSV() {
-  exportCSV("sample_customer_bom.csv", [
-    { "Manufacturer Part":"SN74LVC1G08DCKR",    "Qty":100, "Vendor":"DigiKey", "Order PN":"296-11602-1-ND", "Component Description":"IC GATE AND 1CH SC70-5" },
-    { "Manufacturer Part":"CL10A105KA8N",        "Qty":200, "Vendor":"DigiKey", "Order PN":"",              "Component Description":"CAP CER 1UF 10V X5R 0603" },
-    { "Manufacturer Part":"GRM188R61A226ME15D",  "Qty":50,  "Vendor":"Mouser",  "Order PN":"",              "Component Description":"CAP 22UF 10V" }
-  ]);
+  const sample = [
+    { "Manufacturer Part":"SN74LVC1G08DCKR", "Qty":100, "Vendor":"DigiKey", "Order PN":"296-11602-1-ND", "Component Description":"IC GATE AND 1CH SC70-5" },
+    { "Manufacturer Part":"CL10A105KA8N",    "Qty":200, "Vendor":"DigiKey", "Order PN":"",               "Component Description":"CAP CER 1UF 10V X5R 0603" },
+    { "Manufacturer Part":"GRM188R61A226ME15D","Qty":50, "Vendor":"Mouser",  "Order PN":"",               "Component Description":"CAP 22UF 10V" }
+  ];
+  exportCSV("sample_customer_bom.csv", sample);
 }
 
 // ════════════════════════════════════════════════════════════
@@ -2019,7 +2021,10 @@ function downloadSampleCSV() {
 async function exportInventoryCSV() {
   try {
     const rows = await sheetRead();
-    const data = rows.slice(1).map(r => ({ MfrPN:r[2]||"", SupplierPN:r[0]||"", Supplier:r[1]||"", Description:r[3]||"", Quantity:r[4]||"", Location:r[5]||"", LastUpdated:r[6]||"" }));
+    const data = rows.slice(1).map(r => ({
+      MfrPN: r[2]||"", SupplierPN: r[0]||"", Supplier: r[1]||"",
+      Description: r[3]||"", Quantity: r[4]||"", Location: r[5]||"", LastUpdated: r[6]||""
+    }));
     exportCSV("inventory_export.csv", data);
   } catch(e) { toast("Export failed: " + e.message); }
 }
@@ -2028,7 +2033,10 @@ async function exportTransactionsCSV() {
   try {
     const resp = await fetch(`${APPS_SCRIPT_URL}?action=read&sheet=Transactions`);
     const rows = await resp.json();
-    const data = rows.slice(1).map(r => ({ Date:r[0]||"", MfrPN:r[1]||"", Supplier:r[2]||"", Action:r[3]||"", Qty:r[4]||"", OldStock:r[5]||"", NewStock:r[6]||"", Notes:r[7]||"" }));
+    const data = rows.slice(1).map(r => ({
+      Date: r[0]||"", MfrPN: r[1]||"", Supplier: r[2]||"",
+      Action: r[3]||"", Qty: r[4]||"", OldStock: r[5]||"", NewStock: r[6]||"", Notes: r[7]||""
+    }));
     exportCSV("transactions_export.csv", data);
   } catch(e) { toast("Export failed: " + e.message); }
 }
@@ -2036,7 +2044,9 @@ async function exportTransactionsCSV() {
 function exportCSV(filename, rows) {
   if (!rows.length) { toast("No data to export."); return; }
   const headers = Object.keys(rows[0]);
-  const csv = [headers.join(","), ...rows.map(r => headers.map(h=>`"${String(r[h]??"").replace(/"/g,'""')}"`).join(","))].join("\n");
+  const csv = [headers.join(","), ...rows.map(r =>
+    headers.map(h => `"${String(r[h]??"").replace(/"/g,'""')}"`).join(",")
+  )].join("\n");
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([csv], { type:"text/csv" }));
   a.download = filename;
@@ -2048,6 +2058,9 @@ function confirmClear() {
   toast("Clear not implemented — delete rows manually in Google Sheets.");
 }
 
+// ════════════════════════════════════════════════════════════
+// CSV PARSER
+// ════════════════════════════════════════════════════════════
 function csvToObjects(text) {
   const lines = text.split(/\r?\n/).filter(l => l.trim());
   if (lines.length < 2) return [];
@@ -2089,13 +2102,19 @@ function printLabel(mfrPn, suppPn, desc, location, qty) {
 }
 
 function doPrint() {
+  const label = document.getElementById("labelPreview");
   const win = window.open("", "_blank", "width=400,height=320");
-  win.document.write(`<!DOCTYPE html><html><head><title>Label</title>
+  win.document.write(`
+    <!DOCTYPE html><html><head>
+    <title>Label</title>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&family=IBM+Plex+Sans:wght@400;600&display=swap');
       * { box-sizing: border-box; margin: 0; padding: 0; }
       body { font-family: 'IBM Plex Sans', sans-serif; padding: 12px; width: 350px; }
-      @media print { @page { size: 90mm 50mm; margin: 0; } body { padding: 4mm; width: 90mm; } }
+      @media print {
+        @page { size: 90mm 50mm; margin: 0; }
+        body { padding: 4mm; width: 90mm; }
+      }
       .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
       .company { font-size: 8px; font-weight: 700; color: #888; letter-spacing: 1px; }
       .qty-badge { font-size: 10px; font-weight: 700; background: #ebf0ff; color: #1a56db; padding: 2px 8px; border-radius: 20px; font-family: 'IBM Plex Mono', monospace; }
@@ -2103,10 +2122,12 @@ function doPrint() {
       .supppn { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #888; margin-bottom: 6px; }
       .desc { font-size: 10px; color: #333; margin-bottom: 10px; line-height: 1.4; }
       .location-box { display: flex; align-items: center; gap: 8px; background: #1a56db; border-radius: 6px; padding: 6px 10px; }
+      .pin { font-size: 16px; }
       .loc-label { font-size: 7px; color: rgba(255,255,255,0.7); font-weight: 600; letter-spacing: 1px; }
       .loc-value { font-family: 'IBM Plex Mono', monospace; font-size: 14px; font-weight: 700; color: #fff; }
       .footer { font-size: 7px; color: #aaa; margin-top: 6px; text-align: right; }
-    </style></head><body>
+    </style>
+    </head><body>
     <div class="header">
       <div class="company">NEXWAH TECHNOLOGY</div>
       <div class="qty-badge">${document.getElementById("lblQty").textContent}</div>
@@ -2115,46 +2136,148 @@ function doPrint() {
     <div class="supppn">${document.getElementById("lblSuppPn").textContent}</div>
     <div class="desc">${document.getElementById("lblDesc").textContent}</div>
     <div class="location-box">
-      <div style="font-size:16px">📍</div>
-      <div><div class="loc-label">LOCATION</div><div class="loc-value">${document.getElementById("lblLoc").textContent}</div></div>
+      <div class="pin">📍</div>
+      <div>
+        <div class="loc-label">LOCATION</div>
+        <div class="loc-value">${document.getElementById("lblLoc").textContent}</div>
+      </div>
     </div>
     <div class="footer">${document.getElementById("lblDate").textContent}</div>
     <script>window.onload=()=>{window.print();window.close();}<\/script>
-    </body></html>`);
+    </body></html>
+  `);
   win.document.close();
   document.getElementById("printModal").style.display = "none";
   toast("Label sent to printer!");
 }
 
 // ════════════════════════════════════════════════════════════
-// AUTO LOCATION ASSIGNMENT
+// SCAN HISTORY — saved permanently in localStorage
+// ════════════════════════════════════════════════════════════
+function saveScanToHistory(scan) {
+  try {
+    const history = getScanHistory();
+    history.unshift({
+      id: Date.now(),
+      mfrPn: scan.mfrPn,
+      supplierPn: scan.supplierPn,
+      supplier: scan.supplier,
+      desc: scan.desc,
+      date: scan.date,
+      image: scan.image
+    });
+    // Keep only last 30 scans to avoid storage quota issues
+    const trimmed = history.slice(0, 30);
+    try {
+      localStorage.setItem("nexwah_scan_history", JSON.stringify(trimmed));
+    } catch(quotaErr) {
+      // Storage full — remove images from older entries and try again
+      const noImages = trimmed.map((s, i) => i === 0 ? s : { ...s, image: "" });
+      try { localStorage.setItem("nexwah_scan_history", JSON.stringify(noImages)); } catch(e) {}
+    }
+  } catch(e) {}
+
+  // Save text-only record to Google Sheets (fire and forget — never blocks scanning)
+  try {
+    const device = /iPhone|Android/i.test(navigator.userAgent) ? "Mobile" : "Desktop";
+    const row = [scan.date, scan.mfrPn, scan.supplier||"", scan.supplierPn||"", scan.desc||"", device];
+    fetch(`${APPS_SCRIPT_URL}?action=append&sheet=ScanHistory&row=${encodeURIComponent(JSON.stringify(row))}`);
+  } catch(e) {}
+}
+
+function getScanHistory() {
+  try {
+    return JSON.parse(localStorage.getItem("nexwah_scan_history") || "[]");
+  } catch { return []; }
+}
+
+function deleteScanFromHistory(id) {
+  const history = getScanHistory().filter(s => s.id !== id);
+  localStorage.setItem("nexwah_scan_history", JSON.stringify(history));
+  renderScanHistory();
+  toast("Scan deleted.");
+}
+
+function clearScanHistory() {
+  if (!confirm("Clear all scan history? This cannot be undone.")) return;
+  localStorage.removeItem("nexwah_scan_history");
+  renderScanHistory();
+  toast("Scan history cleared.");
+}
+
+function renderScanHistory() {
+  const search = (document.getElementById("scanHistorySearch").value || "").trim().toUpperCase();
+  let history = getScanHistory();
+  if (search) history = history.filter(s =>
+    (s.mfrPn||"").toUpperCase().includes(search) ||
+    (s.desc||"").toUpperCase().includes(search)
+  );
+
+  const grid  = document.getElementById("scanHistoryGrid");
+  const empty = document.getElementById("scanHistoryEmpty");
+
+  if (!history.length) {
+    grid.innerHTML = "";
+    empty.style.display = "block";
+    return;
+  }
+  empty.style.display = "none";
+  grid.innerHTML = history.map(s => `
+    <div class="scan-hist-card">
+      <img class="scan-hist-img" src="${s.image}" alt="Scan image" />
+      <div class="scan-hist-body">
+        <div class="scan-hist-pn">${s.mfrPn || "—"}</div>
+        <div class="scan-hist-desc">${s.desc || s.supplierPn || "—"}</div>
+        <div class="scan-hist-meta">
+          <span class="scan-hist-date">${s.date || "—"}</span>
+          <span class="supplier-badge badge-${(s.supplier||"unknown").toLowerCase().replace(/[^a-z]/g,"")}">${s.supplier||"Unknown"}</span>
+        </div>
+        <div class="scan-hist-delete" onclick="deleteScanFromHistory(${s.id})">🗑 Delete</div>
+      </div>
+    </div>
+  `).join("");
+}
+
+// ════════════════════════════════════════════════════════════
+// AUTO LOCATION ASSIGNMENT — one box per component type, 50 slots per box
 // ════════════════════════════════════════════════════════════
 const SLOTS_PER_BOX = 50;
 const VALID_CATEGORIES = ["Resistor","Capacitor","Inductor","IC","Transistor","Diode","Connector","Crystal","LED","Relay","Fuse","Other"];
 
 async function autoAssignLocation(category) {
   if (!category || !VALID_CATEGORIES.includes(category)) category = "Other";
+
   try {
     const resp = await fetch(`${APPS_SCRIPT_URL}?action=read&sheet=Locations`);
     const rows = await resp.json();
+
+    // Find existing box for this category that still has slots available
     for (let i = 1; i < rows.length; i++) {
       if ((rows[i][1]||"").trim().toLowerCase() === category.toLowerCase()) {
         const slotsUsed = parseInt(rows[i][2]||"0");
         if (slotsUsed < SLOTS_PER_BOX) {
           const nextSlot = slotsUsed + 1;
           const slotLabel = `${rows[i][0]}-${String(nextSlot).padStart(2,"0")}`;
+          // Update slots used count
           await fetch(`${APPS_SCRIPT_URL}?action=updateLocationSlots&sheet=Locations&rowIndex=${i+1}&slotsUsed=${nextSlot}`);
           return `${slotLabel} : ${category}`;
         }
+        // This box is full — continue searching for another box of same category
       }
     }
+
+    // No box with space found — create new box
     let maxBox = 0;
     for (let i = 1; i < rows.length; i++) {
       const match = (rows[i][0]||"").match(/PB(\d+)/i);
       if (match) maxBox = Math.max(maxBox, parseInt(match[1]));
     }
-    const newBox = `PB${String(maxBox + 1).padStart(2, "0")}`;
+    const newBoxNum = String(maxBox + 1).padStart(2, "0");
+    const newBox = `PB${newBoxNum}`;
+
+    // Save new box to Locations sheet with 1 slot used
     await fetch(`${APPS_SCRIPT_URL}?action=append&sheet=Locations&row=${encodeURIComponent(JSON.stringify([newBox, category, 1]))}`);
+
     return `${newBox}-01 : ${category}`;
   } catch(e) {
     console.warn("Auto location failed:", e);
@@ -2163,12 +2286,15 @@ async function autoAssignLocation(category) {
 }
 
 // ════════════════════════════════════════════════════════════
-// SETTINGS
+// SETTINGS PAGE
 // ════════════════════════════════════════════════════════════
 function loadSettingsPage() {
   const key = localStorage.getItem("nexwah_anthropic_key") || "";
   const keyInput = document.getElementById("settingsApiKey");
   const statusEl = document.getElementById("apiKeyStatus");
+  const settingsStatus = document.getElementById("settingsStatus");
+
+  // Show masked key if exists
   if (key) {
     keyInput.value = key;
     statusEl.innerHTML = `<span style="background:var(--success-bg);color:var(--success);border:1px solid var(--success-border);padding:4px 12px;border-radius:20px;font-size:12px;font-family:var(--mono)">✓ API Key saved — Claude Vision active</span>`;
@@ -2176,22 +2302,35 @@ function loadSettingsPage() {
     keyInput.value = "";
     statusEl.innerHTML = `<span style="background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn-border);padding:4px 12px;border-radius:20px;font-size:12px;font-family:var(--mono)">⚠ No API key — using Tesseract OCR</span>`;
   }
-  document.getElementById("settingsStatus").innerHTML = `
+
+  settingsStatus.innerHTML = `
     <b>Scanning method:</b> ${key ? "Claude Vision (AI)" : "Tesseract OCR (Free)"}<br>
-    <b>Scan History:</b> ☁ Cloud (Google Sheets — shared across all devices)<br>
     <b>API Key:</b> ${key ? key.substring(0,20) + "..." : "Not set"}<br>
-    <b>Google Sheets:</b> Connected`;
+    <b>Google Sheets:</b> Connected<br>
+    <b>App URL:</b> <a href="https://nandarawin.github.io/inventory-app" target="_blank" style="color:var(--accent)">nandarawin.github.io/inventory-app</a>
+  `;
 }
 
 function saveSettingsKey() {
   const val = document.getElementById("settingsApiKey").value.trim();
   const msgEl = document.getElementById("settingsKeyMsg");
   msgEl.style.display = "block";
-  if (!val) { msgEl.innerHTML = "⚠ Please enter an API key."; msgEl.className = "status-bar err"; return; }
-  if (!val.startsWith("sk-ant-")) { msgEl.innerHTML = "⚠ Key should start with sk-ant-"; msgEl.className = "status-bar err"; return; }
+
+  if (!val) {
+    msgEl.innerHTML = "⚠ Please enter an API key.";
+    msgEl.className = "status-bar err";
+    return;
+  }
+  if (!val.startsWith("sk-ant-")) {
+    msgEl.innerHTML = "⚠ Key should start with sk-ant- — please check and try again.";
+    msgEl.className = "status-bar err";
+    return;
+  }
+
   cfg.anthropicKey = val;
   localStorage.setItem("nexwah_anthropic_key", val);
-  msgEl.innerHTML = "✓ API key saved! Claude Vision is now active."; msgEl.className = "status-bar ok";
+  msgEl.innerHTML = "✓ API key saved! Claude Vision is now active.";
+  msgEl.className = "status-bar ok";
   loadSettingsPage();
   toast("API key saved — Claude Vision active!");
 }
@@ -2202,7 +2341,9 @@ function removeSettingsKey() {
   localStorage.removeItem("nexwah_anthropic_key");
   document.getElementById("settingsApiKey").value = "";
   const msgEl = document.getElementById("settingsKeyMsg");
-  msgEl.style.display = "block"; msgEl.innerHTML = "API key removed."; msgEl.className = "status-bar warn";
+  msgEl.style.display = "block";
+  msgEl.innerHTML = "API key removed. Using Tesseract OCR.";
+  msgEl.className = "status-bar warn";
   loadSettingsPage();
   toast("API key removed.");
 }
@@ -2212,14 +2353,19 @@ function removeSettingsKey() {
 // ════════════════════════════════════════════════════════════
 function todayStr() {
   const now = new Date();
+  const day  = String(now.getDate()).padStart(2,"0");
   const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  return `${String(now.getDate()).padStart(2,"0")} ${months[now.getMonth()]} ${now.getFullYear()}`;
+  const month = months[now.getMonth()];
+  const year  = now.getFullYear();
+  return `${day} ${month} ${year}`; // e.g. "26 Mar 2026" — plain text, Google Sheets won't convert
 }
 
 function formatDate(raw) {
   if (!raw) return "—";
   const s = String(raw).trim();
+  // Already clean format e.g. "26 Mar 2026" or "02 Apr 2026"
   if (/^\d{1,2}\s\w{3}\s\d{4}$/.test(s)) return s;
+  // ISO string e.g. "2026-03-26T00:00:00.000Z"
   if (/^\d{4}-\d{2}-\d{2}T/.test(s)) {
     const d = new Date(s);
     if (!isNaN(d.getTime())) {
@@ -2227,6 +2373,7 @@ function formatDate(raw) {
       return `${String(d.getUTCDate()).padStart(2,"0")} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
     }
   }
+  // Plain date string e.g. "2026-03-26"
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
     const d = new Date(s);
     if (!isNaN(d.getTime())) {
@@ -2234,23 +2381,27 @@ function formatDate(raw) {
       return `${String(d.getUTCDate()).padStart(2,"0")} ${months[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
     }
   }
+  // Return as-is — don't try to parse part numbers as dates
   return s;
 }
 
 function setCamStatus(msg, type) {
   const el = document.getElementById("camStatus");
-  el.innerHTML = msg; el.className = "status-bar" + (type ? " " + type : "");
+  el.innerHTML = msg;
+  el.className = "status-bar" + (type ? " " + type : "");
 }
 
 function setStatus(elId, msg, type) {
   const el = document.getElementById(elId);
-  el.innerHTML = msg; el.className = "status-bar" + (type ? " " + type : "");
+  el.innerHTML = msg;
+  el.className = "status-bar" + (type ? " " + type : "");
 }
 
 let toastTimer;
 function toast(msg) {
   const el = document.getElementById("toast");
-  el.textContent = msg; el.classList.add("show");
+  el.textContent = msg;
+  el.classList.add("show");
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => el.classList.remove("show"), 3000);
 }
