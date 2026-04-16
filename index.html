@@ -678,7 +678,7 @@ function showPage(name, btn) {
   document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
   document.getElementById("page-" + name).classList.add("active");
   if (btn) btn.classList.add("active");
-  if (name === "inventory")    { _invCache = null; renderInventory(); }
+  if (name === "inventory")    { _invCache = null; renderInventory(); document.getElementById('invSearch').value = ''; }
   if (name === "transactions") renderTransactions();
   if (name === "dashboard")    loadDashboard();
   if (name === "scanhistory")  renderScanHistory();
@@ -751,29 +751,21 @@ async function loadDashboard() {
 function escQ(s) { return String(s).replace(/\\/g,"\\\\").replace(/'/g,"\\'"); }
 
 let _invCache = null;
-let _invLoading = false;
 
-// Called ONLY to load data from sheet into cache, then display
 async function renderInventory() {
-  if (_invLoading) return; // prevent concurrent fetches
-  _invLoading = true;
   const tbody = document.getElementById("invTableBody");
   tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><span class="spinner"></span>Loading\u2026</td></tr>`;
   try {
     const rows = await sheetRead();
     _invCache = rows.slice(1).map((r, i) => ({ r, origIdx: i + 2 }));
+    filterInventory();
   } catch(e) {
     tbody.innerHTML = `<tr><td colspan="8" class="empty-state" style="color:var(--error)">Failed to load. Check config.</td></tr>`;
-    _invLoading = false;
-    return;
   }
-  _invLoading = false;
-  filterInventory(); // apply any current search after load
 }
 
-// Called on every keystroke — purely in-memory, zero network
 function filterInventory() {
-  if (!_invCache) return; // data not loaded yet, do nothing
+  if (!_invCache) { renderInventory(); return; }
   const search = (document.getElementById("invSearch").value||"").trim().toUpperCase();
   const tbody = document.getElementById("invTableBody");
 
