@@ -105,18 +105,15 @@
     .inv-action-info { font-size: 13px; font-family: var(--mono); line-height: 1.8; margin-bottom: 12px; }
     .qty-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
     .qty-row input { width: 80px; padding: 8px 10px; border: 1px solid var(--border2); border-radius: 8px; font-size: 13px; font-family: var(--mono); }
-    /* Scan history card */
     .scan-hist-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; display: flex; flex-direction: column; }
     .scan-hist-img-wrap { width: 100%; height: 160px; background: #111; overflow: hidden; position: relative; border-bottom: 1px solid var(--border); flex-shrink: 0; }
     .scan-hist-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .scan-hist-img-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #1a1a2e; }
+    .scan-hist-img-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #1a1a2e; flex-direction: column; }
     .scan-hist-body { padding: 12px 14px; flex: 1; display: flex; flex-direction: column; }
     .scan-hist-pn { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--accent); word-break: break-all; margin-bottom: 4px; }
     .scan-hist-desc { font-size: 12px; color: var(--muted); margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .scan-hist-meta { display: flex; justify-content: space-between; align-items: center; margin-top: auto; }
     .scan-hist-date { font-size: 11px; color: var(--muted); font-family: var(--mono); }
-    .scan-hist-delete { font-size: 11px; color: var(--error); cursor: pointer; margin-top: 8px; text-align: right; }
-    .scan-hist-delete:hover { text-decoration: underline; }
     .status-bar { padding: 10px 14px; border-radius: 8px; font-size: 12px; font-family: var(--mono); margin-top: 12px; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); min-height: 40px; }
     .status-bar.ok      { background: var(--success-bg); border-color: var(--success-border); color: var(--success); }
     .status-bar.err     { background: var(--error-bg);   border-color: var(--error-border);   color: var(--error); }
@@ -154,11 +151,9 @@
     .inv-row-clickable { cursor: pointer; }
     .inv-row-clickable:hover td { background: #eef3ff !important; }
     .quick-btns { display: flex; gap: 5px; align-items: center; white-space: nowrap; }
-    /* Scan history image modal */
     #imgModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9000; align-items: center; justify-content: center; cursor: zoom-out; }
     #imgModal.open { display: flex; }
     #imgModal img { max-width: 90vw; max-height: 90vh; border-radius: 10px; object-fit: contain; }
-    /* Column mapping modal */
     .col-map-row { display: flex; align-items: center; gap: 12px; }
     .col-map-label { flex: 0 0 130px; font-size: 12px; font-weight: 600; color: var(--text); }
     .col-map-req { font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 10px; margin-left: 4px; }
@@ -298,6 +293,7 @@
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-primary btn-sm" onclick="openNewPartDrawer()">+ Add New Part</button>
           <button class="btn btn-secondary btn-sm" onclick="exportInventoryCSV()">Export CSV</button>
+          <button class="btn btn-secondary btn-sm" onclick="refreshInventory()">&#8635; Refresh</button>
           <button class="btn btn-danger btn-sm" onclick="confirmClear()">Clear All Data</button>
         </div>
       </div>
@@ -355,16 +351,13 @@
     </div>
   </div>
 
-  <!-- SCAN HISTORY — cloud-synced via window.storage -->
+  <!-- SCAN HISTORY -->
   <div id="page-scanhistory" class="page">
     <div class="card">
       <div class="card-title">Scan History</div>
       <div class="search-bar">
         <input type="text" id="scanHistorySearch" placeholder="Search by part number&hellip;" oninput="renderScanHistory()" />
         <button class="btn btn-danger" onclick="clearScanHistory()">Clear All</button>
-      </div>
-      <div style="font-size:12px;color:var(--muted)">
-        
       </div>
     </div>
     <div id="scanHistoryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;"></div>
@@ -529,7 +522,7 @@
 <script>
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwn4NtlsIHr25yN0tdm3heuY_ihdRMMgghxQClRlr74bBhhBATyEzKRCg6FKPYMbIp7/exec";
 const SCAN_HISTORY_SHEET = "ScanHistory";
-const MAX_IMAGE_SIZE = 600; // px — resize before storing in sheet cell
+const MAX_IMAGE_SIZE = 600;
 
 let cfg = { sheetName: "Sheet1", anthropicKey: "" };
 let currentStream = null;
@@ -685,7 +678,7 @@ function showPage(name, btn) {
   document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
   document.getElementById("page-" + name).classList.add("active");
   if (btn) btn.classList.add("active");
-  if (name === "inventory")    renderInventory();
+  if (name === "inventory")    { _invCache = null; renderInventory(); }
   if (name === "transactions") renderTransactions();
   if (name === "dashboard")    loadDashboard();
   if (name === "scanhistory")  renderScanHistory();
@@ -757,53 +750,83 @@ async function loadDashboard() {
 // ── INVENTORY ─────────────────────────────────────────────
 function escQ(s) { return String(s).replace(/\\/g,"\\\\").replace(/'/g,"\\'"); }
 
+// ── FIX: Cache sheet data so search filters in-memory, not via network ──
+let _invCache = null;
+
 async function renderInventory() {
   const search = (document.getElementById("invSearch").value||"").trim().toUpperCase();
   const tbody = document.getElementById("invTableBody");
-  tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><span class="spinner"></span>Loading\u2026</td></tr>`;
-  try {
-    const rows = await sheetRead();
-    let data = rows.slice(1).map((r,i) => ({ r, origIdx: i+2 }));
-    if (search) data = data.filter(({r}) =>
-      (r[0]||"").toUpperCase().includes(search) ||
-      (r[2]||"").toUpperCase().includes(search) ||
-      (r[3]||"").toUpperCase().includes(search) ||
-      (r[5]||"").toUpperCase().includes(search));
-    data.sort((a,b) => (a.r[2]||"").localeCompare(b.r[2]||""));
-    if (!data.length) { tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No results.</td></tr>`; return; }
-    tbody.innerHTML = data.map(({r, origIdx}) => {
-      const qty = parseInt(r[4])||0;
-      const low = qty <= 5;
-      const mfrPn   = escQ(r[2]||"");
-      const suppPn  = escQ(r[0]||"");
-      const supplier= escQ(r[1]||"");
-      const desc    = escQ(r[3]||"");
-      const loc     = escQ(r[5]||"");
-      const updated = escQ(r[6]||"");
-      return `<tr class="${low?"low-stock ":""}inv-row-clickable"
-          onclick="openDrawer(${origIdx},'${mfrPn}','${suppPn}','${supplier}','${desc}','${loc}',${qty},'${updated}')">
-        <td class="mono">${r[2]||"\u2014"}</td>
-        <td class="mono">${r[0]||"\u2014"}</td>
-        <td>${r[1]||"\u2014"}</td>
-        <td>${r[3]||"\u2014"}</td>
-        <td class="mono">${r[5]||"\u2014"}</td>
-        <td class="mono" style="font-weight:600${low?";color:var(--error)":""}">${qty}</td>
-        <td class="mono" style="color:var(--muted)">${formatDate(r[6]||"")}</td>
-        <td onclick="event.stopPropagation()">
-          <div class="quick-btns">
-            <button class="btn btn-success btn-sm" title="Receive +1"
-              onclick="quickUpdate(${origIdx},'${mfrPn}','${supplier}',${qty},'Receive')">+</button>
-            <button class="btn btn-danger btn-sm" title="Use -1"
-              onclick="quickUpdate(${origIdx},'${mfrPn}','${supplier}',${qty},'Use')">\u2212</button>
-            <button class="btn btn-secondary btn-sm"
-              onclick="printLabel('${mfrPn}','${suppPn}','${desc}','${loc}','${qty}')">&#128424;</button>
-          </div>
-        </td>
-      </tr>`;
-    }).join("");
-  } catch(e) {
-    tbody.innerHTML = `<tr><td colspan="8" class="empty-state" style="color:var(--error)">Failed to load. Check config.</td></tr>`;
+
+  // Only fetch from the sheet when cache is empty
+  if (!_invCache) {
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><span class="spinner"></span>Loading\u2026</td></tr>`;
+    try {
+      const rows = await sheetRead();
+      // Store all data rows in cache with their original sheet row indices
+      _invCache = rows.slice(1).map((r, i) => ({ r, origIdx: i + 2 }));
+    } catch(e) {
+      tbody.innerHTML = `<tr><td colspan="8" class="empty-state" style="color:var(--error)">Failed to load. Check config.</td></tr>`;
+      return;
+    }
   }
+
+  // Filter purely in memory — no network call on each keystroke
+  let data = _invCache;
+  if (search) {
+    data = data.filter(({r}) =>
+      (r[0]||"").toUpperCase().includes(search) ||   // Supplier PN
+      (r[1]||"").toUpperCase().includes(search) ||   // Supplier name
+      (r[2]||"").toUpperCase().includes(search) ||   // Mfr Part Number  ← main fix
+      (r[3]||"").toUpperCase().includes(search) ||   // Description
+      (r[5]||"").toUpperCase().includes(search)      // Location
+    );
+  }
+
+  // Sort a copy so the cache order is preserved
+  const sorted = [...data].sort((a,b) => (a.r[2]||"").localeCompare(b.r[2]||""));
+
+  if (!sorted.length) {
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No results found for "${search}".</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = sorted.map(({r, origIdx}) => {
+    const qty = parseInt(r[4])||0;
+    const low = qty <= 5;
+    const mfrPn    = escQ(r[2]||"");
+    const suppPn   = escQ(r[0]||"");
+    const supplier = escQ(r[1]||"");
+    const desc     = escQ(r[3]||"");
+    const loc      = escQ(r[5]||"");
+    const updated  = escQ(r[6]||"");
+    return `<tr class="${low?"low-stock ":""}inv-row-clickable"
+        onclick="openDrawer(${origIdx},'${mfrPn}','${suppPn}','${supplier}','${desc}','${loc}',${qty},'${updated}')">
+      <td class="mono">${r[2]||"\u2014"}</td>
+      <td class="mono">${r[0]||"\u2014"}</td>
+      <td>${r[1]||"\u2014"}</td>
+      <td>${r[3]||"\u2014"}</td>
+      <td class="mono">${r[5]||"\u2014"}</td>
+      <td class="mono" style="font-weight:600${low?";color:var(--error)":""}">${qty}</td>
+      <td class="mono" style="color:var(--muted)">${formatDate(r[6]||"")}</td>
+      <td onclick="event.stopPropagation()">
+        <div class="quick-btns">
+          <button class="btn btn-success btn-sm" title="Receive +1"
+            onclick="quickUpdate(${origIdx},'${mfrPn}','${supplier}',${qty},'Receive')">+</button>
+          <button class="btn btn-danger btn-sm" title="Use -1"
+            onclick="quickUpdate(${origIdx},'${mfrPn}','${supplier}',${qty},'Use')">\u2212</button>
+          <button class="btn btn-secondary btn-sm"
+            onclick="printLabel('${mfrPn}','${suppPn}','${desc}','${loc}','${qty}')">&#128424;</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+// Force a fresh fetch from the sheet (bypasses cache)
+async function refreshInventory() {
+  _invCache = null;
+  await renderInventory();
+  toast("Inventory refreshed.");
 }
 
 async function quickUpdate(rowIdx, mfrPn, supplier, currentQty, action) {
@@ -814,6 +837,8 @@ async function quickUpdate(rowIdx, mfrPn, supplier, currentQty, action) {
     await sheetUpdate(rowIdx, newQty, today);
     await sheetAppendTx([today, mfrPn, supplier, action, 1, currentQty, newQty, "Quick update"]);
     toast(`${mfrPn}: ${currentQty} \u2192 ${newQty}`);
+    // Bust cache and re-fetch so the updated qty is reflected
+    _invCache = null;
     renderInventory();
   } catch(e) { toast("Error: " + e.message); }
 }
@@ -882,6 +907,8 @@ async function submitDrawerUpdate() {
     if (newQty<=0)      { pill.className="stock-pill empty"; pill.textContent=`0 units \u2014 out of stock`; }
     else if (newQty<=5) { pill.className="stock-pill low";   pill.textContent=`${newQty} units \u2014 low stock`; }
     else                { pill.className="stock-pill ok";    pill.textContent=`${newQty} units in stock`; }
+    // Bust cache so inventory table reflects new qty
+    _invCache = null;
     renderInventory();
   } catch(e) { statusEl.innerHTML="Error: "+e.message; statusEl.className="status-bar err"; }
 }
@@ -926,6 +953,8 @@ async function submitNewPart() {
     await sheetAppendTx([today, mfrPn, supplier, "Receive", qty, 0, qty, notes||"New part added"]);
     statusEl.innerHTML=`\u2713 Added ${mfrPn} \u00d7 ${qty} at ${finalLocation||"no location"}`; statusEl.className="status-bar ok";
     toast(`Added: ${mfrPn}`);
+    // Bust cache so new part appears immediately
+    _invCache = null;
     renderInventory();
     setTimeout(() => { document.getElementById("newPartMfrPn").value=""; document.getElementById("newPartQty").value="1"; }, 1500);
   } catch(e) { statusEl.innerHTML="Error: "+e.message; statusEl.className="status-bar err"; }
@@ -1028,7 +1057,6 @@ async function captureAndExtract() {
   await extractWithClaude(cropUrl);
 }
 
-// ── IMAGE RESIZE — keeps images under storage limit ───────
 async function resizeImageForStorage(dataUrl, maxPx) {
   return new Promise(resolve => {
     const img = new Image();
@@ -1047,7 +1075,6 @@ async function resizeImageForStorage(dataUrl, maxPx) {
   });
 }
 
-// ── OCR CHAIN (unchanged — Google Vision kept intact) ─────
 const GOOGLE_VISION_API_KEY = "AIzaSyBjzZf1DVzZFuaf9tC5SW8x9bjqp1t7HQQ";
 const MPN_LABEL_REGEX = /^(MANUFACTURER\s*PART\s*(NO?\.?|NUMBER)?|MFR\s*(PN|P\/N|NO?\.?)?|MFG\s*(PN|P\/N|NO?\.?)?|MPN|MNF\s*(PN|P\/N)?|MAN\s*(PN|P\/N)?|PART\s*(NO?\.?|NUMBER|#)?|P\s*\/?\s*N|CAT\s*(NO?\.?|#)?|ITEM\s*(NO?\.?|#)?|MODEL\s*(NO?\.?)?|REF\s*(NO?\.?|#)?|\u578b\u53f7|\u6599\u53f7|\u7269\u6599\u7f16\u53f7|\u89c4\u683c\u578b\u53f7)\s*[:#\-\.\s]?\s*/i;
 const DESCRIPTION_WORDS = new Set(["CAPACITOR","CAP","RESISTOR","RES","INDUCTOR","IND","TRANSISTOR","DIODE","RELAY","CONNECTOR","CONN","MODULE","SENSOR","SWITCH","VOLTAGE","REGULATOR","REG","AMPLIFIER","AMP","OSCILLATOR","CRYSTAL","XTAL","FILTER","FUSE","DISPLAY","CONTROLLER","CTRL","DRIVER","DRV","INTERFACE","ELECTROLYTIC","ELEC","CERAMIC","FILM","TANTALUM","TANT","SMD","SMT","WATT","VOLT","OHM","FARAD","HENRY","HERTZ","WITH","FOR","AND","THE","FROM","TYPE","PACK","REEL","TAPE","TRAY","BLACK","WHITE","RED","BLUE","GREEN","YELLOW","SILVER","GOLD","LEADED","LEADFREE","ROHS","COMPLIANT","GENUINE","ORIGINAL","THROUGH","HOLE"]);
@@ -1226,7 +1253,6 @@ async function handleScanResult(parsed, dataUrl, method) {
   showSupplierBadge("scanSupplierBadge", parsed.supplier);
   setCamStatus(`\u2713 Label read via <b>${method}</b>. Edit if needed, then check inventory.`, "ok");
   await lookupForScan(parsed.mfrPartNumber);
-  // Save scan to cloud storage (non-blocking)
   setTimeout(async () => {
     try {
       const resized = await resizeImageForStorage(dataUrl, MAX_IMAGE_SIZE);
@@ -1236,7 +1262,7 @@ async function handleScanResult(parsed, dataUrl, method) {
         supplier: parsed.supplier||"Unknown",
         desc: parsed.description||"",
         date: today,
-        image: resized   // actual scan photo, resized for storage
+        image: resized
       });
     } catch(e) { console.warn("Scan history save failed:", e); }
   }, 100);
@@ -1372,73 +1398,43 @@ async function confirmScanReceiveNew() {
   } catch(e) { statusEl.innerHTML="Error: "+e.message; statusEl.className="status-bar err"; }
 }
 
-
-const IMGUR_CLIENT_ID = "546c25a59c58ad7"; // free anonymous upload client ID
+const IMGUR_CLIENT_ID = "546c25a59c58ad7";
 
 async function uploadImageToImgur(base64DataUrl) {
-  // Strip the data URL prefix — Imgur just wants the raw base64
   const base64 = base64DataUrl.split(",")[1];
   const formData = new FormData();
   formData.append("image", base64);
   formData.append("type", "base64");
-
   const resp = await fetch("https://api.imgur.com/3/image", {
     method: "POST",
     headers: { "Authorization": "Client-ID " + IMGUR_CLIENT_ID },
     body: formData
   });
-
   const data = await resp.json();
-  if (data.success && data.data && data.data.link) {
-    return data.data.link; // e.g. "https://i.imgur.com/abc123.jpg"
-  }
+  if (data.success && data.data && data.data.link) return data.data.link;
   throw new Error("Imgur upload failed: " + JSON.stringify(data));
 }
 
 async function saveScanToHistory(scan) {
   let imageUrl = "";
-
-  // Step 1: Upload image to Imgur → get public URL
   if (scan.image && scan.image.startsWith("data:")) {
-    try {
-      imageUrl = await uploadImageToImgur(scan.image);
-    } catch(imgErr) {
-      console.warn("Imgur upload failed, saving scan without image:", imgErr.message);
-      imageUrl = "";
-    }
+    try { imageUrl = await uploadImageToImgur(scan.image); }
+    catch(imgErr) { console.warn("Imgur upload failed:", imgErr.message); imageUrl = ""; }
   }
-
-  // Step 2: Save scan row to Google Sheets with the Imgur URL
-  // [Date, MfrPN, SupplierPN, Supplier, Desc, ImageURL]
-  const row = [
-    scan.date       || todayStr(),
-    scan.mfrPn      || "",
-    scan.supplierPn || "",
-    scan.supplier   || "Unknown",
-    scan.desc       || "",
-    imageUrl
-  ];
+  const row = [scan.date||todayStr(), scan.mfrPn||"", scan.supplierPn||"", scan.supplier||"Unknown", scan.desc||"", imageUrl];
   try {
     const url = `${APPS_SCRIPT_URL}?action=append&sheet=${encodeURIComponent(SCAN_HISTORY_SHEET)}&row=${encodeURIComponent(JSON.stringify(row))}`;
     await fetch(url);
-  } catch(sheetErr) {
-    console.warn("Sheet save failed:", sheetErr.message);
-  }
+  } catch(sheetErr) { console.warn("Sheet save failed:", sheetErr.message); }
 }
 
 async function loadAllScans() {
   const resp = await fetch(`${APPS_SCRIPT_URL}?action=read&sheet=${encodeURIComponent(SCAN_HISTORY_SHEET)}`);
   const rows = await resp.json();
-  // Row 0 is the header — skip it. Filter rows that have a part number.
-  // Each row: [date, mfrPn, supplierPn, supplier, desc, imgurImageURL]
-  const data = rows.slice(1).filter(r => r[1]);
-  return data.reverse(); // newest first
+  return rows.slice(1).filter(r => r[1]).reverse();
 }
 
 async function deleteScanRow(rowIdx) {
-  // We use a special delete action — Apps Script must support this.
-  // Fallback: clear the row contents by setting qty to a sentinel.
-  // For now we use a "deleteRow" action if available, else clear fields.
   try {
     const url = `${APPS_SCRIPT_URL}?action=deleteRow&sheet=${encodeURIComponent(SCAN_HISTORY_SHEET)}&rowIndex=${rowIdx}`;
     await fetch(url);
@@ -1461,34 +1457,24 @@ async function renderScanHistory() {
   const grid = document.getElementById("scanHistoryGrid");
   const empty = document.getElementById("scanHistoryEmpty");
   const loading = document.getElementById("scanHistoryLoading");
-
-  grid.innerHTML = "";
-  empty.style.display = "none";
-  loading.style.display = "block";
-
+  grid.innerHTML = ""; empty.style.display = "none"; loading.style.display = "block";
   let scans = [];
-  try {
-    scans = await loadAllScans();
-  } catch(e) {
-    loading.style.display = "none";
-    empty.style.display = "block";
+  try { scans = await loadAllScans(); }
+  catch(e) {
+    loading.style.display = "none"; empty.style.display = "block";
     document.getElementById("scanHistoryEmpty").innerHTML = `<div class="empty-state" style="color:var(--error)">Could not load scan history from Google Sheets.<br><small>${e.message||""}</small></div>`;
     return;
   }
   loading.style.display = "none";
-
   const filtered = search
-    ? scans.filter(s => (s[1]||"").toUpperCase().includes(search) || (s[4]||"").toUpperCase().includes(search) || (s[3]||"").toUpperCase().includes(search))
+    ? scans.filter(s => (s[1]||"").toUpperCase().includes(search)||(s[4]||"").toUpperCase().includes(search)||(s[3]||"").toUpperCase().includes(search))
     : scans;
-
   if (!filtered.length) {
     empty.style.display = "block";
     document.getElementById("scanHistoryEmpty").innerHTML = `<div class="empty-state">No scans saved yet. Start scanning labels to build your history.</div>`;
     return;
   }
-
-  // Each row: [date, mfrPn, supplierPn, supplier, desc, imgurImageURL]
-  grid.innerHTML = filtered.map((row, i) => {
+  grid.innerHTML = filtered.map((row) => {
     const [date, mfrPn, supplierPn, supplier, desc, imageUrl] = row;
     const hasImage = imageUrl && imageUrl.startsWith("http");
     const safeUrl = hasImage ? imageUrl.replace(/'/g, "%27") : "";
@@ -1751,6 +1737,8 @@ async function confirmBulkReceive() {
     statusEl.innerHTML=`\u2713 Done. ${done} parts updated.`; statusEl.className="status-bar ok";
     toast(`Bulk receive: ${done} parts added.`);
     bulkPendingItems=[];
+    // Bust inventory cache after bulk receive
+    _invCache = null;
     document.getElementById("bulkConfirmPanel").style.display="none";
   } catch(e) { statusEl.innerHTML="Error at part "+(done+1)+": "+e.message; statusEl.className="status-bar err"; }
 }
