@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NEXWAH Inventory System</title>
+  <title>NEXWAH Inventory v3</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -298,7 +298,7 @@
         </div>
       </div>
       <div class="search-bar" style="margin-bottom:0">
-        <input type="text" id="invSearch" placeholder="Search by part number, description, location&hellip;" oninput="renderInventory()" />
+        <input type="text" id="invSearch" placeholder="Search by part number, description, location&hellip;" oninput="filterInventory()" />
       </div>
       <div style="font-size:12px;color:var(--muted);margin-top:8px">Rows in red have &le;5 units. Use <b>+/&minus;</b> for quick adjustments, or click a row to open details.</div>
     </div>
@@ -750,39 +750,44 @@ async function loadDashboard() {
 // ── INVENTORY ─────────────────────────────────────────────
 function escQ(s) { return String(s).replace(/\\/g,"\\\\").replace(/'/g,"\\'"); }
 
-// ── FIX: Cache sheet data so search filters in-memory, not via network ──
 let _invCache = null;
+let _invLoading = false;
 
+// Called ONLY to load data from sheet into cache, then display
 async function renderInventory() {
+  if (_invLoading) return; // prevent concurrent fetches
+  _invLoading = true;
+  const tbody = document.getElementById("invTableBody");
+  tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><span class="spinner"></span>Loading\u2026</td></tr>`;
+  try {
+    const rows = await sheetRead();
+    _invCache = rows.slice(1).map((r, i) => ({ r, origIdx: i + 2 }));
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-state" style="color:var(--error)">Failed to load. Check config.</td></tr>`;
+    _invLoading = false;
+    return;
+  }
+  _invLoading = false;
+  filterInventory(); // apply any current search after load
+}
+
+// Called on every keystroke — purely in-memory, zero network
+function filterInventory() {
+  if (!_invCache) return; // data not loaded yet, do nothing
   const search = (document.getElementById("invSearch").value||"").trim().toUpperCase();
   const tbody = document.getElementById("invTableBody");
 
-  // Only fetch from the sheet when cache is empty
-  if (!_invCache) {
-    tbody.innerHTML = `<tr><td colspan="8" class="empty-state"><span class="spinner"></span>Loading\u2026</td></tr>`;
-    try {
-      const rows = await sheetRead();
-      // Store all data rows in cache with their original sheet row indices
-      _invCache = rows.slice(1).map((r, i) => ({ r, origIdx: i + 2 }));
-    } catch(e) {
-      tbody.innerHTML = `<tr><td colspan="8" class="empty-state" style="color:var(--error)">Failed to load. Check config.</td></tr>`;
-      return;
-    }
-  }
-
-  // Filter purely in memory — no network call on each keystroke
   let data = _invCache;
   if (search) {
     data = data.filter(({r}) =>
-      (r[0]||"").toUpperCase().includes(search) ||   // Supplier PN
-      (r[1]||"").toUpperCase().includes(search) ||   // Supplier name
-      (r[2]||"").toUpperCase().includes(search) ||   // Mfr Part Number  ← main fix
-      (r[3]||"").toUpperCase().includes(search) ||   // Description
-      (r[5]||"").toUpperCase().includes(search)      // Location
+      (r[0]||"").toUpperCase().includes(search) ||  // Supplier PN
+      (r[1]||"").toUpperCase().includes(search) ||  // Supplier name
+      (r[2]||"").toUpperCase().includes(search) ||  // Mfr Part Number
+      (r[3]||"").toUpperCase().includes(search) ||  // Description
+      (r[5]||"").toUpperCase().includes(search)     // Location
     );
   }
 
-  // Sort a copy so the cache order is preserved
   const sorted = [...data].sort((a,b) => (a.r[2]||"").localeCompare(b.r[2]||""));
 
   if (!sorted.length) {
@@ -822,7 +827,7 @@ async function renderInventory() {
   }).join("");
 }
 
-// Force a fresh fetch from the sheet (bypasses cache)
+// Force a fresh fetch from the sheet
 async function refreshInventory() {
   _invCache = null;
   await renderInventory();
