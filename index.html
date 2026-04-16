@@ -769,14 +769,18 @@ function filterInventory() {
   const search = (document.getElementById("invSearch").value||"").trim().toUpperCase();
   const tbody = document.getElementById("invTableBody");
 
+  // DEBUG: log first row to see actual column order
+  if (_invCache.length > 0) {
+    const sample = _invCache[0].r;
+    console.log("CACHE row[0]:", JSON.stringify(sample));
+    console.log("r[0]=",sample[0]," r[1]=",sample[1]," r[2]=",sample[2]," r[3]=",sample[3]);
+  }
+  console.log("SEARCH TERM:", search, "| CACHE SIZE:", _invCache.length);
+
   let data = _invCache;
   if (search) {
     data = data.filter(({r}) =>
-      (r[0]||"").toUpperCase().includes(search) ||  // Supplier PN
-      (r[1]||"").toUpperCase().includes(search) ||  // Supplier name
-      (r[2]||"").toUpperCase().includes(search) ||  // Mfr Part Number
-      (r[3]||"").toUpperCase().includes(search) ||  // Description
-      (r[5]||"").toUpperCase().includes(search)     // Location
+      (r[2]||"").toUpperCase().includes(search)
     );
   }
 
