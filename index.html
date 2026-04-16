@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NEXWAH Inventory v3</title>
+  <title>NEXWAH Inventory System</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -90,7 +90,6 @@
     canvas { display: none; }
     img.preview { width: 100%; border-radius: 8px; border: 1px solid var(--border); background: #f0f0f0; display: block; min-height: 80px; object-fit: contain; }
     .preview-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 5px; }
-    .result-pn { font-family: var(--mono); font-size: 22px; font-weight: 500; color: var(--accent); letter-spacing: 1px; word-break: break-all; min-height: 30px; }
     .supplier-badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; font-family: var(--mono); margin-top: 5px; }
     .badge-digikey  { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
     .badge-mouser   { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
@@ -163,6 +162,20 @@
     .col-map-select:focus { border-color: var(--accent); }
     .col-map-select.matched { border-color: var(--success); background: var(--success-bg); }
     .col-map-select.unmatched { border-color: var(--border2); }
+    /* FEATURE 4: Location combo box */
+    .loc-combo { position: relative; }
+    .loc-combo input { width: 100%; }
+    .loc-dropdown { display: none; position: absolute; top: 100%; left: 0; right: 0; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.12); z-index: 50; max-height: 180px; overflow-y: auto; margin-top: 2px; }
+    .loc-dropdown.open { display: block; }
+    .loc-option { padding: 8px 12px; font-size: 13px; font-family: var(--mono); cursor: pointer; color: var(--text); border-bottom: 1px solid var(--border); }
+    .loc-option:last-child { border-bottom: none; }
+    .loc-option:hover { background: var(--accent-light); color: var(--accent); }
+    /* BOM match badges */
+    .match-badge { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 10px; font-weight: 700; font-family: var(--mono); margin-left: 6px; }
+    .match-pn   { background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; }
+    .match-nexwah { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+    .match-value { background: #fff7ed; color: #9a3412; border: 1px solid #fed7aa; }
+    .match-fp   { background: #fdf4ff; color: #6b21a8; border: 1px solid #e9d5ff; }
   </style>
 </head>
 <body>
@@ -247,7 +260,18 @@
           <div class="form-grid" style="margin-bottom:10px">
             <div class="field"><label>Supplier PN</label><input type="text" id="scanSupplierPn" placeholder="e.g. 296-11602-1-ND" /></div>
             <div class="field"><label>Description</label><input type="text" id="scanDesc" placeholder="auto-detected" /></div>
-            <div class="field" id="scanLocationField"><label>Storage Location</label><input type="text" id="scanLocation" placeholder="e.g. Shelf A3, Bin 2" /></div>
+            <!-- FEATURE 4: Location dropdown with combo -->
+            <div class="field" id="scanLocationField">
+              <label>Storage Location</label>
+              <div class="loc-combo">
+                <input type="text" id="scanLocation" placeholder="Select or type new location"
+                  autocomplete="off"
+                  oninput="filterLocDropdown()"
+                  onfocus="openLocDropdown()"
+                  onblur="setTimeout(()=>closeLocDropdown(),200)" />
+                <div id="locDropdown" class="loc-dropdown"></div>
+              </div>
+            </div>
             <div class="field"><label>Notes (optional)</label><input type="text" id="scanNotes" placeholder="e.g. Project BOM-001" /></div>
           </div>
           <div id="scanInvPanel" style="display:none"></div>
@@ -262,7 +286,7 @@
   <div id="page-bom" class="page">
     <div class="card">
       <div class="card-title">Order Check &mdash; Stock Availability</div>
-      <div class="config-note">Upload a customer order BOM to check if parts are in stock. The app auto-detects columns &mdash; no need to rename anything. Only <b>Part Number</b> and <b>Quantity</b> are required.</div>
+      <div class="config-note">Upload a customer order BOM to check stock. Match priority: <b>1) Part Number</b> &rarr; <b>2) NexwahPN</b> &rarr; <b>3) Value</b> &rarr; <b>4) Footprint</b>. Only <b>Part Number</b> and <b>Quantity</b> are required.</div>
       <div class="field" style="max-width:400px;margin-bottom:14px"><label>Upload Order BOM CSV</label><input type="file" id="csvFile" accept=".csv" style="padding:6px" /></div>
       <div class="btn-row">
         <button class="btn btn-primary" onclick="processCSV()">&#128269; Check Availability</button>
@@ -298,7 +322,8 @@
         </div>
       </div>
       <div class="search-bar" style="margin-bottom:0">
-        <input type="text" id="invSearch" placeholder="Search by part number, description, location&hellip;" oninput="filterInventory()" />
+        <!-- FEATURE 2: robust search -->
+        <input type="text" id="invSearch" placeholder="Search part number, description, location&hellip;" oninput="filterInventory()" />
       </div>
       <div style="font-size:12px;color:var(--muted);margin-top:8px">Rows in red have &le;5 units. Use <b>+/&minus;</b> for quick adjustments, or click a row to open details.</div>
     </div>
@@ -361,7 +386,7 @@
       </div>
     </div>
     <div id="scanHistoryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;"></div>
-    <div id="scanHistoryEmpty" class="card" style="display:none"><div class="empty-state">No scans saved yet. Start scanning labels to build your history.</div></div>
+    <div id="scanHistoryEmpty" class="card" style="display:none"><div class="empty-state">No scans saved yet.</div></div>
     <div id="scanHistoryLoading" class="card"><div class="empty-state"><span class="spinner"></span> Loading scan history&hellip;</div></div>
   </div>
 
@@ -448,22 +473,6 @@
   </div>
 </div>
 
-<!-- API KEY MODAL -->
-<div id="keyModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999;align-items:center;justify-content:center">
-  <div style="background:#fff;border-radius:14px;padding:32px;max-width:440px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.2)">
-    <div style="font-family:var(--mono);font-size:18px;font-weight:500;color:var(--accent);margin-bottom:8px">NEXWAH / Inventory</div>
-    <div style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6">Enter your Anthropic API key to enable label scanning.<br>It will be saved in this browser.</div>
-    <div style="margin-bottom:14px">
-      <div style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);margin-bottom:5px">Anthropic API Key</div>
-      <input type="password" id="modalKeyInput" placeholder="sk-ant-..." style="width:100%;padding:10px 12px;border:1px solid var(--border2);border-radius:8px;font-family:var(--mono);font-size:13px;outline:none;" onkeydown="if(event.key==='Enter') saveModalKey()" />
-    </div>
-    <button onclick="saveModalKey()" style="width:100%;background:var(--accent);color:#fff;border:none;padding:11px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:var(--sans)">Save &amp; Continue</button>
-    <button onclick="skipApiKey()" style="width:100%;background:transparent;color:var(--muted);border:1px solid var(--border2);padding:10px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:var(--sans);margin-top:8px">Skip &mdash; Use Free OCR (Tesseract)</button>
-    <div id="modalError" style="color:var(--error);font-size:12px;margin-top:10px;display:none">Key should start with sk-ant- &mdash; please check and try again.</div>
-    <div style="font-size:11px;color:var(--muted);margin-top:14px;text-align:center">Get your key at <a href="https://console.anthropic.com/keys" target="_blank" style="color:var(--accent)">console.anthropic.com/keys</a></div>
-  </div>
-</div>
-
 <!-- PRINT LABEL MODAL -->
 <div id="printModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999;align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:14px;padding:28px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.2)">
@@ -501,7 +510,7 @@
   <div style="background:#fff;border-radius:14px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2)">
     <div style="padding:24px 28px 0">
       <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:4px" id="colMapTitle">Confirm Column Mapping</div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.5">The app detected these column matches from your CSV. Check each one and change if needed before processing.</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.5">Check each column match and change if needed before processing.</div>
       <div id="colMapPreviewRow" style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:20px;font-size:12px;font-family:var(--mono);color:var(--muted);overflow-x:auto;white-space:nowrap"></div>
     </div>
     <div id="colMapFields" style="padding:0 28px 8px;display:flex;flex-direction:column;gap:12px"></div>
@@ -531,16 +540,55 @@ const SCAN_REGION = { x: 0.10, y: 0.15, w: 0.80, h: 0.70 };
 let drawerRowData = null;
 let drawerAction = "Receive";
 
-// ── COLUMN MAPPING MODAL ──────────────────────────────────
+// ── FEATURE 4: Location dropdown ──────────────────────────
+let _allLocations = [];
+
+function buildLocList(cache) {
+  const locs = new Set();
+  (cache || []).forEach(({r}) => { if (r[5] && r[5].trim()) locs.add(r[5].trim()); });
+  _allLocations = [...locs].sort();
+}
+
+function openLocDropdown() {
+  const input = document.getElementById("scanLocation");
+  const dd = document.getElementById("locDropdown");
+  const term = (input.value || "").trim().toUpperCase();
+  const filtered = term ? _allLocations.filter(l => l.toUpperCase().includes(term)) : _allLocations;
+  if (!filtered.length) { dd.classList.remove("open"); return; }
+  dd.innerHTML = filtered.map(l =>
+    `<div class="loc-option" onmousedown="selectLocation('${l.replace(/'/g,"\\'")}')">&#128205; ${l}</div>`
+  ).join("");
+  dd.classList.add("open");
+}
+
+function filterLocDropdown() {
+  openLocDropdown();
+}
+
+function closeLocDropdown() {
+  const dd = document.getElementById("locDropdown");
+  if (dd) dd.classList.remove("open");
+}
+
+function selectLocation(loc) {
+  document.getElementById("scanLocation").value = loc;
+  closeLocDropdown();
+}
+
+// ── COLUMN MAPPING ────────────────────────────────────────
 let colMapContext = null;
 let colMapCallback = null;
 
+// FEATURE 3: Added NexwahPN, Value, Footprint fields
 const COL_MAP_FIELDS_BOM = [
-  { key: "MfrPN",       label: "Mfr Part Number", required: true  },
-  { key: "Quantity",    label: "Quantity",         required: true  },
-  { key: "Description", label: "Description",      required: false },
-  { key: "Supplier",    label: "Supplier",         required: false },
-  { key: "SupplierPN",  label: "Supplier PN",      required: false },
+  { key: "MfrPN",       label: "Part Number",   required: true  },
+  { key: "Quantity",    label: "Quantity",       required: true  },
+  { key: "NexwahPN",   label: "NexwahPN",       required: false },
+  { key: "Value",       label: "Value",          required: false },
+  { key: "Footprint",   label: "Footprint",      required: false },
+  { key: "Description", label: "Description",    required: false },
+  { key: "Supplier",    label: "Supplier",       required: false },
+  { key: "SupplierPN",  label: "Supplier PN",    required: false },
 ];
 const COL_MAP_FIELDS_BULK = [
   { key: "MfrPN",       label: "Mfr Part Number", required: true  },
@@ -563,6 +611,9 @@ function autoDetectColumns(headers) {
   };
   mapping.MfrPN       = find(/^(MFR\s*PART|MFR\s*PN|MPN|MANUFACTURER|PART\s*NO?\.?|PART\s*NUMBER|PART\s*#|PN|MFG\s*PN)$/,/PART.*NUM/,/MFR.*PN/);
   mapping.Quantity    = find(/^(QTY|QUANTITY|REQ|REQUIRED|COUNT|AMOUNT)$/,/QUANT/,/QTY/);
+  mapping.NexwahPN    = find(/^(NEXWAH\s*PN|NEXWAHPN|NEXWAH\s*PART|INTERNAL\s*PN|INT\s*PN)$/,/NEXWAH/);
+  mapping.Value       = find(/^(VALUE|VAL|COMP\s*VALUE|COMPONENT\s*VALUE)$/,/^VAL/);
+  mapping.Footprint   = find(/^(FOOTPRINT|FP|PACKAGE|PKG|LAND\s*PATTERN)$/,/FOOTPRINT/,/PACKAGE/);
   mapping.Description = find(/^(DESC|DESCRIPTION|NAME|COMPONENT|ITEM)$/,/DESC/);
   mapping.Supplier    = find(/^(SUPPLIER|VENDOR|SOURCE|DISTRIBUTOR)$/,/SUPPLIER/,/VENDOR/);
   mapping.SupplierPN  = find(/^(SUPPLIER\s*PN|SUPPLIER\s*PART|SUPP\s*PN|ORDER\s*CODE|DISTRIBUTOR\s*PN|DIST\s*PN|CPN)$/,/SUPPLIER.*PN/,/SUPPLIER.*PART/);
@@ -651,34 +702,13 @@ window.addEventListener("DOMContentLoaded", () => {
   loadDashboard();
 });
 
-function skipApiKey() {
-  cfg.anthropicKey = "";
-  localStorage.setItem("nexwah_skip_api", "true");
-  document.getElementById("keyModal").style.display = "none";
-  loadDashboard();
-  toast("Using free Tesseract OCR for scanning.");
-}
-function showKeyModal() {
-  document.getElementById("keyModal").style.display = "flex";
-  setTimeout(() => document.getElementById("modalKeyInput").focus(), 100);
-}
-function saveModalKey() {
-  const val = document.getElementById("modalKeyInput").value.trim();
-  if (!val.startsWith("sk-ant-")) { document.getElementById("modalError").style.display = "block"; return; }
-  cfg.anthropicKey = val;
-  localStorage.setItem("nexwah_anthropic_key", val);
-  document.getElementById("keyModal").style.display = "none";
-  loadDashboard();
-  toast("API key saved. Welcome to NEXWAH Inventory!");
-}
-
 // ── NAV ───────────────────────────────────────────────────
 function showPage(name, btn) {
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
   document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
   document.getElementById("page-" + name).classList.add("active");
   if (btn) btn.classList.add("active");
-  if (name === "inventory")    { _invCache = null; renderInventory(); document.getElementById('invSearch').value = ''; }
+  if (name === "inventory")    { _invCache = null; renderInventory(); }
   if (name === "transactions") renderTransactions();
   if (name === "dashboard")    loadDashboard();
   if (name === "scanhistory")  renderScanHistory();
@@ -742,13 +772,18 @@ async function loadDashboard() {
     document.getElementById("topbarStatus").textContent = `${totalParts} parts \u00b7 ${totalQty} units`;
   } catch(e) {
     document.getElementById("topbarStatus").textContent = "\u26a0 Sheet unavailable";
-    document.getElementById("lowStockList").innerHTML = `<div class="alert alert-warn">Could not connect to Google Sheets. Check your internet connection or try refreshing.<br><small style="color:var(--muted)">${e.message||""}</small></div>`;
+    document.getElementById("lowStockList").innerHTML = `<div class="alert alert-warn">Could not connect to Google Sheets.<br><small>${e.message||""}</small></div>`;
     document.getElementById("recentTxBody").innerHTML = `<tr><td colspan="5" class="empty-state">Could not load.</td></tr>`;
   }
 }
 
-// ── INVENTORY ─────────────────────────────────────────────
+// ── FEATURE 2: INVENTORY SEARCH (robust, case-insensitive, symbol-safe) ───
 function escQ(s) { return String(s).replace(/\\/g,"\\\\").replace(/'/g,"\\'"); }
+
+// Normalize: uppercase, strip all spaces and common symbols for fuzzy matching
+function normalizeSearch(s) {
+  return String(s).toUpperCase().replace(/[\s\-_\/\.]/g, "");
+}
 
 let _invCache = null;
 
@@ -758,6 +793,7 @@ async function renderInventory() {
   try {
     const rows = await sheetRead();
     _invCache = rows.slice(1).map((r, i) => ({ r, origIdx: i + 2 }));
+    buildLocList(_invCache); // FEATURE 4: populate location list
     filterInventory();
   } catch(e) {
     tbody.innerHTML = `<tr><td colspan="8" class="empty-state" style="color:var(--error)">Failed to load. Check config.</td></tr>`;
@@ -765,29 +801,31 @@ async function renderInventory() {
 }
 
 function filterInventory() {
+  // If no cache yet, load first
   if (!_invCache) { renderInventory(); return; }
-  const search = (document.getElementById("invSearch").value||"").trim().toUpperCase();
+
+  const raw = (document.getElementById("invSearch").value || "");
   const tbody = document.getElementById("invTableBody");
 
-  // DEBUG: log first row to see actual column order
-  if (_invCache.length > 0) {
-    const sample = _invCache[0].r;
-    console.log("CACHE row[0]:", JSON.stringify(sample));
-    console.log("r[0]=",sample[0]," r[1]=",sample[1]," r[2]=",sample[2]," r[3]=",sample[3]);
-  }
-  console.log("SEARCH TERM:", search, "| CACHE SIZE:", _invCache.length);
+  // FEATURE 2: normalize both search term and field values
+  // This handles case, spaces, dashes, dots, slashes
+  const term = normalizeSearch(raw);
 
   let data = _invCache;
-  if (search) {
+  if (term) {
     data = data.filter(({r}) =>
-      (r[2]||"").toUpperCase().includes(search)
+      normalizeSearch(r[0]||"").includes(term) ||  // Supplier PN
+      normalizeSearch(r[1]||"").includes(term) ||  // Supplier
+      normalizeSearch(r[2]||"").includes(term) ||  // Mfr PN  ← primary
+      normalizeSearch(r[3]||"").includes(term) ||  // Description
+      normalizeSearch(r[5]||"").includes(term)     // Location
     );
   }
 
   const sorted = [...data].sort((a,b) => (a.r[2]||"").localeCompare(b.r[2]||""));
 
   if (!sorted.length) {
-    tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No results found for "${search}".</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" class="empty-state">No results for "<b>${raw}</b>".</td></tr>`;
     return;
   }
 
@@ -811,34 +849,29 @@ function filterInventory() {
       <td class="mono" style="color:var(--muted)">${formatDate(r[6]||"")}</td>
       <td onclick="event.stopPropagation()">
         <div class="quick-btns">
-          <button class="btn btn-success btn-sm" title="Receive +1"
-            onclick="quickUpdate(${origIdx},'${mfrPn}','${supplier}',${qty},'Receive')">+</button>
-          <button class="btn btn-danger btn-sm" title="Use -1"
-            onclick="quickUpdate(${origIdx},'${mfrPn}','${supplier}',${qty},'Use')">\u2212</button>
-          <button class="btn btn-secondary btn-sm"
-            onclick="printLabel('${mfrPn}','${suppPn}','${desc}','${loc}','${qty}')">&#128424;</button>
+          <button class="btn btn-success btn-sm" onclick="quickUpdate(${origIdx},'${mfrPn}','${supplier}',${qty},'Receive')">+</button>
+          <button class="btn btn-danger btn-sm" onclick="quickUpdate(${origIdx},'${mfrPn}','${supplier}',${qty},'Use')">\u2212</button>
+          <button class="btn btn-secondary btn-sm" onclick="printLabel('${mfrPn}','${suppPn}','${desc}','${loc}','${qty}')">&#128424;</button>
         </div>
       </td>
     </tr>`;
   }).join("");
 }
 
-// Force a fresh fetch from the sheet
 async function refreshInventory() {
   _invCache = null;
+  document.getElementById("invSearch").value = "";
   await renderInventory();
   toast("Inventory refreshed.");
 }
 
 async function quickUpdate(rowIdx, mfrPn, supplier, currentQty, action) {
-  const today = todayStr();
   const newQty = action === "Receive" ? currentQty+1 : currentQty-1;
   if (newQty < 0) { toast("Cannot go below 0"); return; }
   try {
-    await sheetUpdate(rowIdx, newQty, today);
-    await sheetAppendTx([today, mfrPn, supplier, action, 1, currentQty, newQty, "Quick update"]);
+    await sheetUpdate(rowIdx, newQty, todayStr());
+    await sheetAppendTx([todayStr(), mfrPn, supplier, action, 1, currentQty, newQty, "Quick update"]);
     toast(`${mfrPn}: ${currentQty} \u2192 ${newQty}`);
-    // Bust cache and re-fetch so the updated qty is reflected
     _invCache = null;
     renderInventory();
   } catch(e) { toast("Error: " + e.message); }
@@ -862,7 +895,7 @@ function openDrawer(rowIdx, mfrPn, suppPn, supplier, desc, location, qty, lastUp
   ].map(([label,val]) => `<div class="info-row"><div class="info-label">${label}</div><div class="info-value">${val}</div></div>`).join("");
   document.getElementById("drawerQty").value = "1";
   document.getElementById("drawerNotes").value = "";
-  const s = document.getElementById("drawerStatus"); s.style.display="none";
+  document.getElementById("drawerStatus").style.display = "none";
   setDrawerAction("Receive");
   document.getElementById("drawerOverlay").classList.add("open");
   document.getElementById("invDrawer").classList.add("open");
@@ -898,9 +931,8 @@ async function submitDrawerUpdate() {
   if (newQty < 0) { statusEl.style.display="block"; statusEl.innerHTML=`Not enough stock. Available: ${currentQty} units.`; statusEl.className="status-bar err"; return; }
   statusEl.style.display="block"; statusEl.innerHTML='<span class="spinner"></span>Updating\u2026'; statusEl.className="status-bar loading";
   try {
-    const today = todayStr();
-    await sheetUpdate(rowIdx, newQty, today);
-    await sheetAppendTx([today, mfrPn, supplier, drawerAction, qty, currentQty, newQty, notes||drawerAction]);
+    await sheetUpdate(rowIdx, newQty, todayStr());
+    await sheetAppendTx([todayStr(), mfrPn, supplier, drawerAction, qty, currentQty, newQty, notes||drawerAction]);
     statusEl.innerHTML=`\u2713 Updated: ${currentQty} \u2192 ${newQty} units`; statusEl.className="status-bar ok";
     toast(`${drawerAction}: ${mfrPn} \u2192 ${newQty} units`);
     drawerRowData.qty = newQty;
@@ -908,15 +940,12 @@ async function submitDrawerUpdate() {
     if (newQty<=0)      { pill.className="stock-pill empty"; pill.textContent=`0 units \u2014 out of stock`; }
     else if (newQty<=5) { pill.className="stock-pill low";   pill.textContent=`${newQty} units \u2014 low stock`; }
     else                { pill.className="stock-pill ok";    pill.textContent=`${newQty} units in stock`; }
-    // Bust cache so inventory table reflects new qty
-    _invCache = null;
-    renderInventory();
+    _invCache = null; renderInventory();
   } catch(e) { statusEl.innerHTML="Error: "+e.message; statusEl.className="status-bar err"; }
 }
 function drawerPrintLabel() {
   if (!drawerRowData) return;
-  const { mfrPn, suppPn, desc, location, qty } = drawerRowData;
-  printLabel(mfrPn, suppPn, desc, location, qty);
+  printLabel(drawerRowData.mfrPn, drawerRowData.suppPn, drawerRowData.desc, drawerRowData.location, drawerRowData.qty);
 }
 
 // ── ADD NEW PART ───────────────────────────────────────────
@@ -924,7 +953,7 @@ function openNewPartDrawer() {
   ["newPartMfrPn","newPartSupplier","newPartSupplierPn","newPartDesc","newPartNotes"].forEach(id => document.getElementById(id).value="");
   document.getElementById("newPartQty").value="1";
   document.getElementById("newPartLocation").value="";
-  const s=document.getElementById("newPartStatus"); s.style.display="none";
+  document.getElementById("newPartStatus").style.display="none";
   document.getElementById("drawerOverlay").classList.add("open");
   document.getElementById("newPartDrawer").classList.add("open");
   setTimeout(() => document.getElementById("newPartMfrPn").focus(), 300);
@@ -946,17 +975,14 @@ async function submitNewPart() {
   if (qty<=0) { statusEl.style.display="block"; statusEl.innerHTML="Quantity must be at least 1."; statusEl.className="status-bar err"; return; }
   statusEl.style.display="block"; statusEl.innerHTML='<span class="spinner"></span>Adding to inventory\u2026'; statusEl.className="status-bar loading";
   try {
-    const today = todayStr();
     const finalLocation = location || (await autoAssignLocation()) || "";
-    const row = [suppPn, supplier, mfrPn, desc, qty, finalLocation, today];
+    const row = [suppPn, supplier, mfrPn, desc, qty, finalLocation, todayStr()];
     const res = await sheetAppend(row);
     if (res.trim() !== "ok") throw new Error(res);
-    await sheetAppendTx([today, mfrPn, supplier, "Receive", qty, 0, qty, notes||"New part added"]);
+    await sheetAppendTx([todayStr(), mfrPn, supplier, "Receive", qty, 0, qty, notes||"New part added"]);
     statusEl.innerHTML=`\u2713 Added ${mfrPn} \u00d7 ${qty} at ${finalLocation||"no location"}`; statusEl.className="status-bar ok";
     toast(`Added: ${mfrPn}`);
-    // Bust cache so new part appears immediately
-    _invCache = null;
-    renderInventory();
+    _invCache = null; renderInventory();
     setTimeout(() => { document.getElementById("newPartMfrPn").value=""; document.getElementById("newPartQty").value="1"; }, 1500);
   } catch(e) { statusEl.innerHTML="Error: "+e.message; statusEl.className="status-bar err"; }
 }
@@ -983,7 +1009,7 @@ async function renderTransactions() {
       <td style="color:var(--muted)">${r[7]||"\u2014"}</td>
     </tr>`).join("");
   } catch(e) {
-    tbody.innerHTML=`<tr><td colspan="8" class="empty-state" style="color:var(--error)">Could not load transactions sheet.</td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="8" class="empty-state" style="color:var(--error)">Could not load transactions.</td></tr>`;
   }
 }
 
@@ -1081,6 +1107,7 @@ const MPN_LABEL_REGEX = /^(MANUFACTURER\s*PART\s*(NO?\.?|NUMBER)?|MFR\s*(PN|P\/N
 const DESCRIPTION_WORDS = new Set(["CAPACITOR","CAP","RESISTOR","RES","INDUCTOR","IND","TRANSISTOR","DIODE","RELAY","CONNECTOR","CONN","MODULE","SENSOR","SWITCH","VOLTAGE","REGULATOR","REG","AMPLIFIER","AMP","OSCILLATOR","CRYSTAL","XTAL","FILTER","FUSE","DISPLAY","CONTROLLER","CTRL","DRIVER","DRV","INTERFACE","ELECTROLYTIC","ELEC","CERAMIC","FILM","TANTALUM","TANT","SMD","SMT","WATT","VOLT","OHM","FARAD","HENRY","HERTZ","WITH","FOR","AND","THE","FROM","TYPE","PACK","REEL","TAPE","TRAY","BLACK","WHITE","RED","BLUE","GREEN","YELLOW","SILVER","GOLD","LEADED","LEADFREE","ROHS","COMPLIANT","GENUINE","ORIGINAL","THROUGH","HOLE"]);
 const NOISE_STARTS = new Set(["INV","S/O","DATE","LOT#","LOT ","QTY","SHIP","CUST","ORDER","PACK","PO#","REV ","SER ","SERIAL","LEAD","INVOICE","PACKING","DELIVERY","PURCHASE","RECEIPT","BATCH","TOTAL","PRICE","UNIT","USD","SGD","CNY","EUR","GBP","MYR"]);
 const MFR_PREFIXES = new Set(["STM","STM32","STM8","TI","LM","TL","SN","OPA","INA","REF","TPS","LMR","LMK","NXP","LPC","MKE","MK","FXOS","FXLS","MCR","MCP","PIC","ATTINY","ATMEGA","AT","ESP","ESP32","ESP8266","GRM","LQH","BLM","NFM","GCM","CGA","GJM","CRCW","RCWP","ERJ","RK73","RC","RN","IRF","IRFZ","IRLZ","IPP","IPS","BSS","BSR","BC","BD","BT","BUK","LT","LTC","LTM","LTZ","MAX","ICM","ICL","ISL","EL","HIN","ADM","AD","ADA","ADP","ADR","ADXL","BAT","BAS","BZX","BZT","MM","MBR","MB","ULN","UDN","L29","L6","STP","STF","C2012","C1608","C0402","C0603","C0805","C1206","RC0402","RC0603","RC0805","RC1206","GRM21","GRM18","GRM15","STN","TVS","HDS","MB1"]);
+
 function scoreMPN(raw) {
   const pn = raw.replace(/[^A-Z0-9\-\.\/]/g,"").toUpperCase();
   if (pn.length<4||pn.length>32) return null;
@@ -1108,6 +1135,7 @@ function scoreMPN(raw) {
   if (pn.split('-').length>4) score-=10;
   return { pn, score, tier: score>=70?"HIGH":score>=40?"MED":"LOW" };
 }
+
 function extractMPNs(ocrText) {
   const cleaned = ocrText.replace(/[^\x20-\x7E\n]/g,' ').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
   const lines = cleaned.split('\n').map(l=>l.trim()).filter(Boolean);
@@ -1156,16 +1184,16 @@ async function extractWithClaude(dataUrl) {
   if (cfg.anthropicKey) {
     setCamStatus('<span class="spinner"></span>Reading label with Claude Vision\u2026', "loading");
     try { const result = await tryClaudeVision(dataUrl); if (result) { await handleScanResult(result, dataUrl, "Claude Vision"); return; } }
-    catch(err) { setCamStatus('<span class="spinner"></span>Claude unavailable \u2014 trying Google Vision\u2026', "warn"); await new Promise(r=>setTimeout(r,600)); }
+    catch(err) { setCamStatus('<span class="spinner"></span>Trying Google Vision\u2026', "warn"); await new Promise(r=>setTimeout(r,400)); }
   }
   setCamStatus('<span class="spinner"></span>Trying Google Vision\u2026', "loading");
   try { const result = await tryGoogleVision(dataUrl); if (result) { await handleScanResult(result, dataUrl, "Google Vision"); return; } }
-  catch(err) { setCamStatus('<span class="spinner"></span>Google Vision unavailable \u2014 trying Tesseract\u2026', "warn"); await new Promise(r=>setTimeout(r,600)); }
+  catch(err) { setCamStatus('<span class="spinner"></span>Trying Tesseract OCR\u2026', "warn"); await new Promise(r=>setTimeout(r,400)); }
   setCamStatus('<span class="spinner"></span>Running Tesseract OCR\u2026', "loading");
   try {
     const result = await tryTesseract(dataUrl);
-    if (result) { await handleScanResult(result, dataUrl, "Tesseract OCR (Free)"); return; }
-    setCamStatus("\u26a0 Could not read label. Try better lighting, hold steady, or get closer.", "err");
+    if (result) { await handleScanResult(result, dataUrl, "Tesseract OCR"); return; }
+    setCamStatus("\u26a0 Could not read label. Try better lighting or get closer.", "err");
   } catch(err) { setCamStatus("OCR failed: " + err.message, "err"); }
 }
 
@@ -1207,7 +1235,6 @@ async function tryTesseract(dataUrl) {
       document.head.appendChild(script);
     });
   }
-  setCamStatus('<span class="spinner"></span>Tesseract OCR running\u2026', "loading");
   const processedUrl = await preprocessImageForOCR(dataUrl);
   const worker = await Tesseract.createWorker("eng");
   await worker.setParameters({tessedit_pageseg_mode:"6",tessedit_char_whitelist:"ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/"});
@@ -1244,6 +1271,7 @@ async function preprocessImageForOCR(dataUrl) {
   });
 }
 
+// FEATURE 1: handleScanResult saves timestamped image to scan history
 async function handleScanResult(parsed, dataUrl, method) {
   const today = todayStr();
   currentScan = { ...parsed, date: today };
@@ -1252,18 +1280,20 @@ async function handleScanResult(parsed, dataUrl, method) {
   document.getElementById("scanSupplierPn").value = parsed.supplierPartNumber||"";
   document.getElementById("scanDesc").value = parsed.description||"";
   showSupplierBadge("scanSupplierBadge", parsed.supplier);
-  setCamStatus(`\u2713 Label read via <b>${method}</b>. Edit if needed, then check inventory.`, "ok");
+  setCamStatus(`\u2713 Label read via <b>${method}</b>. Image saved to Scan History \u2014 edit if needed.`, "ok");
   await lookupForScan(parsed.mfrPartNumber);
+
+  // FEATURE 1: Save scan with full timestamp + image to history (non-blocking)
   setTimeout(async () => {
     try {
       const resized = await resizeImageForStorage(dataUrl, MAX_IMAGE_SIZE);
       await saveScanToHistory({
-        mfrPn: parsed.mfrPartNumber,
-        supplierPn: parsed.supplierPartNumber||"",
-        supplier: parsed.supplier||"Unknown",
-        desc: parsed.description||"",
-        date: today,
-        image: resized
+        mfrPn:      parsed.mfrPartNumber,
+        supplierPn: parsed.supplierPartNumber || "",
+        supplier:   parsed.supplier || "Unknown",
+        desc:       parsed.description || "",
+        date:       new Date().toISOString(), // full ISO timestamp for Feature 1
+        image:      resized
       });
     } catch(e) { console.warn("Scan history save failed:", e); }
   }, 100);
@@ -1288,10 +1318,14 @@ async function lookupForScan(mfrPn) {
   try {
     const rows = await sheetRead();
     let foundRow=null, foundIdx=-1;
-    for (let i=1;i<rows.length;i++) { if ((rows[i][2]||"").trim().toUpperCase()===mfrPn.trim().toUpperCase()) { foundRow=rows[i]; foundIdx=i+1; break; } }
+    for (let i=1;i<rows.length;i++) {
+      if ((rows[i][2]||"").trim().toUpperCase()===mfrPn.trim().toUpperCase()) {
+        foundRow=rows[i]; foundIdx=i+1; break;
+      }
+    }
     showScanInvPanel(foundRow, foundIdx);
-    if (scanMode==="dispatch") setCamStatus(foundRow?`\u2713 Found \u2014 ${foundRow[4]||0} units in stock at ${foundRow[5]||"unknown location"}.`:`"${mfrPn}" not found in inventory.`, foundRow?"ok":"err");
-    else setCamStatus(foundRow?`\u2713 Found in inventory. Current stock: ${foundRow[4]||0} units at ${foundRow[5]||"no location"}.`:`"${mfrPn}" not in inventory yet \u2014 add it below.`, foundRow?"ok":"warn");
+    if (scanMode==="dispatch") setCamStatus(foundRow?`\u2713 Found \u2014 ${foundRow[4]||0} units at ${foundRow[5]||"unknown"}.`:`"${mfrPn}" not found in inventory.`, foundRow?"ok":"err");
+    else setCamStatus(foundRow?`\u2713 Found. Stock: ${foundRow[4]||0} units at ${foundRow[5]||"no location"}.`:`"${mfrPn}" not in inventory yet \u2014 add it below.`, foundRow?"ok":"warn");
   } catch(e) { setCamStatus("Sheet lookup failed: "+e.message,"err"); showScanInvPanel(null,-1); }
 }
 
@@ -1303,9 +1337,9 @@ function showScanInvPanel(row, rowIdx) {
     const qty=parseInt(row[4]||"0");
     panel.className="inv-action found";
     panel.innerHTML=`<div class="inv-action-title">&#128666; Dispatch Stock</div>
-      <div class="inv-action-info">Location: <b>${row[5]||"\u2014"}</b><br>Available Stock: <b style="color:var(--accent)">${qty} units</b></div>
+      <div class="inv-action-info">Location: <b>${row[5]||"\u2014"}</b><br>Available: <b style="color:var(--accent)">${qty} units</b></div>
       <div class="qty-row">
-        <div class="field"><label>Qty to Dispatch</label><input type="number" id="dispatchQty" min="1" max="${qty}" value="1" /></div>
+        <div class="field"><label>Qty</label><input type="number" id="dispatchQty" min="1" max="${qty}" value="1" /></div>
         <div class="field"><label>Notes</label><input type="text" id="dispatchNotes" placeholder="e.g. Project BOM-001" /></div>
       </div>
       <div class="btn-row" style="margin-top:12px">
@@ -1316,7 +1350,7 @@ function showScanInvPanel(row, rowIdx) {
     if (!row) {
       panel.className="inv-action notfound";
       panel.innerHTML=`<div class="inv-action-title">+ Add to Inventory</div>
-        <div class="inv-action-info">Not in inventory yet. Fill the form above and confirm below.</div>
+        <div class="inv-action-info">Not in inventory yet.</div>
         <div class="qty-row">
           <div class="field"><label>Initial Qty</label><input type="number" id="receiveQty" min="1" value="1" /></div>
           <div class="field"><label>Notes</label><input type="text" id="receiveNotes" placeholder="e.g. Reel 1000pcs" /></div>
@@ -1329,7 +1363,7 @@ function showScanInvPanel(row, rowIdx) {
       const qty=parseInt(row[4]||"0");
       panel.className="inv-action found";
       panel.innerHTML=`<div class="inv-action-title">&#128230; Add Stock</div>
-        <div class="inv-action-info">Location: <b>${row[5]||"\u2014"}</b><br>Current Stock: <b style="color:var(--accent)">${qty} units</b></div>
+        <div class="inv-action-info">Location: <b>${row[5]||"\u2014"}</b><br>Current: <b style="color:var(--accent)">${qty} units</b></div>
         <div class="qty-row">
           <div class="field"><label>Qty to Add</label><input type="number" id="receiveQty" min="1" value="1" /></div>
           <div class="field"><label>Notes</label><input type="text" id="receiveNotes" placeholder="e.g. Restock" /></div>
@@ -1348,12 +1382,12 @@ async function confirmScanDispatch(rowIdx, currentQty) {
   const statusEl = document.getElementById("scanDispatchStatus");
   if (qty<=0||qty>currentQty) { statusEl.style.display="block"; statusEl.innerHTML=`Enter 1\u2013${currentQty}`; statusEl.className="status-bar err"; return; }
   statusEl.style.display="block"; statusEl.innerHTML='<span class="spinner"></span>Processing\u2026'; statusEl.className="status-bar loading";
-  const newQty=currentQty-qty; const today=todayStr();
+  const newQty=currentQty-qty;
   try {
-    await sheetUpdate(rowIdx,newQty,today);
+    await sheetUpdate(rowIdx,newQty,todayStr());
     const mfrPn=document.getElementById("scanMfrPn").value;
     const supplier=document.getElementById("scanSupplierBadge").textContent.trim()||"Unknown";
-    await sheetAppendTx([today,mfrPn,supplier,"Use",qty,currentQty,newQty,notes||"Scan dispatch"]);
+    await sheetAppendTx([todayStr(),mfrPn,supplier,"Use",qty,currentQty,newQty,notes||"Scan dispatch"]);
     statusEl.innerHTML=`\u2713 Dispatched ${qty}. Remaining: ${newQty}`; statusEl.className="status-bar ok";
     toast(`Dispatched ${qty} \u00d7 ${mfrPn}`);
   } catch(e) { statusEl.innerHTML="Error: "+e.message; statusEl.className="status-bar err"; }
@@ -1365,12 +1399,12 @@ async function confirmScanReceiveExisting(rowIdx, currentQty) {
   const statusEl = document.getElementById("scanReceiveStatus");
   if (qty<=0) { statusEl.style.display="block"; statusEl.innerHTML="Enter qty \u2265 1"; statusEl.className="status-bar err"; return; }
   statusEl.style.display="block"; statusEl.innerHTML='<span class="spinner"></span>Processing\u2026'; statusEl.className="status-bar loading";
-  const newQty=currentQty+qty; const today=todayStr();
+  const newQty=currentQty+qty;
   try {
-    await sheetUpdate(rowIdx,newQty,today);
+    await sheetUpdate(rowIdx,newQty,todayStr());
     const mfrPn=document.getElementById("scanMfrPn").value;
     const supplier=document.getElementById("scanSupplierBadge").textContent.trim()||"Unknown";
-    await sheetAppendTx([today,mfrPn,supplier,"Receive",qty,currentQty,newQty,notes||"Scan receive"]);
+    await sheetAppendTx([todayStr(),mfrPn,supplier,"Receive",qty,currentQty,newQty,notes||"Scan receive"]);
     statusEl.innerHTML=`\u2713 Received ${qty}. New stock: ${newQty}`; statusEl.className="status-bar ok";
     toast(`Received ${qty} \u00d7 ${mfrPn}`);
   } catch(e) { statusEl.innerHTML="Error: "+e.message; statusEl.className="status-bar err"; }
@@ -1387,18 +1421,19 @@ async function confirmScanReceiveNew() {
   const supplier = document.getElementById("scanSupplierBadge").textContent.trim()||"Unknown";
   if (!mfrPn||qty<=0) { statusEl.style.display="block"; statusEl.innerHTML="Part number and qty required"; statusEl.className="status-bar err"; return; }
   statusEl.style.display="block"; statusEl.innerHTML='<span class="spinner"></span>Adding\u2026'; statusEl.className="status-bar loading";
-  const today=todayStr();
   try {
-    const finalLocation = location || (await autoAssignLocation("Other")) || "";
-    const row=[suppPn,supplier,mfrPn,desc,qty,finalLocation,today];
+    const finalLocation = location || (await autoAssignLocation()) || "";
+    const row=[suppPn,supplier,mfrPn,desc,qty,finalLocation,todayStr()];
     const res=await sheetAppend(row);
     if (res.trim()!=="ok") throw new Error(res);
-    await sheetAppendTx([today,mfrPn,supplier,"Receive",qty,0,qty,notes||"Scan receive new"]);
+    await sheetAppendTx([todayStr(),mfrPn,supplier,"Receive",qty,0,qty,notes||"Scan receive new"]);
     statusEl.innerHTML=`\u2713 Added ${mfrPn} \u00d7 ${qty} at ${finalLocation}`; statusEl.className="status-bar ok";
     toast(`Added: ${mfrPn}`);
+    _invCache = null;
   } catch(e) { statusEl.innerHTML="Error: "+e.message; statusEl.className="status-bar err"; }
 }
 
+// ── FEATURE 1: Scan history with full timestamp ────────────
 const IMGUR_CLIENT_ID = "546c25a59c58ad7";
 
 async function uploadImageToImgur(base64DataUrl) {
@@ -1413,20 +1448,20 @@ async function uploadImageToImgur(base64DataUrl) {
   });
   const data = await resp.json();
   if (data.success && data.data && data.data.link) return data.data.link;
-  throw new Error("Imgur upload failed: " + JSON.stringify(data));
+  throw new Error("Imgur upload failed");
 }
 
 async function saveScanToHistory(scan) {
   let imageUrl = "";
   if (scan.image && scan.image.startsWith("data:")) {
     try { imageUrl = await uploadImageToImgur(scan.image); }
-    catch(imgErr) { console.warn("Imgur upload failed:", imgErr.message); imageUrl = ""; }
+    catch(e) { console.warn("Imgur upload failed:", e.message); }
   }
-  const row = [scan.date||todayStr(), scan.mfrPn||"", scan.supplierPn||"", scan.supplier||"Unknown", scan.desc||"", imageUrl];
+  // Store full ISO timestamp (Feature 1)
+  const row = [scan.date||new Date().toISOString(), scan.mfrPn||"", scan.supplierPn||"", scan.supplier||"Unknown", scan.desc||"", imageUrl];
   try {
-    const url = `${APPS_SCRIPT_URL}?action=append&sheet=${encodeURIComponent(SCAN_HISTORY_SHEET)}&row=${encodeURIComponent(JSON.stringify(row))}`;
-    await fetch(url);
-  } catch(sheetErr) { console.warn("Sheet save failed:", sheetErr.message); }
+    await fetch(`${APPS_SCRIPT_URL}?action=append&sheet=${encodeURIComponent(SCAN_HISTORY_SHEET)}&row=${encodeURIComponent(JSON.stringify(row))}`);
+  } catch(e) { console.warn("Sheet save failed:", e.message); }
 }
 
 async function loadAllScans() {
@@ -1435,19 +1470,10 @@ async function loadAllScans() {
   return rows.slice(1).filter(r => r[1]).reverse();
 }
 
-async function deleteScanRow(rowIdx) {
-  try {
-    const url = `${APPS_SCRIPT_URL}?action=deleteRow&sheet=${encodeURIComponent(SCAN_HISTORY_SHEET)}&rowIndex=${rowIdx}`;
-    await fetch(url);
-  } catch(e) { console.warn("Delete row failed:", e); }
-  renderScanHistory();
-}
-
 async function clearScanHistory() {
   if (!confirm("Delete all scan history? This cannot be undone.")) return;
   try {
-    const url = `${APPS_SCRIPT_URL}?action=clearSheet&sheet=${encodeURIComponent(SCAN_HISTORY_SHEET)}`;
-    await fetch(url);
+    await fetch(`${APPS_SCRIPT_URL}?action=clearSheet&sheet=${encodeURIComponent(SCAN_HISTORY_SHEET)}`);
     toast("Scan history cleared.");
   } catch(e) { toast("Clear failed: " + e.message); }
   renderScanHistory();
@@ -1463,7 +1489,7 @@ async function renderScanHistory() {
   try { scans = await loadAllScans(); }
   catch(e) {
     loading.style.display = "none"; empty.style.display = "block";
-    document.getElementById("scanHistoryEmpty").innerHTML = `<div class="empty-state" style="color:var(--error)">Could not load scan history from Google Sheets.<br><small>${e.message||""}</small></div>`;
+    document.getElementById("scanHistoryEmpty").innerHTML = `<div class="empty-state" style="color:var(--error)">Could not load scan history.<br><small>${e.message||""}</small></div>`;
     return;
   }
   loading.style.display = "none";
@@ -1472,13 +1498,15 @@ async function renderScanHistory() {
     : scans;
   if (!filtered.length) {
     empty.style.display = "block";
-    document.getElementById("scanHistoryEmpty").innerHTML = `<div class="empty-state">No scans saved yet. Start scanning labels to build your history.</div>`;
+    document.getElementById("scanHistoryEmpty").innerHTML = `<div class="empty-state">No scans saved yet.</div>`;
     return;
   }
   grid.innerHTML = filtered.map((row) => {
     const [date, mfrPn, supplierPn, supplier, desc, imageUrl] = row;
     const hasImage = imageUrl && imageUrl.startsWith("http");
     const safeUrl = hasImage ? imageUrl.replace(/'/g, "%27") : "";
+    // FEATURE 1: Show full date+time from ISO string
+    const displayDate = date ? formatDateTime(date) : "";
     const imgHtml = hasImage
       ? `<img src="${imageUrl}" alt="scan" loading="lazy"
              onclick="openImgModalDirect('${safeUrl}')"
@@ -1503,7 +1531,7 @@ async function renderScanHistory() {
         <div class="scan-hist-desc">${desc||"No description"}</div>
         <div class="scan-hist-meta">
           <span class="badge ${getBadgeClass(supplier)}">${supplier||"Unknown"}</span>
-          <span class="scan-hist-date">${formatDate(date)}</span>
+          <span class="scan-hist-date">${displayDate}</span>
         </div>
         ${supplierPn ? `<div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:4px">${supplierPn}</div>` : ""}
       </div>
@@ -1521,85 +1549,77 @@ function openImgModalDirect(src) {
   document.getElementById("imgModal").classList.add("open");
 }
 
-// ── SETTINGS ──────────────────────────────────────────────
-function loadSettingsPage() {
-  const hasKey = !!cfg.anthropicKey;
-  document.getElementById("settingsApiKey").value = hasKey ? cfg.anthropicKey : "";
-  const keyStatusEl = document.getElementById("apiKeyStatus");
-  keyStatusEl.innerHTML = hasKey
-    ? `<div class="alert alert-success">\u2713 API key saved. Claude Vision scanning enabled.</div>`
-    : `<div class="alert alert-warn">No API key set. Using free OCR (Google Vision \u2192 Tesseract fallback).</div>`;
-  document.getElementById("settingsStatus").innerHTML = `
-    API Key: <b>${hasKey ? "Set \u2713" : "Not set"}</b><br>
-    Sheet: <b>${cfg.sheetName || "Sheet1"}</b><br>
-    Scan History: <b>Google Sheets (ScanHistory tab) &mdash; cross-device &#9729;</b>
-  `;
-}
-function saveSettingsKey() {
-  const val = document.getElementById("settingsApiKey").value.trim();
-  const msgEl = document.getElementById("settingsKeyMsg");
-  if (!val.startsWith("sk-ant-")) { msgEl.style.display="block"; msgEl.innerHTML="Key must start with sk-ant-"; msgEl.className="status-bar err"; return; }
-  cfg.anthropicKey = val;
-  localStorage.setItem("nexwah_anthropic_key", val);
-  msgEl.style.display="block"; msgEl.innerHTML="\u2713 Key saved."; msgEl.className="status-bar ok";
-  toast("API key saved.");
-  loadSettingsPage();
-}
-function removeSettingsKey() {
-  cfg.anthropicKey = "";
-  localStorage.removeItem("nexwah_anthropic_key");
-  document.getElementById("settingsApiKey").value = "";
-  const msgEl = document.getElementById("settingsKeyMsg");
-  msgEl.style.display="block"; msgEl.innerHTML="Key removed."; msgEl.className="status-bar warn";
-  toast("API key removed.");
-  loadSettingsPage();
+// ── FEATURE 3: BOM check with priority matching ───────────
+// Priority: 1=PartNumber, 2=NexwahPN, 3=Value, 4=Footprint
+
+// Build a lookup map from inventory for all match types
+function buildInvLookup(sheetRows) {
+  const byMfrPn    = {};  // exact mfr part number
+  const byNexwah   = {};  // supplier PN (used as NexwahPN)
+  const byValue    = {};  // description field — value matches
+  const byFootprint= {};  // description field — footprint matches
+
+  // Common footprint patterns
+  const FOOTPRINT_RE = /\b(0201|0402|0603|0805|1206|1210|1812|2010|2512|SOD[\-]?\d+|SOT[\-]?\d+|SOIC|SOP|QFP|QFN|DFN|DIP|TO[\-]?\d+|LGA|BGA|SMB|SMA|DO[\-]?\d+)\b/i;
+
+  sheetRows.slice(1).forEach((r, i) => {
+    const idx = i + 2;
+    const mfrPn = (r[2]||"").trim().toUpperCase();
+    const suppPn = (r[0]||"").trim().toUpperCase();
+    const desc   = (r[3]||"").trim().toUpperCase();
+    const qty    = parseInt(r[4])||0;
+    const loc    = r[5]||"";
+    const entry  = { rowIdx: idx, qty, loc, mfrPn: r[2]||"", suppPn: r[0]||"", desc: r[3]||"" };
+
+    if (mfrPn) byMfrPn[mfrPn] = entry;
+    if (suppPn) byNexwah[suppPn] = entry;
+
+    // Index by value tokens in description (e.g. "10K", "100NF", "4.7UH")
+    const valueTokens = desc.match(/\b[\d\.]+\s*(?:K|M|R|OHM|NF|PF|UF|UH|NH|MH|MHZ|KHZ|GHZ|V|MA|A|W)\b/gi) || [];
+    valueTokens.forEach(v => {
+      const key = v.replace(/\s/g,"").toUpperCase();
+      if (!byValue[key]) byValue[key] = [];
+      byValue[key].push(entry);
+    });
+
+    // Index by footprint
+    const fpMatch = desc.match(FOOTPRINT_RE);
+    if (fpMatch) {
+      const key = fpMatch[0].toUpperCase().replace(/[\s\-]/g,"");
+      if (!byFootprint[key]) byFootprint[key] = [];
+      byFootprint[key].push(entry);
+    }
+  });
+
+  return { byMfrPn, byNexwah, byValue, byFootprint };
 }
 
-// ── PRINT LABEL ───────────────────────────────────────────
-function printLabel(mfrPn, suppPn, desc, location, qty) {
-  document.getElementById("lblMfrPn").textContent = mfrPn||"";
-  document.getElementById("lblSuppPn").textContent = suppPn||"";
-  document.getElementById("lblDesc").textContent = desc||"";
-  document.getElementById("lblLoc").textContent = location||"—";
-  document.getElementById("lblQty").textContent = "QTY: " + (qty||0);
-  document.getElementById("lblDate").textContent = new Date().toLocaleDateString();
-  document.getElementById("printLocInput").value = location||"";
-  document.getElementById("printQtyInput").value = qty||"";
-  document.getElementById("printModal").style.display = "flex";
-}
-function doPrint() {
-  const printArea = document.getElementById("labelPreview").outerHTML;
-  const win = window.open("","_blank","width=400,height=350");
-  win.document.write(`<!DOCTYPE html><html><head><title>Label</title><style>
-    body{font-family:'IBM Plex Mono',monospace;margin:20px;background:#fff}
-    @media print{body{margin:0}}
-  </style><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet"></head><body>${printArea}<script>window.onload=()=>{window.print();setTimeout(()=>window.close(),500)}<\/script></body></html>`);
+function matchBomItem(item, lookup, mapping) {
+  const pn       = (mapping.MfrPN    ? item[mapping.MfrPN]    : "").trim().toUpperCase();
+  const nexwahPn = (mapping.NexwahPN  ? item[mapping.NexwahPN] : "").trim().toUpperCase();
+  const value    = (mapping.Value     ? item[mapping.Value]    : "").trim().toUpperCase().replace(/\s/g,"");
+  const footprint= (mapping.Footprint ? item[mapping.Footprint]: "").trim().toUpperCase().replace(/[\s\-]/g,"");
+
+  // Priority 1: Part Number exact match
+  if (pn && lookup.byMfrPn[pn]) return { entry: lookup.byMfrPn[pn], matchType: "pn" };
+
+  // Priority 2: NexwahPN
+  if (nexwahPn && lookup.byNexwah[nexwahPn]) return { entry: lookup.byNexwah[nexwahPn], matchType: "nexwah" };
+
+  // Priority 3: Value
+  if (value && lookup.byValue[value] && lookup.byValue[value].length > 0) return { entry: lookup.byValue[value][0], matchType: "value" };
+
+  // Priority 4: Footprint
+  if (footprint && lookup.byFootprint[footprint] && lookup.byFootprint[footprint].length > 0) return { entry: lookup.byFootprint[footprint][0], matchType: "fp" };
+
+  return null;
 }
 
-// ── CSV EXPORT ────────────────────────────────────────────
-async function exportInventoryCSV() {
-  try {
-    const rows = await sheetRead();
-    const csv = rows.map(r => r.map(c => `"${(c||"").toString().replace(/"/g,'""')}"`).join(",")).join("\n");
-    downloadFile("nexwah_inventory_" + todayStr() + ".csv", "text/csv", csv);
-  } catch(e) { toast("Export failed: " + e.message); }
-}
-async function exportTransactionsCSV() {
-  try {
-    const resp = await fetch(`${APPS_SCRIPT_URL}?action=read&sheet=Transactions`);
-    const rows = await resp.json();
-    const csv = rows.map(r => r.map(c => `"${(c||"").toString().replace(/"/g,'""')}"`).join(",")).join("\n");
-    downloadFile("nexwah_transactions_" + todayStr() + ".csv", "text/csv", csv);
-  } catch(e) { toast("Export failed: " + e.message); }
-}
-function downloadFile(name, type, content) {
-  const a = document.createElement("a");
-  a.href = "data:" + type + ";charset=utf-8," + encodeURIComponent(content);
-  a.download = name; a.click();
-}
+const MATCH_LABEL = { pn:"Part#", nexwah:"NexwahPN", value:"Value", fp:"Footprint" };
+const MATCH_CLASS = { pn:"match-pn", nexwah:"match-nexwah", value:"match-value", fp:"match-fp" };
 
-// ── BOM / ORDER CHECK ─────────────────────────────────────
 let bomPendingDispatch = [];
+
 function processCSV() {
   const file = document.getElementById("csvFile").files[0];
   if (!file) { document.getElementById("bomStatus").innerHTML="Please select a CSV file."; document.getElementById("bomStatus").className="status-bar err"; return; }
@@ -1614,51 +1634,77 @@ function processCSV() {
   };
   reader.readAsText(file);
 }
+
 async function runBomCheck(mapping, rows) {
   document.getElementById("bomStatus").innerHTML='<span class="spinner"></span>Checking availability\u2026'; document.getElementById("bomStatus").className="status-bar loading";
-  const items = rows.map(r => ({ pn: r[mapping.MfrPN]||"", qty: parseInt(r[mapping.Quantity])||0 })).filter(i=>i.pn&&i.qty>0);
   try {
     const sheetRows = await sheetRead();
-    const inv = {}; sheetRows.slice(1).forEach((r,i)=>{ if(r[2]) inv[(r[2]||"").toUpperCase()]={rowIdx:i+2,qty:parseInt(r[4])||0,location:r[5]||""}; });
-    let html=""; let allOk=true; bomPendingDispatch=[];
-    items.forEach(({pn,qty})=>{
-      const key=pn.toUpperCase(); const stock=inv[key];
-      if (!stock) { html+=`<div class="alert alert-error"><b>${pn}</b>: NOT IN INVENTORY</div>`; allOk=false; }
-      else if (stock.qty<qty) { html+=`<div class="alert alert-warn"><b>${pn}</b>: Need ${qty}, have ${stock.qty} at ${stock.location||"?"}. Shortage: ${qty-stock.qty}</div>`; allOk=false; }
-      else { html+=`<div class="alert alert-success"><b>${pn}</b>: OK \u2014 ${stock.qty} in stock at ${stock.location||"?"}. Need: ${qty}</div>`; bomPendingDispatch.push({pn,qty,rowIdx:stock.rowIdx,currentQty:stock.qty}); }
+    const lookup = buildInvLookup(sheetRows);
+    let html = ""; let allOk = true; bomPendingDispatch = [];
+
+    rows.forEach(r => {
+      const pn  = mapping.MfrPN   ? (r[mapping.MfrPN]||"").trim()   : "";
+      const qty = parseInt(mapping.Quantity ? r[mapping.Quantity] : 0)||0;
+      const displayName = pn || (mapping.Value ? r[mapping.Value]||"" : "") || "(unnamed)";
+      if (!qty) return;
+
+      const match = matchBomItem(r, lookup, mapping);
+
+      if (!match) {
+        html += `<div class="alert alert-error"><b>${displayName}</b>: NOT FOUND in inventory</div>`;
+        allOk = false;
+      } else {
+        const { entry, matchType } = match;
+        const badge = `<span class="match-badge ${MATCH_CLASS[matchType]}">via ${MATCH_LABEL[matchType]}</span>`;
+        if (entry.qty < qty) {
+          html += `<div class="alert alert-warn"><b>${displayName}</b>${badge}: Need ${qty}, have ${entry.qty} at ${entry.loc||"?"}. Short: ${qty-entry.qty}</div>`;
+          allOk = false;
+        } else {
+          html += `<div class="alert alert-success"><b>${displayName}</b>${badge}: OK &mdash; ${entry.qty} in stock at ${entry.loc||"?"}. Need: ${qty}</div>`;
+          bomPendingDispatch.push({ pn: entry.mfrPn, qty, rowIdx: entry.rowIdx, currentQty: entry.qty });
+        }
+      }
     });
+
     document.getElementById("bomResults").innerHTML = `<div class="card"><div class="card-title">Availability Results</div>${html}</div>`;
-    if (bomPendingDispatch.length>0) {
-      document.getElementById("bomConfirmPanel").style.display="block";
-      document.getElementById("bomConfirmSummary").innerHTML=`Ready to deduct stock for <b>${bomPendingDispatch.length}</b> available part(s):<br>${bomPendingDispatch.map(i=>`${i.pn} &times; ${i.qty}`).join("<br>")}`;
-      document.getElementById("bomConfirmStatus").style.display="none";
+    if (bomPendingDispatch.length > 0) {
+      document.getElementById("bomConfirmPanel").style.display = "block";
+      document.getElementById("bomConfirmSummary").innerHTML = `Ready to deduct stock for <b>${bomPendingDispatch.length}</b> available part(s):<br>${bomPendingDispatch.map(i=>`${i.pn} &times; ${i.qty}`).join("<br>")}`;
+      document.getElementById("bomConfirmStatus").style.display = "none";
     }
-    document.getElementById("bomStatus").innerHTML=allOk?"\u2713 All parts available.":"\u26a0 Some parts unavailable or insufficient."; document.getElementById("bomStatus").className="status-bar "+(allOk?"ok":"warn");
-  } catch(e) { document.getElementById("bomStatus").innerHTML="Error: "+e.message; document.getElementById("bomStatus").className="status-bar err"; }
+    document.getElementById("bomStatus").innerHTML = allOk ? "\u2713 All parts available." : "\u26a0 Some parts unavailable or insufficient.";
+    document.getElementById("bomStatus").className = "status-bar " + (allOk ? "ok" : "warn");
+  } catch(e) {
+    document.getElementById("bomStatus").innerHTML = "Error: " + e.message;
+    document.getElementById("bomStatus").className = "status-bar err";
+  }
 }
+
 async function confirmOrderDispatch() {
   const statusEl = document.getElementById("bomConfirmStatus");
   statusEl.style.display="block"; statusEl.innerHTML='<span class="spinner"></span>Deducting stock\u2026'; statusEl.className="status-bar loading";
-  const today=todayStr();
   try {
     for (const item of bomPendingDispatch) {
-      const newQty=item.currentQty-item.qty;
-      await sheetUpdate(item.rowIdx,newQty,today);
-      await sheetAppendTx([today,item.pn,"Order Check","Use",item.qty,item.currentQty,newQty,"Order dispatch"]);
+      const newQty = item.currentQty - item.qty;
+      await sheetUpdate(item.rowIdx, newQty, todayStr());
+      await sheetAppendTx([todayStr(), item.pn, "Order Check", "Use", item.qty, item.currentQty, newQty, "Order dispatch"]);
     }
     statusEl.innerHTML=`\u2713 Stock deducted for ${bomPendingDispatch.length} parts.`; statusEl.className="status-bar ok";
     toast("Order dispatched.");
-    bomPendingDispatch=[];
-    document.getElementById("bomConfirmPanel").style.display="none";
-  } catch(e) { statusEl.innerHTML="Error: "+e.message; statusEl.className="status-bar err"; }
+    bomPendingDispatch = [];
+    document.getElementById("bomConfirmPanel").style.display = "none";
+  } catch(e) { statusEl.innerHTML = "Error: " + e.message; statusEl.className = "status-bar err"; }
 }
+
 function cancelOrderDispatch() { document.getElementById("bomConfirmPanel").style.display="none"; bomPendingDispatch=[]; }
+
 function downloadSampleCSV() {
-  downloadFile("sample_order_bom.csv","text/csv","Part Number,Quantity,Description\nSN74LVC1G08DCKR,100,IC Gate AND\nGRM188R71H104KA93D,500,Cap 100nF 50V\n");
+  downloadFile("sample_order_bom.csv","text/csv","Part Number,Quantity,NexwahPN,Value,Footprint,Description\nSN74LVC1G08DCKR,100,,,SOT23-5,IC GATE AND\nGRM188R71H104KA93D,500,,100NF,0402,Cap 100nF\n,,PB23-6,10K,0402,Resistor 10K\n");
 }
 
 // ── BULK RECEIVE ──────────────────────────────────────────
 let bulkPendingItems = [];
+
 async function autoAssignLocation() {
   try {
     const rows = await sheetRead();
@@ -1670,6 +1716,7 @@ async function autoAssignLocation() {
     return "PB001";
   } catch(e) { return "PB001"; }
 }
+
 function processBulkReceive() {
   const file = document.getElementById("bulkCsvFile").files[0];
   if (!file) { document.getElementById("bulkStatus").innerHTML="Please select a CSV file."; document.getElementById("bulkStatus").className="status-bar err"; return; }
@@ -1684,6 +1731,7 @@ function processBulkReceive() {
   };
   reader.readAsText(file);
 }
+
 async function runBulkPreview(mapping, rows) {
   document.getElementById("bulkStatus").innerHTML='<span class="spinner"></span>Previewing\u2026'; document.getElementById("bulkStatus").className="status-bar loading";
   const items = rows.map(r => ({
@@ -1718,61 +1766,148 @@ async function runBulkPreview(mapping, rows) {
     document.getElementById("bulkStatus").innerHTML=`\u2713 ${bulkPendingItems.length} parts parsed.`; document.getElementById("bulkStatus").className="status-bar ok";
   } catch(e) { document.getElementById("bulkStatus").innerHTML="Error: "+e.message; document.getElementById("bulkStatus").className="status-bar err"; }
 }
+
 async function confirmBulkReceive() {
   const statusEl=document.getElementById("bulkConfirmStatus");
   statusEl.style.display="block"; statusEl.innerHTML='<span class="spinner"></span>Processing\u2026'; statusEl.className="status-bar loading";
-  const today=todayStr(); let done=0;
+  let done=0;
   try {
     for (const item of bulkPendingItems) {
       if (item.isNew) {
-        const row=[item.supplierPn,item.supplier,item.mfrPn,item.desc,item.qty,item.finalLocation,today];
-        await sheetAppend(row);
-        await sheetAppendTx([today,item.mfrPn,item.supplier,"Receive",item.qty,0,item.qty,"Bulk receive"]);
+        await sheetAppend([item.supplierPn,item.supplier,item.mfrPn,item.desc,item.qty,item.finalLocation,todayStr()]);
+        await sheetAppendTx([todayStr(),item.mfrPn,item.supplier,"Receive",item.qty,0,item.qty,"Bulk receive"]);
       } else {
         const newQty=item.currentQty+item.qty;
-        await sheetUpdate(item.rowIdx,newQty,today);
-        await sheetAppendTx([today,item.mfrPn,item.supplier,"Receive",item.qty,item.currentQty,newQty,"Bulk receive"]);
+        await sheetUpdate(item.rowIdx,newQty,todayStr());
+        await sheetAppendTx([todayStr(),item.mfrPn,item.supplier,"Receive",item.qty,item.currentQty,newQty,"Bulk receive"]);
       }
       done++;
     }
     statusEl.innerHTML=`\u2713 Done. ${done} parts updated.`; statusEl.className="status-bar ok";
     toast(`Bulk receive: ${done} parts added.`);
-    bulkPendingItems=[];
-    // Bust inventory cache after bulk receive
-    _invCache = null;
+    bulkPendingItems=[]; _invCache=null;
     document.getElementById("bulkConfirmPanel").style.display="none";
   } catch(e) { statusEl.innerHTML="Error at part "+(done+1)+": "+e.message; statusEl.className="status-bar err"; }
 }
+
 function cancelBulkReceive() { document.getElementById("bulkConfirmPanel").style.display="none"; bulkPendingItems=[]; }
+
 function downloadBulkSampleCSV() {
   downloadFile("sample_bulk_receive.csv","text/csv","Part Number,Quantity,Description,Supplier,Supplier PN,Location\nSN74LVC1G08DCKR,500,IC Gate AND,DigiKey,296-1234-1-ND,PB01\nGRM188R71H104KA93D,2000,Cap 100nF,Mouser,81-GRM188R71H104KA93D,PB01\n");
 }
 
+// ── SETTINGS ──────────────────────────────────────────────
+function loadSettingsPage() {
+  const hasKey = !!cfg.anthropicKey;
+  document.getElementById("settingsApiKey").value = hasKey ? cfg.anthropicKey : "";
+  document.getElementById("apiKeyStatus").innerHTML = hasKey
+    ? `<div class="alert alert-success">\u2713 API key saved. Claude Vision scanning enabled.</div>`
+    : `<div class="alert alert-warn">No API key set. Using free OCR (Google Vision \u2192 Tesseract fallback).</div>`;
+  document.getElementById("settingsStatus").innerHTML = `
+    API Key: <b>${hasKey ? "Set \u2713" : "Not set"}</b><br>
+    Sheet: <b>${cfg.sheetName || "Sheet1"}</b><br>
+    Scan History: <b>Google Sheets (ScanHistory tab)</b>
+  `;
+}
+function saveSettingsKey() {
+  const val = document.getElementById("settingsApiKey").value.trim();
+  const msgEl = document.getElementById("settingsKeyMsg");
+  if (!val.startsWith("sk-ant-")) { msgEl.style.display="block"; msgEl.innerHTML="Key must start with sk-ant-"; msgEl.className="status-bar err"; return; }
+  cfg.anthropicKey = val;
+  localStorage.setItem("nexwah_anthropic_key", val);
+  msgEl.style.display="block"; msgEl.innerHTML="\u2713 Key saved."; msgEl.className="status-bar ok";
+  toast("API key saved.");
+  loadSettingsPage();
+}
+function removeSettingsKey() {
+  cfg.anthropicKey = "";
+  localStorage.removeItem("nexwah_anthropic_key");
+  document.getElementById("settingsApiKey").value = "";
+  const msgEl = document.getElementById("settingsKeyMsg");
+  msgEl.style.display="block"; msgEl.innerHTML="Key removed."; msgEl.className="status-bar warn";
+  toast("API key removed.");
+  loadSettingsPage();
+}
+
 // ── CONFIRM CLEAR ─────────────────────────────────────────
 async function confirmClear() {
-  if (!confirm("This will delete ALL inventory and transaction data from Google Sheets. Are you sure?")) return;
+  if (!confirm("This will delete ALL inventory and transaction data. Are you sure?")) return;
   if (!confirm("SECOND CONFIRMATION: This cannot be undone. Proceed?")) return;
-  toast("Clear not implemented — manage data in Google Sheets directly for safety.");
+  toast("Clear not implemented \u2014 manage data in Google Sheets directly for safety.");
+}
+
+// ── PRINT LABEL ───────────────────────────────────────────
+function printLabel(mfrPn, suppPn, desc, location, qty) {
+  document.getElementById("lblMfrPn").textContent = mfrPn||"";
+  document.getElementById("lblSuppPn").textContent = suppPn||"";
+  document.getElementById("lblDesc").textContent = desc||"";
+  document.getElementById("lblLoc").textContent = location||"\u2014";
+  document.getElementById("lblQty").textContent = "QTY: " + (qty||0);
+  document.getElementById("lblDate").textContent = new Date().toLocaleDateString();
+  document.getElementById("printLocInput").value = location||"";
+  document.getElementById("printQtyInput").value = qty||"";
+  document.getElementById("printModal").style.display = "flex";
+}
+function doPrint() {
+  const printArea = document.getElementById("labelPreview").outerHTML;
+  const win = window.open("","_blank","width=400,height=350");
+  win.document.write(`<!DOCTYPE html><html><head><title>Label</title><style>body{font-family:'IBM Plex Mono',monospace;margin:20px;background:#fff}@media print{body{margin:0}}</style><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap" rel="stylesheet"></head><body>${printArea}<script>window.onload=()=>{window.print();setTimeout(()=>window.close(),500)}<\/script></body></html>`);
+}
+
+// ── CSV EXPORT ────────────────────────────────────────────
+async function exportInventoryCSV() {
+  try {
+    const rows = await sheetRead();
+    const csv = rows.map(r => r.map(c => `"${(c||"").toString().replace(/"/g,'""')}"`).join(",")).join("\n");
+    downloadFile("nexwah_inventory_" + todayStr() + ".csv", "text/csv", csv);
+  } catch(e) { toast("Export failed: " + e.message); }
+}
+async function exportTransactionsCSV() {
+  try {
+    const resp = await fetch(`${APPS_SCRIPT_URL}?action=read&sheet=Transactions`);
+    const rows = await resp.json();
+    const csv = rows.map(r => r.map(c => `"${(c||"").toString().replace(/"/g,'""')}"`).join(",")).join("\n");
+    downloadFile("nexwah_transactions_" + todayStr() + ".csv", "text/csv", csv);
+  } catch(e) { toast("Export failed: " + e.message); }
+}
+function downloadFile(name, type, content) {
+  const a = document.createElement("a");
+  a.href = "data:" + type + ";charset=utf-8," + encodeURIComponent(content);
+  a.download = name; a.click();
 }
 
 // ── UTILS ─────────────────────────────────────────────────
 function todayStr() { return new Date().toISOString().split("T")[0]; }
+
 function formatDate(d) {
   if (!d) return "";
   try { const dt=new Date(d); if (isNaN(dt)) return d; return dt.toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"}); }
   catch(e) { return d; }
 }
-function setCamStatus(msg, type) {
-  const el=document.getElementById("camStatus");
-  el.innerHTML=msg;
-  el.className="status-bar"+(type?" "+type:"");
+
+// FEATURE 1: Full date + time display for scan history
+function formatDateTime(d) {
+  if (!d) return "";
+  try {
+    const dt = new Date(d);
+    if (isNaN(dt)) return d;
+    return dt.toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"}) + " " +
+           dt.toLocaleTimeString(undefined,{hour:"2-digit",minute:"2-digit"});
+  } catch(e) { return d; }
 }
+
+function setCamStatus(msg, type) {
+  const el = document.getElementById("camStatus");
+  el.innerHTML = msg;
+  el.className = "status-bar" + (type?" "+type:"");
+}
+
 let toastTimer;
 function toast(msg) {
-  const el=document.getElementById("toast");
-  el.textContent=msg; el.classList.add("show");
+  const el = document.getElementById("toast");
+  el.textContent = msg; el.classList.add("show");
   clearTimeout(toastTimer);
-  toastTimer=setTimeout(()=>el.classList.remove("show"),3000);
+  toastTimer = setTimeout(() => el.classList.remove("show"), 3000);
 }
 </script>
 </body>
