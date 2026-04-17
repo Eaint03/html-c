@@ -1569,7 +1569,7 @@ function buildInvLookup(sheetRows) {
     const suppPn = safeStr(r[0]).toUpperCase();
     const desc   = safeStr(r[3]).toUpperCase();
     const qty    = parseInt(r[4])||0;
-    const loc    = r[5]||"";
+    const loc    = safeStr(r[5]);
     const entry  = { rowIdx: idx, qty, loc, mfrPn: r[2]||"", suppPn: r[0]||"", desc: r[3]||"" };
 
     if (mfrPn) byMfrPn[mfrPn] = entry;
@@ -1766,10 +1766,10 @@ async function runBomCheck(mapping, rows) {
         const { entry, matchType } = match;
         const badge = `<span class="match-badge ${MATCH_CLASS[matchType]}">via ${MATCH_LABEL[matchType]}</span>`;
         if (entry.qty < qty) {
-          html += `<div class="alert alert-warn"><b>${displayName}</b>${badge}: Need ${qty}, have ${entry.qty} at ${entry.loc||"?"}. Short: ${qty-entry.qty}</div>`;
+          html += `<div class="alert alert-warn"><b>${displayName}</b>${badge}: Need ${qty}, have ${entry.qty} at <b style="color:var(--warn);font-family:var(--mono)">${entry.loc||"⚠ No location set"}</b>. Short: ${qty-entry.qty}</div>`;
           allOk = false;
         } else {
-          html += `<div class="alert alert-success"><b>${displayName}</b>${badge}: OK &mdash; ${entry.qty} in stock at ${entry.loc||"?"}. Need: ${qty}</div>`;
+          html += `<div class="alert alert-success"><b>${displayName}</b>${badge}: OK &mdash; ${entry.qty} in stock at <b style="color:var(--success);font-family:var(--mono)">${entry.loc||"⚠ No location set"}</b>. Need: ${qty}</div>`;
           bomPendingDispatch.push({ pn: entry.mfrPn, qty, rowIdx: entry.rowIdx, currentQty: entry.qty });
         }
       }
