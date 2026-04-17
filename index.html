@@ -1879,46 +1879,4 @@ function toast(msg) {
 }
 </script>
 </body>
-</html>// ── UNIVERSAL FILE READER: CSV + Excel ─────────────────────
-function readSpreadsheetFile(file) {
-  return new Promise((resolve, reject) => {
-    const isExcel = /\.(xlsx|xls)$/i.test(file.name);
-    const reader = new FileReader();
-    if (isExcel) {
-      reader.onload = (e) => {
-        try {
-          const data = new Uint8Array(e.target.result);
-          const wb = XLSX.read(data, { type: 'array' });
-          const ws = wb.Sheets[wb.SheetNames[0]];
-          const jsonData = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-          if (!jsonData.length) { reject(new Error('Excel file is empty.')); return; }
-          const validCols = jsonData[0].map((h,i) => ({h: String(h).trim(), i})).filter(x => x.h);
-          const headers = validCols.map(x => x.h);
-          const rows = jsonData.slice(1)
-            .filter(r => r.some(c => String(c).trim()))
-            .map(r => {
-              const obj = {};
-              validCols.forEach(({h, i}) => { obj[h] = String(r[i] ?? '').trim(); });
-              return obj;
-            });
-          resolve({ headers, rows });
-        } catch(e) { reject(new Error('Could not read Excel file: ' + e.message)); }
-      };
-      reader.onerror = () => reject(new Error('File read error.'));
-      reader.readAsArrayBuffer(file);
-    } else {
-      reader.onload = (e) => {
-        try {
-          const result = parseCSVToObjects(e.target.result);
-          if (!result.headers.length) { reject(new Error('CSV appears empty or invalid.')); return; }
-          resolve(result);
-        } catch(e) { reject(new Error('Could not parse CSV: ' + e.message)); }
-      };
-      reader.onerror = () => reject(new Error('File read error.'));
-      reader.readAsText(file);
-    }
-  });
-}
-
-
-
+</html>//
