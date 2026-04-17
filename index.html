@@ -318,6 +318,7 @@
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-primary btn-sm" onclick="openNewPartDrawer()">+ Add New Part</button>
           <button class="btn btn-secondary btn-sm" onclick="exportInventoryCSV()">Export CSV</button>
+          <button class="btn btn-primary btn-sm" onclick="exportBOMWithLocations()">&#128190; Export BOM</button>
           <button class="btn btn-secondary btn-sm" onclick="refreshInventory()">&#8635; Refresh</button>
           <button class="btn btn-danger btn-sm" onclick="confirmClear()">Clear All Data</button>
         </div>
@@ -1554,231 +1555,52 @@ function openImgModalDirect(src) {
 // Priority: 1=PartNumber, 2=NexwahPN, 3=Value, 4=Footprint
 
 // Build a lookup map from inventory for all match types
-function buildInvLookup(sheetRows) {
-  const byMfrPn    = {};  // exact mfr part number
-  const byNexwah   = {};  // supplier PN (used as NexwahPN)
-  const byValue    = {};  // description field — value matches
-  const byFootprint= {};  // description field — footprint matches
-
-  // Common footprint patterns
-  const FOOTPRINT_RE = /\b(0201|0402|0603|0805|1206|1210|1812|2010|2512|SOD[\-]?\d+|SOT[\-]?\d+|SOIC|SOP|QFP|QFN|DFN|DIP|TO[\-]?\d+|LGA|BGA|SMB|SMA|DO[\-]?\d+)\b/i;
-
-  sheetRows.slice(1).forEach((r, i) => {
-    const idx = i + 2;
-    const mfrPn = safeStr(r[2]).toUpperCase();
-    const suppPn = safeStr(r[0]).toUpperCase();
-    const desc   = safeStr(r[3]).toUpperCase();
-    const qty    = parseInt(r[4])||0;
-    const loc    = safeStr(r[5]);
-    const entry  = { rowIdx: idx, qty, loc, mfrPn: r[2]||"", suppPn: r[0]||"", desc: r[3]||"" };
-
-    if (mfrPn) byMfrPn[mfrPn] = entry;
-    if (suppPn) byNexwah[suppPn] = entry;
-
-    // Index by value tokens in description (e.g. "10K", "100NF", "4.7UH")
-    const valueTokens = desc.match(/\b[\d\.]+\s*(?:K|M|R|OHM|NF|PF|UF|UH|NH|MH|MHZ|KHZ|GHZ|V|MA|A|W)\b/gi) || [];
-    valueTokens.forEach(v => {
-      const key = v.replace(/\s/g,"").toUpperCase();
-      if (!byValue[key]) byValue[key] = [];
-      byValue[key].push(entry);
-    });
-
-    // Index by footprint
-    const fpMatch = desc.match(FOOTPRINT_RE);
-    if (fpMatch) {
-      const key = fpMatch[0].toUpperCase().replace(/[\s\-]/g,"");
-      if (!byFootprint[key]) byFootprint[key] = [];
-      byFootprint[key].push(entry);
-    }
-  });
-
-  return { byMfrPn, byNexwah, byValue, byFootprint };
-}
-
-function matchBomItem(item, lookup, mapping) {
-  const pn       = safeStr(mapping.MfrPN ? item[mapping.MfrPN] : "").toUpperCase();
-  const nexwahPn = safeStr(mapping.NexwahPN ? item[mapping.NexwahPN] : "").toUpperCase();
-  const value    = safeStr(mapping.Value ? item[mapping.Value] : "").toUpperCase().replace(/\s/g,"");
-  const footprint= safeStr(mapping.Footprint ? item[mapping.Footprint] : "").toUpperCase().replace(/[\s\-]/g,"");
-
-  // Priority 1: Part Number exact match
-  if (pn && lookup.byMfrPn[pn]) return { entry: lookup.byMfrPn[pn], matchType: "pn" };
-
-  // Priority 2: NexwahPN
-  if (nexwahPn && lookup.byNexwah[nexwahPn]) return { entry: lookup.byNexwah[nexwahPn], matchType: "nexwah" };
-
-  // Priority 3: Value
-  if (value && lookup.byValue[value] && lookup.byValue[value].length > 0) return { entry: lookup.byValue[value][0], matchType: "value" };
-
-  // Priority 4: Footprint
-  if (footprint && lookup.byFootprint[footprint] && lookup.byFootprint[footprint].length > 0) return { entry: lookup.byFootprint[footprint][0], matchType: "fp" };
-
-  return null;
-}
-
-const MATCH_LABEL = { pn:"Part#", nexwah:"NexwahPN", value:"Value", fp:"Footprint" };
-const MATCH_CLASS = { pn:"match-pn", nexwah:"match-nexwah", value:"match-value", fp:"match-fp" };
-
-let bomPendingDispatch = [];
-
-
-// ── UNIVERSAL FILE PARSER: handles CSV, XLSX, XLS, any BOM format ──────────
-// Safely converts ANY cell value to string (handles numbers, nulls, booleans, dates)
-function safeStr(val) {
-  if (val === null || val === undefined || val === '') return '';
-  if (typeof val === 'number') {
-    // Handle NaN and Infinity
-    if (!isFinite(val)) return '';
-    // Format integers cleanly (no decimal point for whole numbers)
-    return Number.isInteger(val) ? String(val) : String(val);
-  }
-  if (typeof val === 'boolean') return String(val);
-  if (val instanceof Date) return val.toISOString().split('T')[0];
-  return String(val).trim();
-}
-
-async function parseAnyFile(file) {
-  return new Promise((resolve, reject) => {
-    const name = file.name.toLowerCase();
-    const isExcel = name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.xlsm') || name.endsWith('.ods');
-    if (isExcel) {
-      if (typeof XLSX === 'undefined') { reject(new Error('Excel library not loaded yet. Please try again in a moment.')); return; }
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          const data = new Uint8Array(e.target.result);
-          const wb = XLSX.read(data, { type: 'array', cellDates: true });
-          const ws = wb.Sheets[wb.SheetNames[0]];
-
-          // Convert to array of arrays — raw values
-          const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: false });
-          if (!aoa || aoa.length < 2) { reject(new Error('Excel file appears empty or has only one row.')); return; }
-
-          // Find the header row — skip any completely empty rows at top
-          let headerRowIdx = 0;
-          for (let i = 0; i < Math.min(aoa.length, 5); i++) {
-            const rowHasData = aoa[i].some(c => c !== null && c !== undefined && String(c).trim() !== '');
-            if (rowHasData) { headerRowIdx = i; break; }
-          }
-
-          const rawHeaders = aoa[headerRowIdx];
-          // Build list of valid (non-empty) header columns
-          const validCols = [];
-          rawHeaders.forEach((h, i) => {
-            const hStr = safeStr(h);
-            if (hStr !== '') validCols.push({ h: hStr, i });
-          });
-
-          if (!validCols.length) { reject(new Error('No column headers found in Excel file. Make sure row 1 has column names.')); return; }
-
-          const headers = validCols.map(x => x.h);
-
-          // Build row objects — safely convert every cell value
-          const rows = [];
-          for (let r = headerRowIdx + 1; r < aoa.length; r++) {
-            const row = aoa[r];
-            const obj = {};
-            validCols.forEach(({ h, i }) => {
-              obj[h] = safeStr(row ? row[i] : null);
-            });
-            // Only include rows that have at least one non-empty value
-            if (Object.values(obj).some(v => v !== '')) {
-              rows.push(obj);
-            }
-          }
-
-          resolve({ headers, rows });
-        } catch(err) {
-          reject(new Error('Could not read Excel file: ' + err.message));
-        }
-      };
-      reader.onerror = () => reject(new Error('Could not read the file. Please try again.'));
-      reader.readAsArrayBuffer(file);
-    } else {
-      // CSV / TSV
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        try {
-          // Auto-detect delimiter: comma or semicolon or tab
-          const text = e.target.result;
-          const firstLine = text.split('\n')[0];
-          let delim = ',';
-          if ((firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length) delim = ';';
-          else if ((firstLine.match(/\t/g) || []).length > (firstLine.match(/,/g) || []).length) delim = '\t';
-
-          if (delim === ',') {
-            resolve(parseCSVToObjects(text));
-          } else {
-            // Parse with detected delimiter
-            const lines = text.split(/\r?\n/).filter(l => l.trim());
-            if (lines.length < 2) { reject(new Error('CSV must have at least a header row and one data row.')); return; }
-            const headers = lines[0].split(delim).map(h => h.replace(/^"|"$/g,'').trim()).filter(h => h !== '');
-            const rows = lines.slice(1).map(line => {
-              const cols = line.split(delim);
-              const obj = {};
-              headers.forEach((h, i) => { obj[h] = safeStr((cols[i] || '').replace(/^"|"$/g,'')); });
-              return obj;
-            }).filter(row => Object.values(row).some(v => v !== ''));
-            resolve({ headers, rows });
-          }
-        } catch(err) {
-          reject(new Error('Could not parse file: ' + err.message));
-        }
-      };
-      reader.onerror = () => reject(new Error('Could not read the file.'));
-      reader.readAsText(file);
-    }
-  });
-}
-function processCSV() {
-  const file = document.getElementById("csvFile").files[0];
-  if (!file) { document.getElementById("bomStatus").innerHTML="Please select a CSV or Excel file."; document.getElementById("bomStatus").className="status-bar err"; return; }
-  document.getElementById("bomStatus").innerHTML='<span class="spinner"></span>Reading file\u2026'; document.getElementById("bomStatus").className="status-bar loading";
-  parseAnyFile(file).then(({headers, rows}) => {
-    if (!headers.length || !rows.length) { document.getElementById("bomStatus").innerHTML="File must have a header row and data rows."; document.getElementById("bomStatus").className="status-bar err"; return; }
-    const initialMapping = autoDetectColumns(headers);
-    showColMapModal(headers, rows, "bom", initialMapping, runBomCheck);
-    document.getElementById("bomStatus").innerHTML="Confirm column mapping to continue."; document.getElementById("bomStatus").className="status-bar";
-  }).catch(err => {
-    document.getElementById("bomStatus").innerHTML="Error reading file: " + err.message; document.getElementById("bomStatus").className="status-bar err";
-  });
-}
-
 async function runBomCheck(mapping, rows) {
-  document.getElementById("bomStatus").innerHTML='<span class="spinner"></span>Checking availability\u2026'; document.getElementById("bomStatus").className="status-bar loading";
+  document.getElementById("bomStatus").innerHTML = '<span class="spinner"></span>Checking availability\u2026';
+  document.getElementById("bomStatus").className = "status-bar loading";
+  const items = rows.map(r => ({
+    pn: String(r[mapping.MfrPN] || "").trim(),
+    qty: parseInt(r[mapping.Quantity]) || 0
+  })).filter(i => i.pn && i.qty > 0);
+
   try {
     const sheetRows = await sheetRead();
-    const lookup = buildInvLookup(sheetRows);
+    const inv = {};
+    sheetRows.slice(1).forEach((r, idx) => {
+      const mfrPn = String(r[2] || "").trim();
+      if (mfrPn) inv[mfrPn.toUpperCase()] = {
+        rowIdx: idx + 2,
+        qty: parseInt(r[4]) || 0,
+        location: String(r[5] || "").trim()
+      };
+    });
+
     let html = ""; let allOk = true; bomPendingDispatch = [];
 
-    rows.forEach(r => {
-      const pn  = mapping.MfrPN   ? safeStr(r[mapping.MfrPN])   : "";
-      const qty = parseInt(mapping.Quantity ? r[mapping.Quantity] : 0)||0;
-      const displayName = pn || (mapping.Value ? r[mapping.Value]||"" : "") || "(unnamed)";
-      if (!qty) return;
+    items.forEach(({ pn, qty }) => {
+      const key = pn.toUpperCase();
+      const stock = inv[key];
+      const locText = stock && stock.location ? stock.location : "";
+      const locDisplay = locText
+        ? `<b style="font-family:var(--mono)">${locText}</b>`
+        : `<span style="color:var(--muted);font-style:italic">no location set</span>`;
 
-      const match = matchBomItem(r, lookup, mapping);
-
-      if (!match) {
-        html += `<div class="alert alert-error"><b>${displayName}</b>: NOT FOUND in inventory</div>`;
+      if (!stock) {
+        html += `<div class="alert alert-error"><b>${pn}</b>: NOT IN INVENTORY</div>`;
+        allOk = false;
+      } else if (stock.qty < qty) {
+        html += `<div class="alert alert-warn"><b>${pn}</b>: Need ${qty}, have ${stock.qty} at ${locDisplay}. Shortage: ${qty - stock.qty}</div>`;
         allOk = false;
       } else {
-        const { entry, matchType } = match;
-        const badge = `<span class="match-badge ${MATCH_CLASS[matchType]}">via ${MATCH_LABEL[matchType]}</span>`;
-        if (entry.qty < qty) {
-          html += `<div class="alert alert-warn"><b>${displayName}</b>${badge}: Need ${qty}, have ${entry.qty} at <b style="color:var(--warn);font-family:var(--mono)">${entry.loc||"⚠ No location set"}</b>. Short: ${qty-entry.qty}</div>`;
-          allOk = false;
-        } else {
-          html += `<div class="alert alert-success"><b>${displayName}</b>${badge}: OK &mdash; ${entry.qty} in stock at <b style="color:var(--success);font-family:var(--mono)">${entry.loc||"⚠ No location set"}</b>. Need: ${qty}</div>`;
-          bomPendingDispatch.push({ pn: entry.mfrPn, qty, rowIdx: entry.rowIdx, currentQty: entry.qty });
-        }
+        html += `<div class="alert alert-success"><b>${pn}</b>: OK \u2014 ${stock.qty} in stock at ${locDisplay}. Need: ${qty}</div>`;
+        bomPendingDispatch.push({ pn, qty, rowIdx: stock.rowIdx, currentQty: stock.qty });
       }
     });
 
     document.getElementById("bomResults").innerHTML = `<div class="card"><div class="card-title">Availability Results</div>${html}</div>`;
     if (bomPendingDispatch.length > 0) {
       document.getElementById("bomConfirmPanel").style.display = "block";
-      document.getElementById("bomConfirmSummary").innerHTML = `Ready to deduct stock for <b>${bomPendingDispatch.length}</b> available part(s):<br>${bomPendingDispatch.map(i=>`${i.pn} &times; ${i.qty}`).join("<br>")}`;
+      document.getElementById("bomConfirmSummary").innerHTML = `Ready to deduct stock for <b>${bomPendingDispatch.length}</b> available part(s):<br>${bomPendingDispatch.map(i => `${i.pn} &times; ${i.qty}`).join("<br>")}`;
       document.getElementById("bomConfirmStatus").style.display = "none";
     }
     document.getElementById("bomStatus").innerHTML = allOk ? "\u2713 All parts available." : "\u26a0 Some parts unavailable or insufficient.";
@@ -1828,16 +1650,15 @@ async function autoAssignLocation() {
 
 function processBulkReceive() {
   const file = document.getElementById("bulkCsvFile").files[0];
-  if (!file) { document.getElementById("bulkStatus").innerHTML="Please select a CSV or Excel file."; document.getElementById("bulkStatus").className="status-bar err"; return; }
-  document.getElementById("bulkStatus").innerHTML='<span class="spinner"></span>Reading file\u2026'; document.getElementById("bulkStatus").className="status-bar loading";
-  parseAnyFile(file).then(({headers, rows}) => {
-    if (!headers.length || !rows.length) { document.getElementById("bulkStatus").innerHTML="File must have a header row and data rows."; document.getElementById("bulkStatus").className="status-bar err"; return; }
+  const statusEl = document.getElementById("bulkStatus");
+  if (!file) { statusEl.innerHTML = "Please select a CSV or Excel file."; statusEl.className = "status-bar err"; return; }
+  statusEl.innerHTML = '<span class="spinner"></span>Reading file\u2026'; statusEl.className = "status-bar loading";
+  readSpreadsheetFile(file).then(({ headers, rows }) => {
+    if (!rows.length) { statusEl.innerHTML = "File must have header + data rows."; statusEl.className = "status-bar err"; return; }
     const initialMapping = autoDetectColumns(headers);
     showColMapModal(headers, rows, "bulk", initialMapping, runBulkPreview);
-    document.getElementById("bulkStatus").innerHTML="Confirm column mapping to continue."; document.getElementById("bulkStatus").className="status-bar";
-  }).catch(err => {
-    document.getElementById("bulkStatus").innerHTML="Error reading file: " + err.message; document.getElementById("bulkStatus").className="status-bar err";
-  });
+    statusEl.innerHTML = "Confirm column mapping to continue."; statusEl.className = "status-bar";
+  }).catch(e => { statusEl.innerHTML = "Error: " + e.message; statusEl.className = "status-bar err"; });
 }
 
 async function runBulkPreview(mapping, rows) {
@@ -1978,6 +1799,45 @@ async function exportTransactionsCSV() {
     downloadFile("nexwah_transactions_" + todayStr() + ".csv", "text/csv", csv);
   } catch(e) { toast("Export failed: " + e.message); }
 }
+
+// ── BOM WITH LOCATIONS EXPORT ─────────────────────────────
+// stores last BOM check results for download
+
+async function exportBOMWithLocations() {
+  // Export full inventory as BOM with location column
+  try {
+    const rows = await sheetRead();
+    const data = rows.slice(1).filter(r => r[2]); // skip empty rows
+    
+    // Build CSV with all inventory data including location
+    const csvRows = [
+      ['Mfr Part Number', 'Supplier PN', 'Supplier', 'Description', 'Location', 'Quantity', 'Last Updated']
+    ];
+    data.forEach(r => {
+      csvRows.push([
+        safeStr(r[2]), // MfrPN
+        safeStr(r[0]), // SupplierPN
+        safeStr(r[1]), // Supplier
+        safeStr(r[3]), // Description
+        safeStr(r[5]), // Location
+        safeStr(r[4]), // Qty
+        safeStr(r[6]), // Date
+      ]);
+    });
+    
+    const csv = csvRows.map(row =>
+      row.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')
+    ).join('\n');
+    
+    downloadFile('nexwah_inventory_bom_' + todayStr() + '.csv', 'text/csv', csv);
+    toast('BOM exported with locations!');
+  } catch(e) {
+    toast('Export failed: ' + e.message);
+  }
+}
+
+
+
 function downloadFile(name, type, content) {
   const a = document.createElement("a");
   a.href = "data:" + type + ";charset=utf-8," + encodeURIComponent(content);
@@ -2019,4 +1879,43 @@ function toast(msg) {
 }
 </script>
 </body>
-</html>
+</html>// ── UNIVERSAL FILE READER: CSV + Excel ─────────────────────
+function readSpreadsheetFile(file) {
+  return new Promise((resolve, reject) => {
+    const isExcel = /\.(xlsx|xls)$/i.test(file.name);
+    const reader = new FileReader();
+    if (isExcel) {
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const wb = XLSX.read(data, { type: 'array' });
+          const ws = wb.Sheets[wb.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+          if (!jsonData.length) { reject(new Error('Excel file is empty.')); return; }
+          const validCols = jsonData[0].map((h,i) => ({h: String(h).trim(), i})).filter(x => x.h);
+          const headers = validCols.map(x => x.h);
+          const rows = jsonData.slice(1)
+            .filter(r => r.some(c => String(c).trim()))
+            .map(r => {
+              const obj = {};
+              validCols.forEach(({h, i}) => { obj[h] = String(r[i] ?? '').trim(); });
+              return obj;
+            });
+          resolve({ headers, rows });
+        } catch(e) { reject(new Error('Could not read Excel file: ' + e.message)); }
+      };
+      reader.onerror = () => reject(new Error('File read error.'));
+      reader.readAsArrayBuffer(file);
+    } else {
+      reader.onload = (e) => {
+        try {
+          const result = parseCSVToObjects(e.target.result);
+          if (!result.headers.length) { reject(new Error('CSV appears empty or invalid.')); return; }
+          resolve(result);
+        } catch(e) { reject(new Error('Could not parse CSV: ' + e.message)); }
+      };
+      reader.onerror = () => reject(new Error('File read error.'));
+      reader.readAsText(file);
+    }
+  });
+}
