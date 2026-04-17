@@ -1622,42 +1622,110 @@ const MATCH_CLASS = { pn:"match-pn", nexwah:"match-nexwah", value:"match-value",
 let bomPendingDispatch = [];
 
 
-// ── UNIVERSAL FILE PARSER: handles CSV, XLSX, XLS ──────────
+// ── UNIVERSAL FILE PARSER: handles CSV, XLSX, XLS, any BOM format ──────────
+// Safely converts ANY cell value to string (handles numbers, nulls, booleans, dates)
+function safeStr(val) {
+  if (val === null || val === undefined || val === '') return '';
+  if (typeof val === 'number') {
+    // Handle NaN and Infinity
+    if (!isFinite(val)) return '';
+    // Format integers cleanly (no decimal point for whole numbers)
+    return Number.isInteger(val) ? String(val) : String(val);
+  }
+  if (typeof val === 'boolean') return String(val);
+  if (val instanceof Date) return val.toISOString().split('T')[0];
+  return String(val).trim();
+}
+
 async function parseAnyFile(file) {
   return new Promise((resolve, reject) => {
     const name = file.name.toLowerCase();
-    const isExcel = name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.xlsm');
+    const isExcel = name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.xlsm') || name.endsWith('.ods');
     if (isExcel) {
-      if (typeof XLSX === 'undefined') { reject(new Error('Excel library not loaded. Please wait and try again.')); return; }
+      if (typeof XLSX === 'undefined') { reject(new Error('Excel library not loaded yet. Please try again in a moment.')); return; }
       const reader = new FileReader();
       reader.onload = (e) => {
         try {
           const data = new Uint8Array(e.target.result);
-          const wb = XLSX.read(data, { type: 'array' });
+          const wb = XLSX.read(data, { type: 'array', cellDates: true });
           const ws = wb.Sheets[wb.SheetNames[0]];
-          const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-          if (!aoa || aoa.length < 2) { reject(new Error('Excel file is empty or has only one row.')); return; }
-          const rawHeaders = aoa[0];
-          const validCols = rawHeaders.map((h, i) => ({ h: String(h || '').trim(), i })).filter(x => x.h !== '');
-          if (!validCols.length) { reject(new Error('No column headers found in first row of Excel.')); return; }
+
+          // Convert to array of arrays — raw values
+          const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: false });
+          if (!aoa || aoa.length < 2) { reject(new Error('Excel file appears empty or has only one row.')); return; }
+
+          // Find the header row — skip any completely empty rows at top
+          let headerRowIdx = 0;
+          for (let i = 0; i < Math.min(aoa.length, 5); i++) {
+            const rowHasData = aoa[i].some(c => c !== null && c !== undefined && String(c).trim() !== '');
+            if (rowHasData) { headerRowIdx = i; break; }
+          }
+
+          const rawHeaders = aoa[headerRowIdx];
+          // Build list of valid (non-empty) header columns
+          const validCols = [];
+          rawHeaders.forEach((h, i) => {
+            const hStr = safeStr(h);
+            if (hStr !== '') validCols.push({ h: hStr, i });
+          });
+
+          if (!validCols.length) { reject(new Error('No column headers found in Excel file. Make sure row 1 has column names.')); return; }
+
           const headers = validCols.map(x => x.h);
-          const rows = aoa.slice(1).map(row => {
+
+          // Build row objects — safely convert every cell value
+          const rows = [];
+          for (let r = headerRowIdx + 1; r < aoa.length; r++) {
+            const row = aoa[r];
             const obj = {};
-            validCols.forEach(({ h, i }) => { obj[h] = String(row[i] !== undefined ? row[i] : '').trim(); });
-            return obj;
-          }).filter(row => Object.values(row).some(v => v !== ''));
+            validCols.forEach(({ h, i }) => {
+              obj[h] = safeStr(row ? row[i] : null);
+            });
+            // Only include rows that have at least one non-empty value
+            if (Object.values(obj).some(v => v !== '')) {
+              rows.push(obj);
+            }
+          }
+
           resolve({ headers, rows });
-        } catch(err) { reject(new Error('Could not read Excel file: ' + err.message)); }
+        } catch(err) {
+          reject(new Error('Could not read Excel file: ' + err.message));
+        }
       };
-      reader.onerror = () => reject(new Error('File read error.'));
+      reader.onerror = () => reject(new Error('Could not read the file. Please try again.'));
       reader.readAsArrayBuffer(file);
     } else {
+      // CSV / TSV
       const reader = new FileReader();
       reader.onload = (e) => {
-        try { resolve(parseCSVToObjects(e.target.result)); }
-        catch(err) { reject(new Error('Could not parse CSV: ' + err.message)); }
+        try {
+          // Auto-detect delimiter: comma or semicolon or tab
+          const text = e.target.result;
+          const firstLine = text.split('\n')[0];
+          let delim = ',';
+          if ((firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length) delim = ';';
+          else if ((firstLine.match(/\t/g) || []).length > (firstLine.match(/,/g) || []).length) delim = '\t';
+
+          if (delim === ',') {
+            resolve(parseCSVToObjects(text));
+          } else {
+            // Parse with detected delimiter
+            const lines = text.split(/\r?\n/).filter(l => l.trim());
+            if (lines.length < 2) { reject(new Error('CSV must have at least a header row and one data row.')); return; }
+            const headers = lines[0].split(delim).map(h => h.replace(/^"|"$/g,'').trim()).filter(h => h !== '');
+            const rows = lines.slice(1).map(line => {
+              const cols = line.split(delim);
+              const obj = {};
+              headers.forEach((h, i) => { obj[h] = safeStr((cols[i] || '').replace(/^"|"$/g,'')); });
+              return obj;
+            }).filter(row => Object.values(row).some(v => v !== ''));
+            resolve({ headers, rows });
+          }
+        } catch(err) {
+          reject(new Error('Could not parse file: ' + err.message));
+        }
       };
-      reader.onerror = () => reject(new Error('File read error.'));
+      reader.onerror = () => reject(new Error('Could not read the file.'));
       reader.readAsText(file);
     }
   });
