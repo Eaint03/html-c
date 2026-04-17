@@ -546,7 +546,7 @@ let _allLocations = [];
 
 function buildLocList(cache) {
   const locs = new Set();
-  (cache || []).forEach(({r}) => { if (r[5] && r[5].trim()) locs.add(r[5].trim()); });
+  (cache || []).forEach(({r}) => { if (safeStr(r[5])) locs.add(safeStr(r[5])); });
   _allLocations = [...locs].sort();
 }
 
@@ -1320,7 +1320,7 @@ async function lookupForScan(mfrPn) {
     const rows = await sheetRead();
     let foundRow=null, foundIdx=-1;
     for (let i=1;i<rows.length;i++) {
-      if ((rows[i][2]||"").trim().toUpperCase()===mfrPn.trim().toUpperCase()) {
+      if (safeStr(rows[i][2]).toUpperCase()===mfrPn.trim().toUpperCase()) {
         foundRow=rows[i]; foundIdx=i+1; break;
       }
     }
@@ -1565,9 +1565,9 @@ function buildInvLookup(sheetRows) {
 
   sheetRows.slice(1).forEach((r, i) => {
     const idx = i + 2;
-    const mfrPn = (r[2]||"").trim().toUpperCase();
-    const suppPn = (r[0]||"").trim().toUpperCase();
-    const desc   = (r[3]||"").trim().toUpperCase();
+    const mfrPn = safeStr(r[2]).toUpperCase();
+    const suppPn = safeStr(r[0]).toUpperCase();
+    const desc   = safeStr(r[3]).toUpperCase();
     const qty    = parseInt(r[4])||0;
     const loc    = r[5]||"";
     const entry  = { rowIdx: idx, qty, loc, mfrPn: r[2]||"", suppPn: r[0]||"", desc: r[3]||"" };
@@ -1596,10 +1596,10 @@ function buildInvLookup(sheetRows) {
 }
 
 function matchBomItem(item, lookup, mapping) {
-  const pn       = (mapping.MfrPN    ? item[mapping.MfrPN]    : "").trim().toUpperCase();
-  const nexwahPn = (mapping.NexwahPN  ? item[mapping.NexwahPN] : "").trim().toUpperCase();
-  const value    = (mapping.Value     ? item[mapping.Value]    : "").trim().toUpperCase().replace(/\s/g,"");
-  const footprint= (mapping.Footprint ? item[mapping.Footprint]: "").trim().toUpperCase().replace(/[\s\-]/g,"");
+  const pn       = safeStr(mapping.MfrPN ? item[mapping.MfrPN] : "").toUpperCase();
+  const nexwahPn = safeStr(mapping.NexwahPN ? item[mapping.NexwahPN] : "").toUpperCase();
+  const value    = safeStr(mapping.Value ? item[mapping.Value] : "").toUpperCase().replace(/\s/g,"");
+  const footprint= safeStr(mapping.Footprint ? item[mapping.Footprint] : "").toUpperCase().replace(/[\s\-]/g,"");
 
   // Priority 1: Part Number exact match
   if (pn && lookup.byMfrPn[pn]) return { entry: lookup.byMfrPn[pn], matchType: "pn" };
@@ -1752,7 +1752,7 @@ async function runBomCheck(mapping, rows) {
     let html = ""; let allOk = true; bomPendingDispatch = [];
 
     rows.forEach(r => {
-      const pn  = mapping.MfrPN   ? (r[mapping.MfrPN]||"").trim()   : "";
+      const pn  = mapping.MfrPN   ? safeStr(r[mapping.MfrPN])   : "";
       const qty = parseInt(mapping.Quantity ? r[mapping.Quantity] : 0)||0;
       const displayName = pn || (mapping.Value ? r[mapping.Value]||"" : "") || "(unnamed)";
       if (!qty) return;
@@ -1819,7 +1819,7 @@ async function autoAssignLocation() {
     const rows = await sheetRead();
     for (let i=1;i<=999;i++) {
       const loc = "PB" + String(i).padStart(2,"0");
-      const count = rows.slice(1).filter(r=>(r[5]||"").trim().toUpperCase()===loc.toUpperCase()).length;
+      const count = rows.slice(1).filter(r=>safeStr(r[5]).toUpperCase()===loc.toUpperCase()).length;
       if (count<50) return loc;
     }
     return "PB001";
