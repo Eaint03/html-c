@@ -530,7 +530,7 @@
 <div id="toast"></div>
 
 <script>
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwn4NtlsIHr25yN0tdm3heuY_ihdRMMgghxQClRlr74bBhhBATyEzKRCg6FKPYMbIp7/exec";
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxRT6BxGCPHhwmqaBHH8LWrCHxcVQmESrJJve9HjyCvKaXy5g19WlSVX9UaXYecTuoj/exec";
 const SCAN_HISTORY_SHEET = "ScanHistory";
 const MAX_IMAGE_SIZE = 600;
 
@@ -1320,7 +1320,7 @@ async function lookupForScan(mfrPn) {
     const rows = await sheetRead();
     let foundRow=null, foundIdx=-1;
     for (let i=1;i<rows.length;i++) {
-      if (safeStr(rows[i][2]).toUpperCase()===mfrPn.trim().toUpperCase()) {
+      if (safeStr(rows[i][2]).toUpperCase()===safeStr(mfrPn).toUpperCase()) {
         foundRow=rows[i]; foundIdx=i+1; break;
       }
     }
