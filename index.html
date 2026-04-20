@@ -846,7 +846,7 @@ function getNextSlot(locId) {
   return cap + 1;
 }
 function usedCount(locId) { return (locSlots[locId]||[]).length; }
-function slotLabel(locId, n) { return `${locId}-${pad2(n)}`; }
+function slotLabel(locId, n) { return `${locId}-${n}`; }
 
 function populateAllLocationDropdowns() {
   ['#addCompLocation'].forEach(sel => {
