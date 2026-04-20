@@ -1098,7 +1098,29 @@ function openLocDropdown() {
 }
 function filterLocDropdown() { openLocDropdown(); }
 function closeLocDropdown() { const dd=document.getElementById('locDropdown'); if(dd)dd.classList.remove('open'); }
-function selectLocation(loc) { document.getElementById('scanLocation').value=loc; closeLocDropdown(); }
+function selectLocation(loc) {
+  // If user picked a bare bin (PBxx), resolve to next slot asynchronously
+  const input = document.getElementById('scanLocation');
+  if(/^PB\d+$/i.test(loc.trim())) {
+    input.value = loc; // show immediately
+    closeLocDropdown();
+    // Resolve to next slot
+    sheetRead().then(rows => {
+      const slotMap={};
+      rows.slice(1).forEach(r=>{
+        const l=String(r[5]||'').trim();
+        const m=l.match(/^(PB\d+)-(\d+)$/i);
+        if(m){const bin=m[1].toUpperCase();const n=parseInt(m[2]);if(!slotMap[bin]||n>slotMap[bin])slotMap[bin]=n;}
+      });
+      const bin=loc.trim().toUpperCase();
+      const next=(slotMap[bin]||0)+1;
+      input.value=bin+'-'+next;
+    }).catch(()=>{});
+  } else {
+    input.value = loc;
+    closeLocDropdown();
+  }
+}
 
 // ═══════════════════════════════════════════════════════════════
 // COLUMN MAPPING
@@ -1433,7 +1455,15 @@ async function submitNewPart(){
       statusEl.innerHTML=`\u26a0 Part already exists — merged! ${currentQty} + ${qty} = <b>${newQty} units</b>`;statusEl.className='status-bar warn';
       toast(`Merged: ${mfrPn} now ${newQty} units`);
     }else{
-      const finalLocation=location||(await autoAssignLocation())||'';
+      let finalLocation=location||(await autoAssignLocation())||'';
+  // If location is a bare bin (PBxx) without a slot, resolve to next slot
+  if(/^PB\d+$/i.test(finalLocation.trim())){
+    const _rows=await sheetRead();
+    const _slotMap={};
+    _rows.slice(1).forEach(r=>{const _l=String(r[5]||'').trim();const _m=_l.match(/^(PB\d+)-(\d+)$/i);if(_m){const _b=_m[1].toUpperCase();const _n=parseInt(_m[2]);if(!_slotMap[_b]||_n>_slotMap[_b])_slotMap[_b]=_n;}});
+    const _bin=finalLocation.trim().toUpperCase();
+    finalLocation=_bin+'-'+((_slotMap[_bin]||0)+1);
+  }
       const row=[suppPn,supplier,mfrPn,desc,qty,finalLocation,todayStr()];
       const res=await sheetAppend(row); if(res.trim()!=='ok')throw new Error(res);
       await sheetAppendTx([todayStr(),mfrPn,supplier,'Receive',qty,0,qty,notes||'New part added']);
@@ -1561,7 +1591,15 @@ function updateReceivePreview(currentQty){const add=parseInt(document.getElement
 function updateDispatchPreview(currentQty){const dispatch=parseInt(document.getElementById('dispatchQty').value)||0;const remaining=currentQty-dispatch;document.getElementById('dispatchPreview').innerHTML=dispatch>0&&remaining>=0?`Remaining after dispatch: <b style="color:${remaining<=5?'var(--error)':'var(--success)'}">${remaining} units</b>`:remaining<0?`<span style="color:var(--error)">Not enough stock! Only ${currentQty} available.</span>`:`<span style="color:var(--muted)">Enter a quantity to see remaining</span>`;}
 async function confirmScanDispatch(rowIdx,currentQty){const qty=parseInt(document.getElementById('dispatchQty').value)||0;const notes=document.getElementById('dispatchNotes').value.trim();const statusEl=document.getElementById('scanDispatchStatus');if(qty<=0||qty>currentQty){statusEl.style.display='block';statusEl.innerHTML=`Enter 1\u2013${currentQty}`;statusEl.className='status-bar err';return;}statusEl.style.display='block';statusEl.innerHTML='<span class="spinner"></span>Processing\u2026';statusEl.className='status-bar loading';const newQty=currentQty-qty;try{await sheetUpdate(rowIdx,newQty,todayStr());const mfrPn=document.getElementById('scanMfrPn').value;const supplier=document.getElementById('scanSupplierBadge').textContent.trim()||'Unknown';await sheetAppendTx([todayStr(),mfrPn,supplier,'Use',qty,currentQty,newQty,notes||'Scan dispatch']);statusEl.innerHTML=`\u2713 Dispatched ${qty}. Remaining: <b>${newQty} units</b>`;statusEl.className='status-bar ok';toast(`Dispatched ${qty} \u00d7 ${mfrPn}`);_invCache=null;}catch(e){statusEl.innerHTML='Error: '+e.message;statusEl.className='status-bar err';}}
 async function confirmScanReceiveExisting(rowIdx,currentQty){const qty=parseInt(document.getElementById('receiveQty').value)||0;const notes=document.getElementById('receiveNotes').value.trim();const statusEl=document.getElementById('scanReceiveStatus');if(qty<=0){statusEl.style.display='block';statusEl.innerHTML='Enter qty \u2265 1';statusEl.className='status-bar err';return;}statusEl.style.display='block';statusEl.innerHTML='<span class="spinner"></span>Adding stock\u2026';statusEl.className='status-bar loading';const newQty=currentQty+qty;try{const mfrPn=document.getElementById('scanMfrPn').value.trim();const supplier=document.getElementById('scanSupplierBadge').textContent.trim()||'Unknown';await sheetUpdate(rowIdx,newQty,todayStr());await sheetAppendTx([todayStr(),mfrPn,supplier,'Receive',qty,currentQty,newQty,notes||'Scan receive']);statusEl.innerHTML=`\u2713 <b>${mfrPn}</b>: ${currentQty} + ${qty} = <b>${newQty} units</b>`;statusEl.className='status-bar ok';toast(`${mfrPn}: ${currentQty} \u2192 ${newQty} units`);_invCache=null;}catch(e){statusEl.innerHTML='Error: '+e.message;statusEl.className='status-bar err';}}
-async function confirmScanReceiveNew(){const qty=parseInt(document.getElementById('receiveQty').value)||0;const notes=document.getElementById('receiveNotes').value.trim();const statusEl=document.getElementById('scanReceiveStatus');const mfrPn=document.getElementById('scanMfrPn').value.trim();const suppPn=document.getElementById('scanSupplierPn').value.trim();const desc=document.getElementById('scanDesc').value.trim();const location=document.getElementById('scanLocation').value.trim();const supplier=document.getElementById('scanSupplierBadge').textContent.trim()||'Unknown';if(!mfrPn||qty<=0){statusEl.style.display='block';statusEl.innerHTML='Part number and qty required';statusEl.className='status-bar err';return;}statusEl.style.display='block';statusEl.innerHTML='<span class="spinner"></span>Checking for duplicates\u2026';statusEl.className='status-bar loading';try{const rows=await sheetRead();let existingRow=null,existingIdx=-1;for(let i=1;i<rows.length;i++){if(safeStr(rows[i][2]).toUpperCase()===mfrPn.toUpperCase()){existingRow=rows[i];existingIdx=i+1;break;}}const today=todayStr();if(existingRow){const currentQty=parseInt(existingRow[4])||0;const newQty=currentQty+qty;await sheetUpdate(existingIdx,newQty,today);await sheetAppendTx([today,mfrPn,supplier,'Receive',qty,currentQty,newQty,notes||'Scan receive (merged)']);statusEl.innerHTML=`\u26a0 Part already existed \u2014 merged! ${currentQty} + ${qty} = <b>${newQty} units</b>`;statusEl.className='status-bar warn';toast(`Merged: ${mfrPn} now ${newQty} units`);}else{const finalLocation=location||(await autoAssignLocation())||'';const row=[suppPn,supplier,mfrPn,desc,qty,finalLocation,today];const res=await sheetAppend(row);if(res.trim()!=='ok')throw new Error(res);await sheetAppendTx([today,mfrPn,supplier,'Receive',qty,0,qty,notes||'Scan receive new']);statusEl.innerHTML=`\u2713 Added ${mfrPn} \u00d7 ${qty} at <b>${finalLocation||'no location'}</b>`;statusEl.className='status-bar ok';toast(`Added: ${mfrPn}`);}  _invCache=null;}catch(e){statusEl.innerHTML='Error: '+e.message;statusEl.className='status-bar err';}}
+async function confirmScanReceiveNew(){const qty=parseInt(document.getElementById('receiveQty').value)||0;const notes=document.getElementById('receiveNotes').value.trim();const statusEl=document.getElementById('scanReceiveStatus');const mfrPn=document.getElementById('scanMfrPn').value.trim();const suppPn=document.getElementById('scanSupplierPn').value.trim();const desc=document.getElementById('scanDesc').value.trim();const location=document.getElementById('scanLocation').value.trim();const supplier=document.getElementById('scanSupplierBadge').textContent.trim()||'Unknown';if(!mfrPn||qty<=0){statusEl.style.display='block';statusEl.innerHTML='Part number and qty required';statusEl.className='status-bar err';return;}statusEl.style.display='block';statusEl.innerHTML='<span class="spinner"></span>Checking for duplicates\u2026';statusEl.className='status-bar loading';try{const rows=await sheetRead();let existingRow=null,existingIdx=-1;for(let i=1;i<rows.length;i++){if(safeStr(rows[i][2]).toUpperCase()===mfrPn.toUpperCase()){existingRow=rows[i];existingIdx=i+1;break;}}const today=todayStr();if(existingRow){const currentQty=parseInt(existingRow[4])||0;const newQty=currentQty+qty;await sheetUpdate(existingIdx,newQty,today);await sheetAppendTx([today,mfrPn,supplier,'Receive',qty,currentQty,newQty,notes||'Scan receive (merged)']);statusEl.innerHTML=`\u26a0 Part already existed \u2014 merged! ${currentQty} + ${qty} = <b>${newQty} units</b>`;statusEl.className='status-bar warn';toast(`Merged: ${mfrPn} now ${newQty} units`);}else{let finalLocation=location||(await autoAssignLocation())||'';
+  // If location is a bare bin (PBxx) without a slot, resolve to next slot
+  if(/^PB\d+$/i.test(finalLocation.trim())){
+    const _rows=await sheetRead();
+    const _slotMap={};
+    _rows.slice(1).forEach(r=>{const _l=String(r[5]||'').trim();const _m=_l.match(/^(PB\d+)-(\d+)$/i);if(_m){const _b=_m[1].toUpperCase();const _n=parseInt(_m[2]);if(!_slotMap[_b]||_n>_slotMap[_b])_slotMap[_b]=_n;}});
+    const _bin=finalLocation.trim().toUpperCase();
+    finalLocation=_bin+'-'+((_slotMap[_bin]||0)+1);
+  }const row=[suppPn,supplier,mfrPn,desc,qty,finalLocation,today];const res=await sheetAppend(row);if(res.trim()!=='ok')throw new Error(res);await sheetAppendTx([today,mfrPn,supplier,'Receive',qty,0,qty,notes||'Scan receive new']);statusEl.innerHTML=`\u2713 Added ${mfrPn} \u00d7 ${qty} at <b>${finalLocation||'no location'}</b>`;statusEl.className='status-bar ok';toast(`Added: ${mfrPn}`);}  _invCache=null;}catch(e){statusEl.innerHTML='Error: '+e.message;statusEl.className='status-bar err';}}
 
 // ═══════════════════════════════════════════════════════════════
 // SCAN HISTORY
@@ -1584,7 +1622,27 @@ function downloadSampleCSV(){downloadFile('sample_order_bom.csv','text/csv','Par
 // ═══════════════════════════════════════════════════════════════
 // BULK RECEIVE
 // ═══════════════════════════════════════════════════════════════
-async function autoAssignLocation(){try{const rows=await sheetRead();for(let i=1;i<=999;i++){const loc='PB'+String(i).padStart(2,'0');const count=rows.slice(1).filter(r=>safeStr(r[5]).toUpperCase()===loc.toUpperCase()).length;if(count<50)return loc;}return'PB001';}catch(e){return'PB001';}}
+async function autoAssignLocation(){try{
+  const rows=await sheetRead();
+  // Build a map of binId -> max slot number used
+  const slotMap={};
+  rows.slice(1).forEach(r=>{
+    const loc=safeStr(r[5]).trim();
+    const m=loc.match(/^(PB\d+)-(\d+)$/i);
+    if(m){
+      const bin=m[1].toUpperCase();
+      const n=parseInt(m[2]);
+      if(!slotMap[bin]||n>slotMap[bin]) slotMap[bin]=n;
+    }
+  });
+  // Find the lowest bin that has room (< 100 slots)
+  for(let i=1;i<=999;i++){
+    const bin='PB'+String(i).padStart(2,'0');
+    const next=(slotMap[bin]||0)+1;
+    if(next<=100){slotMap[bin]=next; return bin+'-'+next;}
+  }
+  return'PB01-1';
+}catch(e){return'PB01-1';}}
 function processBulkReceive(){const file=document.getElementById('bulkCsvFile').files[0];const statusEl=document.getElementById('bulkStatus');if(!file){statusEl.innerHTML='Please select a CSV or Excel file.';statusEl.className='status-bar err';return;}statusEl.innerHTML='<span class="spinner"></span>Reading file\u2026';statusEl.className='status-bar loading';readSpreadsheetFile(file).then(({headers,rows})=>{if(!rows.length){statusEl.innerHTML='File must have header + data rows.';statusEl.className='status-bar err';return;}const initialMapping=autoDetectColumns(headers);showColMapModal(headers,rows,'bulk',initialMapping,runBulkPreview);statusEl.innerHTML='Confirm column mapping to continue.';statusEl.className='status-bar';}).catch(e=>{statusEl.innerHTML='Error: '+e.message;statusEl.className='status-bar err';});}
 async function runBulkPreview(mapping,rows){document.getElementById('bulkStatus').innerHTML='<span class="spinner"></span>Previewing\u2026';document.getElementById('bulkStatus').className='status-bar loading';const items=rows.map(r=>({mfrPn:r[mapping.MfrPN]||'',qty:parseInt(r[mapping.Quantity])||0,desc:mapping.Description?r[mapping.Description]||'':'',supplier:mapping.Supplier?r[mapping.Supplier]||'':'',supplierPn:mapping.SupplierPN?r[mapping.SupplierPN]||'':'',location:mapping.Location?r[mapping.Location]||'':'',})).filter(i=>i.mfrPn&&i.qty>0);try{const sheetRows=await sheetRead();const existing={};sheetRows.slice(1).forEach((r,i)=>{if(r[2])existing[(r[2]||'').toUpperCase()]={rowIdx:i+2,qty:parseInt(r[4])||0};});bulkPendingItems=[];let html='';for(const item of items){const key=item.mfrPn.toUpperCase();if(existing[key]){html+=`<div class="alert alert-info"><b>${item.mfrPn}</b>: Exists \u2014 will add ${item.qty} (current: ${existing[key].qty} → new total: ${existing[key].qty+item.qty})</div>`;bulkPendingItems.push({...item,isNew:false,rowIdx:existing[key].rowIdx,currentQty:existing[key].qty});}else{const loc=item.location||(await autoAssignLocation());html+=`<div class="alert alert-success"><b>${item.mfrPn}</b>: NEW \u2014 will add ${item.qty} at ${loc}</div>`;bulkPendingItems.push({...item,isNew:true,finalLocation:loc});}}document.getElementById('bulkResults').innerHTML=`<div class="card"><div class="card-title">Preview</div>${html}</div>`;document.getElementById('bulkConfirmPanel').style.display='block';document.getElementById('bulkConfirmSummary').innerHTML=`${bulkPendingItems.length} parts ready: ${bulkPendingItems.filter(i=>i.isNew).length} new, ${bulkPendingItems.filter(i=>!i.isNew).length} existing (will be merged).`;document.getElementById('bulkConfirmStatus').style.display='none';document.getElementById('bulkStatus').innerHTML=`\u2713 ${bulkPendingItems.length} parts parsed.`;document.getElementById('bulkStatus').className='status-bar ok';}catch(e){document.getElementById('bulkStatus').innerHTML='Error: '+e.message;document.getElementById('bulkStatus').className='status-bar err';}}
 async function confirmBulkReceive(){const statusEl=document.getElementById('bulkConfirmStatus');statusEl.style.display='block';statusEl.innerHTML='<span class="spinner"></span>Processing\u2026';statusEl.className='status-bar loading';let done=0;try{for(const item of bulkPendingItems){if(item.isNew){await sheetAppend([item.supplierPn,item.supplier,item.mfrPn,item.desc,item.qty,item.finalLocation,todayStr()]);await sheetAppendTx([todayStr(),item.mfrPn,item.supplier,'Receive',item.qty,0,item.qty,'Bulk receive']);}else{const newQty=item.currentQty+item.qty;await sheetUpdate(item.rowIdx,newQty,todayStr());await sheetAppendTx([todayStr(),item.mfrPn,item.supplier,'Receive',item.qty,item.currentQty,newQty,'Bulk receive']);}done++;}statusEl.innerHTML=`\u2713 Done. ${done} parts updated.`;statusEl.className='status-bar ok';toast(`Bulk receive: ${done} parts added.`);bulkPendingItems=[];_invCache=null;document.getElementById('bulkConfirmPanel').style.display='none';}catch(e){statusEl.innerHTML='Error at part '+(done+1)+': '+e.message;statusEl.className='status-bar err';}}
