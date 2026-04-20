@@ -1247,7 +1247,7 @@ function filterInventory(){
   let data=_invCache;
   if(term){data=data.filter(({r})=>normalizeSearch(r[0]||'').includes(term)||normalizeSearch(r[1]||'').includes(term)||normalizeSearch(r[2]||'').includes(term)||normalizeSearch(r[3]||'').includes(term)||normalizeSearch(r[5]||'').includes(term));}
   const sorted=[...data].sort((a,b)=>safeStr(a.r[2]).localeCompare(safeStr(b.r[2])));
-  if(!sorted.length){tbody.innerHTML=`<tr><td colspan="8" class="empty-state">No results${raw?` for "<b>${raw}</b>":''}</td></tr>`;return;}
+  if(!sorted.length){tbody.innerHTML=`<tr><td colspan="8" class="empty-state">No results${raw?' for "<b>'+raw+'</b>':''}</td></tr>`;return;}
   tbody.innerHTML=sorted.map(({r,origIdx})=>{
     const qty=parseInt(r[4])||0; const low=qty<=5;
     const mfrPn=safeStr(r[2]),suppPn=safeStr(r[0]),supplier=safeStr(r[1]);
