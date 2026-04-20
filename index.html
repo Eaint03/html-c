@@ -280,10 +280,10 @@
     <div class="card">
       <div class="card-title">Scan Label</div>
       <div style="display:flex;gap:0;margin-bottom:18px;border:1px solid var(--border2);border-radius:9px;overflow:hidden;width:fit-content">
-        <button id="modeReceive" onclick="setScanMode('receive')" style="padding:9px 24px;font-size:13px;font-weight:600;font-family:var(--sans);border:none;cursor:pointer;background:var(--accent);color:#fff;transition:all 0.15s">&#128230; Receive</button>
-        <button id="modeDispatch" onclick="setScanMode('dispatch')" style="padding:9px 24px;font-size:13px;font-weight:600;font-family:var(--sans);border:none;cursor:pointer;background:var(--surface2);color:var(--muted);transition:all 0.15s">&#128666; Dispatch</button>
+        <button id="modeReceive" onclick="setScanMode('receive')" style="padding:9px 24px;font-size:13px;font-weight:600;font-family:var(--sans);border:none;cursor:pointer;background:var(--accent);color:#fff;transition:all 0.15s">Receive</button>
+        <button id="modeDispatch" onclick="setScanMode('dispatch')" style="padding:9px 24px;font-size:13px;font-weight:600;font-family:var(--sans);border:none;cursor:pointer;background:var(--surface2);color:var(--muted);transition:all 0.15s">Dispatch</button>
       </div>
-      <div id="scanModeLabel" style="font-size:12px;color:var(--muted);margin-bottom:14px">&#128230; <b>Receive mode</b> &mdash; scan incoming delivery labels to add stock</div>
+      <div id="scanModeLabel" style="font-size:12px;color:var(--muted);margin-bottom:14px"><b>Receive mode</b> &mdash; scan incoming delivery labels to add stock</div>
       <div class="scanner-layout">
         <div>
           <div class="video-wrap">
@@ -306,9 +306,8 @@
           <div class="preview-label">Detected Part</div>
           <div style="display:flex;gap:8px;align-items:center;margin-bottom:4px">
             <input type="text" id="scanMfrPn" placeholder="Manufacturer PN" style="font-family:var(--mono);font-size:16px;font-weight:500;color:var(--accent);flex:1;padding:8px 12px;border:2px solid var(--border2);border-radius:8px;outline:none;" oninput="this.style.borderColor='var(--warn)'" />
-            <button class="btn btn-secondary" onclick="recheckMfrPn()" style="white-space:nowrap;padding:8px 12px;font-size:12px">&#128269; Re-check</button>
+            <button class="btn btn-secondary" onclick="recheckMfrPn()" style="white-space:nowrap;padding:8px 12px;font-size:12px">Re-check</button>
           </div>
-          <div style="font-size:11px;color:var(--muted);margin-bottom:8px">&#9999; Edit if misread, then click Re-check</div>
           <div id="scanSupplierBadge" style="margin:4px 0 10px"></div>
           <div class="form-grid" style="margin-bottom:10px">
             <div class="field"><label>Supplier PN</label><input type="text" id="scanSupplierPn" placeholder="e.g. 296-11602-1-ND" /></div>
@@ -338,7 +337,6 @@
   <div id="page-bom" class="page">
     <div class="card">
       <div class="card-title">Order Check &mdash; Stock Availability</div>
-      <div class="config-note">Upload a customer order BOM (CSV or Excel). Only <b>Part Number</b> and <b>Quantity</b> are required.</div>
       <div class="field" style="max-width:400px;margin-bottom:14px"><label>Upload Order BOM (CSV or Excel)</label><input type="file" id="csvFile" accept=".csv,.xlsx,.xls,.xlsm" style="padding:6px" /></div>
       <div class="btn-row">
         <button class="btn btn-primary" onclick="processCSV()">&#128269; Check Availability</button>
@@ -351,7 +349,7 @@
       <div class="card-title">Confirm Stock Deduction</div>
       <div id="bomConfirmSummary" style="margin-bottom:16px;font-size:13px;line-height:1.8"></div>
       <div class="btn-row">
-        <button class="btn btn-primary" onclick="confirmOrderDispatch()">&#9989; Confirm &amp; Deduct Stock</button>
+        <button class="btn btn-primary" onclick="confirmOrderDispatch()">Confirm &amp; Deduct Stock</button>
         <button class="btn btn-danger" onclick="cancelOrderDispatch()">&#10005; Cancel</button>
       </div>
       <div id="bomConfirmStatus" class="status-bar" style="margin-top:14px;display:none"></div>
@@ -364,19 +362,17 @@
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:14px">
         <div>
           <div style="font-size:16px;font-weight:700;color:var(--text)">Inventory</div>
-    
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-primary btn-sm" onclick="openNewPartDrawer()">+ Add New Part</button>
           <button class="btn btn-secondary btn-sm" onclick="exportInventoryCSV()">Export CSV</button>
-          <button class="btn btn-primary btn-sm" onclick="exportBOMWithLocations()">&#128190; Export BOM</button>
+          <button class="btn btn-primary btn-sm" onclick="exportBOMWithLocations()">Export BOM</button>
           <button class="btn btn-secondary btn-sm" onclick="refreshInventory()">&#8635; Refresh</button>
         </div>
       </div>
       <div class="search-bar" style="margin-bottom:0">
         <input type="text" id="invSearch" placeholder="Search part number, description, location&hellip;" oninput="filterInventory()" />
       </div>
-      <div style="font-size:12px;color:var(--muted);margin-top:8px">Rows in red have &le;5 units. Use <b>+/&minus;</b> for quick adjustments, or click a row to open details. Click <b>&#128465;</b> to delete a part.</div>
     </div>
     <div class="table-wrap">
       <table>
@@ -432,7 +428,6 @@
   <div id="page-bulkreceive" class="page">
     <div class="card">
       <div class="card-title">Bulk Receive &mdash; Add New Stock from CSV</div>
-      <div class="config-note">Upload a stock file (CSV or Excel). Only <b>Part Number</b> and <b>Quantity</b> required. New parts get auto-assigned locations.</div>
       <div class="field" style="max-width:400px;margin-bottom:14px"><label>Upload Stock (CSV or Excel)</label><input type="file" id="bulkCsvFile" accept=".csv,.xlsx,.xls,.xlsm" style="padding:6px" /></div>
       <div class="btn-row">
         <button class="btn btn-primary" onclick="processBulkReceive()">Preview Stock</button>
@@ -505,8 +500,8 @@
     <div class="drawer-action-section">
       <div class="drawer-action-title">Update Stock</div>
       <div class="action-toggle">
-        <button class="action-toggle-btn active-receive" id="drawerBtnReceive" onclick="setDrawerAction('Receive')">&#128230; Receive</button>
-        <button class="action-toggle-btn" id="drawerBtnUse" onclick="setDrawerAction('Use')">&#128296; Use / Dispatch</button>
+        <button class="action-toggle-btn active-receive" id="drawerBtnReceive" onclick="setDrawerAction('Receive')">Receive</button>
+        <button class="action-toggle-btn" id="drawerBtnUse" onclick="setDrawerAction('Use')">Use / Dispatch</button>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
         <div class="field"><label>Quantity</label><input type="number" id="drawerQty" min="1" value="1" style="font-family:var(--mono)" /></div>
@@ -516,8 +511,8 @@
       <div id="drawerStatus" class="status-bar" style="margin-top:10px;display:none"></div>
     </div>
     <div style="margin-top:14px;display:flex;gap:8px">
-      <button class="btn btn-secondary" style="flex:1" onclick="drawerPrintLabel()">&#128424; Print Location Label</button>
-      <button class="btn btn-danger" style="flex:0 0 auto" onclick="drawerDeletePart()" title="Delete this part">&#128465; Delete Part</button>
+      <button class="btn btn-secondary" style="flex:1" onclick="drawerPrintLabel()">Print Location Label</button>
+      <button class="btn btn-danger" style="flex:0 0 auto" onclick="drawerDeletePart()" title="Delete this part">Delete Part</button>
     </div>
   </div>
 </div>
@@ -557,7 +552,7 @@
     <div class="delete-modal-pn" id="deleteConfirmPn"></div>
     <div class="delete-modal-warn">This will permanently remove this part and all its stock data from Google Sheets. This action cannot be undone.</div>
     <div style="display:flex;gap:10px">
-      <button class="btn btn-danger" style="flex:1" id="deleteConfirmBtn" onclick="executeDeletePart()">&#128465; Yes, Delete Part</button>
+      <button class="btn btn-danger" style="flex:1" id="deleteConfirmBtn" onclick="executeDeletePart()">Yes, Delete Part</button>
       <button class="btn btn-secondary" style="flex:1" onclick="closeDeleteModal()">Cancel</button>
     </div>
     <div id="deleteStatus" class="status-bar" style="margin-top:10px;display:none"></div>
@@ -686,7 +681,7 @@
 <!-- PRINT LABEL MODAL -->
 <div id="printModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:999;align-items:center;justify-content:center">
   <div style="background:#fff;border-radius:14px;padding:28px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.2)">
-    <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:16px">&#128424; Print Location Label</div>
+    <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:16px">Print Location Label</div>
     <div id="labelPreview" style="border:2px dashed var(--border2);border-radius:10px;padding:16px;margin-bottom:18px;background:#fff">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
         <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1px">NEXWAH TECHNOLOGY</div>
@@ -696,7 +691,7 @@
       <div id="lblSuppPn" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:8px"></div>
       <div id="lblDesc" style="font-size:12px;color:var(--text);margin-bottom:12px;line-height:1.4"></div>
       <div style="display:flex;align-items:center;gap:8px;background:var(--accent);border-radius:6px;padding:8px 12px">
-        <div style="font-size:20px">&#128205;</div>
+        
         <div>
           <div style="font-size:9px;color:rgba(255,255,255,0.7);font-weight:600;letter-spacing:1px">LOCATION</div>
           <div id="lblLoc" style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;color:#fff"></div>
@@ -709,7 +704,7 @@
       <div class="field"><label>Quantity</label><input type="number" id="printQtyInput" oninput="document.getElementById('lblQty').textContent='QTY: '+(this.value||0)" /></div>
     </div>
     <div style="display:flex;gap:10px">
-      <button class="btn btn-primary" style="flex:1" onclick="doPrint()">&#128424; Print Label</button>
+      <button class="btn btn-primary" style="flex:1" onclick="doPrint()">Print Label</button>
       <button class="btn btn-secondary" onclick="document.getElementById('printModal').style.display='none'">Cancel</button>
     </div>
   </div>
@@ -1098,7 +1093,7 @@ function openLocDropdown() {
   const term=(input.value||'').trim().toUpperCase();
   const filtered=term?_allLocations.filter(l=>l.toUpperCase().includes(term)):_allLocations;
   if(!filtered.length){dd.classList.remove('open');return;}
-  dd.innerHTML=filtered.map(l=>`<div class="loc-option" onmousedown="selectLocation('${l.replace(/'/g,"\\'")}')">&#128205; ${l}</div>`).join('');
+  dd.innerHTML=filtered.map(l=>`<div class="loc-option" onmousedown="selectLocation('${l.replace(/'/g,"\\'")}')"> ${l}</div>`).join('');
   dd.classList.add('open');
 }
 function filterLocDropdown() { openLocDropdown(); }
@@ -1252,7 +1247,7 @@ function filterInventory(){
   let data=_invCache;
   if(term){data=data.filter(({r})=>normalizeSearch(r[0]||'').includes(term)||normalizeSearch(r[1]||'').includes(term)||normalizeSearch(r[2]||'').includes(term)||normalizeSearch(r[3]||'').includes(term)||normalizeSearch(r[5]||'').includes(term));}
   const sorted=[...data].sort((a,b)=>safeStr(a.r[2]).localeCompare(safeStr(b.r[2])));
-  if(!sorted.length){tbody.innerHTML=`<tr><td colspan="8" class="empty-state">No results${raw?` for "<b>${raw}</b>`:''}</td></tr>`;return;}
+  if(!sorted.length){tbody.innerHTML=`<tr><td colspan="8" class="empty-state">No results${raw?` for "<b>${raw}</b>":''}</td></tr>`;return;}
   tbody.innerHTML=sorted.map(({r,origIdx})=>{
     const qty=parseInt(r[4])||0; const low=qty<=5;
     const mfrPn=safeStr(r[2]),suppPn=safeStr(r[0]),supplier=safeStr(r[1]);
@@ -1331,7 +1326,6 @@ async function executeDeletePart() {
     setTimeout(() => {
       closeDeleteModal();
       renderInventory();
-      // Also close drawer if it was open for this part
       closeDrawer();
       btn.disabled = false;
     }, 800);
@@ -1342,7 +1336,6 @@ async function executeDeletePart() {
   }
 }
 
-// Delete from drawer
 function drawerDeletePart() {
   if (!drawerRowData) return;
   confirmDeletePart(drawerRowData.rowIdx, drawerRowData.mfrPn);
@@ -1377,8 +1370,8 @@ function setDrawerAction(action){
   drawerAction=action;
   const btnR=document.getElementById('drawerBtnReceive'),btnU=document.getElementById('drawerBtnUse');
   const sub=document.getElementById('drawerSubmitBtn');
-  if(action==='Receive'){btnR.className='action-toggle-btn active-receive';btnU.className='action-toggle-btn';sub.style.background='var(--accent)';sub.innerHTML='&#128230; Receive Stock';}
-  else{btnR.className='action-toggle-btn';btnU.className='action-toggle-btn active-use';sub.style.background='#dc2626';sub.innerHTML='&#128296; Use / Dispatch Stock';}
+  if(action==='Receive'){btnR.className='action-toggle-btn active-receive';btnU.className='action-toggle-btn';sub.style.background='var(--accent)';sub.innerHTML='Receive Stock';}
+  else{btnR.className='action-toggle-btn';btnU.className='action-toggle-btn active-use';sub.style.background='#dc2626';sub.innerHTML='Use / Dispatch Stock';}
 }
 async function submitDrawerUpdate(){
   if(!drawerRowData)return;
@@ -1485,7 +1478,7 @@ function setScanMode(mode){
   document.getElementById('modeReceive').style.color=isReceive?'#fff':'var(--muted)';
   document.getElementById('modeDispatch').style.background=!isReceive?'#dc2626':'var(--surface2)';
   document.getElementById('modeDispatch').style.color=!isReceive?'#fff':'var(--muted)';
-  document.getElementById('scanModeLabel').innerHTML=isReceive?'&#128230; <b>Receive mode</b> \u2014 scan incoming delivery labels to add stock':'&#128666; <b>Dispatch mode</b> \u2014 scan components being taken out for a project';
+  document.getElementById('scanModeLabel').innerHTML=isReceive?'<b>Receive mode</b> \u2014 scan incoming delivery labels to add stock':'<b>Dispatch mode</b> \u2014 scan components being taken out for a project';
   document.getElementById('scanLocationField').style.display=isReceive?'':'none';
   document.getElementById('scanInvPanel').style.display='none';
   document.getElementById('scanMfrPn').value=''; document.getElementById('scanMfrPn').style.borderColor='var(--border2)';
@@ -1560,9 +1553,9 @@ async function lookupForScan(mfrPn){
 }
 function showScanInvPanel(row,rowIdx){
   const panel=document.getElementById('scanInvPanel');panel.style.display='block';
-  if(scanMode==='dispatch'){if(!row){panel.className='inv-action notfound';panel.innerHTML=`<div class="inv-action-title">\u26a0 Part Not Found</div><div style="font-size:13px;color:var(--muted)">This part is not in inventory. Cannot dispatch.</div>`;return;}const qty=parseInt(row[4]||'0');panel.className='inv-action found';panel.innerHTML=`<div class="inv-action-title">&#128666; Dispatch Stock</div><div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:3px">&#128205; Location</div><div style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--accent)">${row[5]||'\u2014'}</div></div><div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:3px">&#128230; Available</div><div style="font-family:var(--mono);font-size:22px;font-weight:700;color:var(--success)">${qty} <span style="font-size:12px;font-weight:400;color:var(--muted)">units</span></div></div></div><div class="qty-row"><div class="field"><label>Qty to Dispatch</label><input type="number" id="dispatchQty" min="1" max="${qty}" value="1" oninput="updateDispatchPreview(${qty})" /></div><div class="field"><label>Notes</label><input type="text" id="dispatchNotes" placeholder="e.g. Project BOM-001" /></div></div><div id="dispatchPreview" class="qty-preview-bar" style="margin-top:10px">Remaining after dispatch: <b style="color:var(--error)">${qty-1} units</b></div><div class="btn-row" style="margin-top:12px"><button class="btn btn-danger" onclick="confirmScanDispatch(${rowIdx},${qty})">&#128666; Confirm Dispatch</button></div><div id="scanDispatchStatus" class="status-bar" style="display:none;margin-top:8px"></div>`;return;}
-  if(!row){panel.className='inv-action notfound';panel.innerHTML=`<div class="inv-action-title">+ New Part — Add to Inventory</div><div style="font-size:12px;color:var(--muted);margin-bottom:12px">This part number was not found in inventory.</div><div class="qty-row"><div class="field"><label>Initial Qty</label><input type="number" id="receiveQty" min="1" value="1" /></div><div class="field"><label>Notes</label><input type="text" id="receiveNotes" placeholder="e.g. Reel 1000pcs" /></div></div><div class="btn-row" style="margin-top:12px"><button class="btn btn-primary" onclick="confirmScanReceiveNew()">&#128230; Add to Inventory</button></div><div id="scanReceiveStatus" class="status-bar" style="display:none;margin-top:8px"></div>`;}
-  else{const qty=parseInt(row[4]||'0');const loc=safeStr(row[5]);panel.className='inv-action found';panel.innerHTML=`<div class="inv-action-title">&#128230; Add Stock — Part Already in Inventory</div><div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:4px">&#128205; Existing Location</div><div style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--accent)">${loc||'<span style="color:var(--muted);font-style:italic;font-weight:400;font-size:13px">no location</span>'}</div></div><div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:4px">&#128230; Current Stock</div><div style="font-family:var(--mono);font-size:22px;font-weight:700;color:var(--success)">${qty} <span style="font-size:12px;font-weight:400;color:var(--muted)">units</span></div></div></div><div class="qty-row"><div class="field"><label>Qty to Add</label><input type="number" id="receiveQty" min="1" value="1" oninput="updateReceivePreview(${qty})" /></div><div class="field"><label>Notes</label><input type="text" id="receiveNotes" placeholder="e.g. Restock" /></div></div><div id="receivePreview" class="qty-preview-bar" style="margin-top:10px"><span style="color:var(--muted)">${qty}</span> + <span style="color:var(--accent);font-weight:700">1</span> = <b style="color:var(--success);font-size:15px">${qty+1} units total</b></div><div class="btn-row" style="margin-top:12px"><button class="btn btn-primary" onclick="confirmScanReceiveExisting(${rowIdx},${qty})">&#128230; Confirm Add Stock</button></div><div id="scanReceiveStatus" class="status-bar" style="display:none;margin-top:8px"></div>`;}
+  if(scanMode==='dispatch'){if(!row){panel.className='inv-action notfound';panel.innerHTML=`<div class="inv-action-title">\u26a0 Part Not Found</div><div style="font-size:13px;color:var(--muted)">This part is not in inventory. Cannot dispatch.</div>`;return;}const qty=parseInt(row[4]||'0');panel.className='inv-action found';panel.innerHTML=`<div class="inv-action-title">Dispatch Stock</div><div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:3px">Location</div><div style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--accent)">${row[5]||'\u2014'}</div></div><div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:3px">Available</div><div style="font-family:var(--mono);font-size:22px;font-weight:700;color:var(--success)">${qty} <span style="font-size:12px;font-weight:400;color:var(--muted)">units</span></div></div></div><div class="qty-row"><div class="field"><label>Qty to Dispatch</label><input type="number" id="dispatchQty" min="1" max="${qty}" value="1" oninput="updateDispatchPreview(${qty})" /></div><div class="field"><label>Notes</label><input type="text" id="dispatchNotes" placeholder="e.g. Project BOM-001" /></div></div><div id="dispatchPreview" class="qty-preview-bar" style="margin-top:10px">Remaining after dispatch: <b style="color:var(--error)">${qty-1} units</b></div><div class="btn-row" style="margin-top:12px"><button class="btn btn-danger" onclick="confirmScanDispatch(${rowIdx},${qty})">Confirm Dispatch</button></div><div id="scanDispatchStatus" class="status-bar" style="display:none;margin-top:8px"></div>`;return;}
+  if(!row){panel.className='inv-action notfound';panel.innerHTML=`<div class="inv-action-title">+ New Part — Add to Inventory</div><div style="font-size:12px;color:var(--muted);margin-bottom:12px">This part number was not found in inventory.</div><div class="qty-row"><div class="field"><label>Initial Qty</label><input type="number" id="receiveQty" min="1" value="1" /></div><div class="field"><label>Notes</label><input type="text" id="receiveNotes" placeholder="e.g. Reel 1000pcs" /></div></div><div class="btn-row" style="margin-top:12px"><button class="btn btn-primary" onclick="confirmScanReceiveNew()">Add to Inventory</button></div><div id="scanReceiveStatus" class="status-bar" style="display:none;margin-top:8px"></div>`;}
+  else{const qty=parseInt(row[4]||'0');const loc=safeStr(row[5]);panel.className='inv-action found';panel.innerHTML=`<div class="inv-action-title">Add Stock — Part Already in Inventory</div><div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px"><div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:4px">Existing Location</div><div style="font-family:var(--mono);font-size:16px;font-weight:700;color:var(--accent)">${loc||'<span style="color:var(--muted);font-style:italic;font-weight:400;font-size:13px">no location</span>'}</div></div><div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:4px">Current Stock</div><div style="font-family:var(--mono);font-size:22px;font-weight:700;color:var(--success)">${qty} <span style="font-size:12px;font-weight:400;color:var(--muted)">units</span></div></div></div><div class="qty-row"><div class="field"><label>Qty to Add</label><input type="number" id="receiveQty" min="1" value="1" oninput="updateReceivePreview(${qty})" /></div><div class="field"><label>Notes</label><input type="text" id="receiveNotes" placeholder="e.g. Restock" /></div></div><div id="receivePreview" class="qty-preview-bar" style="margin-top:10px"><span style="color:var(--muted)">${qty}</span> + <span style="color:var(--accent);font-weight:700">1</span> = <b style="color:var(--success);font-size:15px">${qty+1} units total</b></div><div class="btn-row" style="margin-top:12px"><button class="btn btn-primary" onclick="confirmScanReceiveExisting(${rowIdx},${qty})">Confirm Add Stock</button></div><div id="scanReceiveStatus" class="status-bar" style="display:none;margin-top:8px"></div>`;}
 }
 function updateReceivePreview(currentQty){const add=parseInt(document.getElementById('receiveQty').value)||0;const total=currentQty+add;document.getElementById('receivePreview').innerHTML=add>0?`<span style="color:var(--muted)">${currentQty}</span> + <span style="color:var(--accent);font-weight:700">${add}</span> = <b style="color:var(--success);font-size:15px">${total} units total</b>`:`<span style="color:var(--muted)">Enter a quantity to see total</span>`;}
 function updateDispatchPreview(currentQty){const dispatch=parseInt(document.getElementById('dispatchQty').value)||0;const remaining=currentQty-dispatch;document.getElementById('dispatchPreview').innerHTML=dispatch>0&&remaining>=0?`Remaining after dispatch: <b style="color:${remaining<=5?'var(--error)':'var(--success)'}">${remaining} units</b>`:remaining<0?`<span style="color:var(--error)">Not enough stock! Only ${currentQty} available.</span>`:`<span style="color:var(--muted)">Enter a quantity to see remaining</span>`;}
