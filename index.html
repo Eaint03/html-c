@@ -480,6 +480,14 @@
         <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:12px">Current Status</div>
         <div id="settingsStatus" style="font-size:13px;color:var(--muted);line-height:2"></div>
       </div>
+      <div style="border-top:1px solid var(--border);padding-top:18px;margin-top:18px">
+        <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:6px">Migrate Locations to PBxx-N Format</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.6">Items stored with a bare bin location (e.g. <span style="font-family:var(--mono)">PB01</span>) will be assigned a slot number (e.g. <span style="font-family:var(--mono)">PB01-1</span>). This updates your Google Sheet directly. Requires your Apps Script to support the <span style="font-family:var(--mono)">updateLocation</span> action.</div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="migrateLocations()">Fix All Locations → PBxx-N</button>
+        </div>
+        <div id="migrateStatus" class="status-bar" style="margin-top:14px;display:none"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -1070,6 +1078,10 @@ async function sheetUpdate(rowIndex,qty,date) {
   const url=`${APPS_SCRIPT_URL}?action=update&sheet=${encodeURIComponent(cfg.sheetName||'Sheet1')}&rowIndex=${rowIndex}&qty=${qty}&date=${encodeURIComponent(date)}`;
   const resp=await fetch(url); return await resp.text();
 }
+async function sheetUpdateLocation(rowIndex, location) {
+  const url=`${APPS_SCRIPT_URL}?action=updateLocation&sheet=${encodeURIComponent(cfg.sheetName||'Sheet1')}&rowIndex=${rowIndex}&location=${encodeURIComponent(location)}`;
+  const resp=await fetch(url); return await resp.text();
+}
 async function sheetDeleteRow(rowIndex) {
   const url=`${APPS_SCRIPT_URL}?action=deleteRow&sheet=${encodeURIComponent(cfg.sheetName||'Sheet1')}&rowIndex=${rowIndex}`;
   const resp=await fetch(url); return await resp.text();
@@ -1652,6 +1664,55 @@ function downloadBulkSampleCSV(){downloadFile('sample_bulk_receive.csv','text/cs
 // ═══════════════════════════════════════════════════════════════
 // SETTINGS
 // ═══════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════
+// LOCATION MIGRATION
+// ═══════════════════════════════════════════════════════════════
+async function migrateLocations(){
+  const statusEl=document.getElementById('migrateStatus');
+  statusEl.style.display='block';
+  statusEl.className='status-bar loading';
+  statusEl.innerHTML='<span class="spinner"></span>Reading inventory…';
+  try{
+    const rows=await sheetRead();
+    const data=rows.slice(1);
+    // Build slotMap: bin -> max slot used (from already-slotted rows)
+    const slotMap={};
+    data.forEach(r=>{
+      const loc=String(r[5]||'').trim();
+      const m=loc.match(/^(PB\d+)-(\d+)$/i);
+      if(m){const bin=m[1].toUpperCase();const n=parseInt(m[2]);if(!slotMap[bin]||n>slotMap[bin])slotMap[bin]=n;}
+    });
+    // Find rows with bare PBxx location (no slot)
+    const toFix=[];
+    data.forEach((r,i)=>{
+      const loc=String(r[5]||'').trim();
+      if(/^PB\d+$/i.test(loc)) toFix.push({rowIdx:i+2, bin:loc.toUpperCase(), loc});
+    });
+    if(!toFix.length){
+      statusEl.className='status-bar ok';
+      statusEl.innerHTML='&#10003; All locations already in PBxx-N format. Nothing to migrate.';
+      return;
+    }
+    statusEl.innerHTML=`<span class="spinner"></span>Migrating ${toFix.length} items…`;
+    let done=0, failed=0;
+    for(const item of toFix){
+      slotMap[item.bin]=(slotMap[item.bin]||0)+1;
+      const newLoc=item.bin+'-'+slotMap[item.bin];
+      try{
+        await sheetUpdateLocation(item.rowIdx, newLoc);
+        done++;
+        statusEl.innerHTML=`<span class="spinner"></span>Migrating… ${done}/${toFix.length}`;
+      }catch(e){ failed++; }
+    }
+    _invCache=null;
+    statusEl.className=failed?'status-bar warn':'status-bar ok';
+    statusEl.innerHTML=`&#10003; Migrated ${done} items to PBxx-N format.${failed?' ('+failed+' failed)':''}`;
+  }catch(e){
+    statusEl.className='status-bar err';
+    statusEl.innerHTML='Error: '+e.message;
+  }
+}
 function loadSettingsPage(){
   const hasKey=!!cfg.anthropicKey;
   document.getElementById('settingsApiKey').value=hasKey?cfg.anthropicKey:'';
