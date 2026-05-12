@@ -326,7 +326,7 @@ function onNotify(event) {
 async function sendMessage(msg) {
   if (!isConnected || !writeChar) { log('Not connected!', 'error'); return; }
   try {
-    await writeChar.writeValue(new TextEncoder().encode(msg));
+    await writeChar.writeValueWithoutResponse(new TextEncoder().encode(msg));
     log(`→ Sent: ${msg}`, 'outgoing');
     if (msg === 'ON')    setLED(true);
     if (msg === 'OFF')   setLED(false);
