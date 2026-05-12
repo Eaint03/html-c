@@ -2,328 +2,361 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>AirSense</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
 <style>
+  :root {
+    --bg: #0E0F11;
+    --surface: #16181C;
+    --border: rgba(255,255,255,0.07);
+    --green: #00E5A0;
+    --green-dim: rgba(0,229,160,0.12);
+    --red: #FF4F4F;
+    --red-dim: rgba(255,79,79,0.12);
+    --blue: #4FA3FF;
+    --blue-dim: rgba(79,163,255,0.12);
+    --muted: #5A5E6B;
+    --text: #E8EAF0;
+    --subtext: #8B8F9E;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #F5F5F3; color: #1A1A1A; }
-  .app { max-width: 430px; margin: 0 auto; padding: 16px; padding-bottom: 40px; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    padding: 32px 16px 60px;
+  }
 
-  .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-top: 12px; }
-  .app-title { font-size: 22px; font-weight: 600; }
-  .app-sub { font-size: 13px; color: #6B6B6B; margin-top: 2px; }
-  .conn-badge { display: flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 500; }
-  .conn-dot { width: 7px; height: 7px; border-radius: 50%; }
+  .app { width: 100%; max-width: 420px; }
 
-  .row { display: flex; gap: 10px; margin-bottom: 10px; }
-  .stat-card { flex: 1; background: #fff; border-radius: 12px; border: 0.5px solid rgba(0,0,0,0.08); padding: 14px; }
-  .stat-label { font-size: 12px; color: #6B6B6B; margin-bottom: 4px; }
-  .stat-value { font-size: 18px; font-weight: 600; }
+  /* Header */
+  .header { margin-bottom: 28px; }
+  .header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, var(--green), var(--blue));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header p { font-size: 12px; color: var(--muted); margin-top: 4px; letter-spacing: 0.5px; }
 
-  .card { background: #fff; border-radius: 12px; border: 0.5px solid rgba(0,0,0,0.08); padding: 16px; margin-bottom: 10px; }
-  .countdown-card { background: #FAEEDA; border-color: #BA7517; }
-  .countdown-card .card-label { font-size: 12px; font-weight: 500; color: #BA7517; margin-bottom: 4px; }
-  .countdown-card .big-num { font-size: 28px; font-weight: 600; color: #BA7517; }
-  .countdown-card .card-sub { font-size: 12px; color: #BA7517; margin-top: 2px; }
+  /* Connection status */
+  .conn-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px; margin-bottom: 14px;
+  }
+  .conn-left { display: flex; align-items: center; gap: 10px; }
+  .conn-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted); transition: background 0.3s;
+  }
+  .conn-dot.connected { background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 2s infinite; }
+  .conn-dot.connecting { background: var(--blue); animation: blink 0.8s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+  .conn-label { font-size: 13px; color: var(--subtext); }
+  .conn-label span { color: var(--text); font-weight: 500; }
+  .conn-btn {
+    background: none; border: 1px solid var(--border);
+    color: var(--text); font-family: 'DM Mono', monospace;
+    font-size: 11px; padding: 6px 12px; border-radius: 6px;
+    cursor: pointer; transition: all 0.2s; letter-spacing: 0.5px;
+  }
+  .conn-btn:hover { border-color: var(--green); color: var(--green); }
+  .conn-btn.disconnect:hover { border-color: var(--red); color: var(--red); }
 
-  .section-label { font-size: 11px; font-weight: 600; color: #ABABAB; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 14px; }
-  .field-label { font-size: 13px; color: #6B6B6B; margin-bottom: 8px; margin-top: 14px; }
+  /* Log panel */
+  .log-panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 14px 16px; margin-bottom: 14px;
+    min-height: 80px;
+  }
+  .log-title { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
+  .log-line {
+    font-size: 12px; line-height: 1.8; color: var(--subtext);
+    border-left: 2px solid var(--border); padding-left: 10px;
+    transition: all 0.3s;
+  }
+  .log-line.incoming { color: var(--green); border-color: var(--green); }
+  .log-line.outgoing { color: var(--blue); border-color: var(--blue); }
+  .log-line.system   { color: var(--muted); border-color: var(--muted); }
+  .log-line.error    { color: var(--red);  border-color: var(--red); }
 
-  .override-row { display: flex; gap: 10px; }
-  .override-btn { flex: 1; padding: 12px; border-radius: 8px; border: 0.5px solid; font-size: 14px; font-weight: 500; cursor: pointer; }
-  .btn-on  { background: #E1F5EE; border-color: #1D9E75; color: #0F6E56; }
-  .btn-off { background: #FCEBEB; border-color: #E24B4A; color: #E24B4A; }
-  .btn-on:active, .btn-off:active { opacity: 0.7; }
+  /* Big control buttons */
+  .control-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .ctrl-btn {
+    border: 1px solid var(--border); border-radius: 14px;
+    padding: 22px 16px; cursor: pointer; background: var(--surface);
+    transition: all 0.2s; text-align: left; font-family: 'DM Mono', monospace;
+    position: relative; overflow: hidden;
+  }
+  .ctrl-btn::before {
+    content: ''; position: absolute; inset: 0;
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .ctrl-btn.on::before  { background: var(--green-dim); }
+  .ctrl-btn.off::before { background: var(--red-dim); }
+  .ctrl-btn:hover::before { opacity: 1; }
+  .ctrl-btn:active { transform: scale(0.97); }
+  .ctrl-icon { font-size: 24px; margin-bottom: 10px; display: block; }
+  .ctrl-label { font-size: 15px; font-weight: 500; color: var(--text); display: block; }
+  .ctrl-sub   { font-size: 11px; color: var(--muted); display: block; margin-top: 3px; }
+  .ctrl-btn.on  .ctrl-label { color: var(--green); }
+  .ctrl-btn.off .ctrl-label { color: var(--red); }
 
-  .selector { display: flex; justify-content: space-between; align-items: center; border: 0.5px solid rgba(0,0,0,0.08); border-radius: 8px; padding: 12px; cursor: pointer; background: #fff; width: 100%; font-size: 14px; }
-  .brand-list { border: 0.5px solid rgba(0,0,0,0.08); border-radius: 8px; margin-top: 4px; overflow: hidden; display: none; }
-  .brand-list.open { display: block; }
-  .brand-item { padding: 12px; border-bottom: 0.5px solid rgba(0,0,0,0.08); cursor: pointer; font-size: 14px; }
-  .brand-item:last-child { border-bottom: none; }
-  .brand-item:hover, .brand-item.active { background: #E1F5EE; color: #0F6E56; font-weight: 500; }
+  /* Custom message */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px; margin-bottom: 14px;
+  }
+  .card-title { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; }
+  .input-row { display: flex; gap: 8px; }
+  .msg-input {
+    flex: 1; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 11px 14px; color: var(--text);
+    font-family: 'DM Mono', monospace; font-size: 13px;
+    outline: none; transition: border-color 0.2s;
+  }
+  .msg-input:focus { border-color: var(--blue); }
+  .msg-input::placeholder { color: var(--muted); }
+  .send-btn {
+    background: var(--blue-dim); border: 1px solid var(--blue);
+    color: var(--blue); font-family: 'DM Mono', monospace;
+    font-size: 12px; padding: 11px 16px; border-radius: 8px;
+    cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+  .send-btn:hover { background: var(--blue); color: #000; }
 
-  .timer-grid { display: flex; flex-wrap: wrap; gap: 6px; }
-  .timer-pip { padding: 6px 10px; border-radius: 6px; border: 0.5px solid rgba(0,0,0,0.08); background: #F5F5F3; font-size: 11px; color: #6B6B6B; cursor: pointer; }
-  .timer-pip.active { background: #E1F5EE; border-color: #1D9E75; color: #0F6E56; font-weight: 500; }
+  /* Quick commands */
+  .quick-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .quick-pill {
+    padding: 6px 12px; border-radius: 20px; font-size: 11px;
+    border: 1px solid var(--border); color: var(--subtext);
+    cursor: pointer; background: var(--bg); font-family: 'DM Mono', monospace;
+    transition: all 0.2s; letter-spacing: 0.3px;
+  }
+  .quick-pill:hover { border-color: var(--blue); color: var(--blue); }
 
-  .toggle { display: flex; border: 0.5px solid rgba(0,0,0,0.08); border-radius: 8px; overflow: hidden; }
-  .toggle-btn { flex: 1; padding: 11px; text-align: center; cursor: pointer; font-size: 13px; color: #6B6B6B; background: #F5F5F3; border: none; }
-  .toggle-btn.active { background: #E1F5EE; color: #0F6E56; font-weight: 500; }
+  /* OLED preview */
+  .oled-preview {
+    background: #000; border: 2px solid #333;
+    border-radius: 8px; padding: 16px; margin-top: 12px;
+    font-family: 'DM Mono', monospace; min-height: 80px;
+    position: relative;
+  }
+  .oled-label {
+    position: absolute; top: -9px; left: 12px;
+    font-size: 10px; color: var(--muted); background: var(--surface);
+    padding: 0 6px; letter-spacing: 0.8px;
+  }
+  .oled-text {
+    color: #fff; font-size: 14px; line-height: 1.6;
+    text-shadow: 0 0 8px rgba(255,255,255,0.6);
+  }
+  .oled-cursor {
+    display: inline-block; width: 8px; height: 14px;
+    background: #fff; margin-left: 2px; vertical-align: middle;
+    animation: blink 1s infinite;
+  }
 
-  .temp-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-  .temp-btn { width: 40px; height: 40px; border-radius: 8px; border: 0.5px solid rgba(0,0,0,0.08); background: #F5F5F3; font-size: 12px; color: #6B6B6B; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-  .temp-btn.active { background: #E6F1FB; border-color: #378ADD; color: #378ADD; font-weight: 500; }
-
-  .preview { background: #F5F5F3; border-radius: 8px; padding: 12px; margin-top: 16px; font-size: 13px; color: #6B6B6B; line-height: 1.6; }
-  .preview b { color: #1A1A1A; }
-
-  .save-btn { width: 100%; background: #1D9E75; color: #fff; border: none; border-radius: 10px; padding: 14px; font-size: 15px; font-weight: 600; cursor: pointer; margin-top: 16px; }
-  .save-btn:active { opacity: 0.8; }
-
-  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1A1A1A; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
-  .toast.show { opacity: 1; }
-
-  #temp-section { display: none; }
-  #countdown-card { display: none; }
+  /* No BLE warning */
+  .warning {
+    background: rgba(255,79,79,0.08); border: 1px solid rgba(255,79,79,0.3);
+    border-radius: 12px; padding: 14px 16px; margin-bottom: 14px;
+    font-size: 12px; color: var(--red); line-height: 1.6; display: none;
+  }
+  .warning b { color: #ff8080; }
 </style>
 </head>
 <body>
 <div class="app">
 
-  <!-- Header -->
   <div class="header">
-    <div>
-      <div class="app-title">AirSense</div>
-      <div class="app-sub">Smart AC controller</div>
-    </div>
-    <div class="conn-badge" id="conn-badge" style="background:#FCEBEB">
-      <div class="conn-dot" id="conn-dot" style="background:#E24B4A"></div>
-      <span id="conn-text" style="color:#E24B4A">Offline</span>
-    </div>
+    <h1>AirSense</h1>
+    <p>BLE Controller · ESP32</p>
   </div>
 
-  <!-- Status -->
-  <div class="row">
-    <div class="stat-card">
-      <div class="stat-label">Room</div>
-      <div class="stat-value" id="presence-val" style="color:#ABABAB">—</div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-label">AC status</div>
-      <div class="stat-value" id="ac-val" style="color:#ABABAB">—</div>
-    </div>
+  <!-- No BLE warning -->
+  <div class="warning" id="warning">
+    <b>⚠ Web Bluetooth not supported</b><br>
+    Please open this page in <b>Google Chrome</b> on a laptop or Android device. Safari and Firefox do not support Web Bluetooth.
   </div>
 
-  <!-- Countdown -->
-  <div class="card countdown-card" id="countdown-card">
-    <div class="card-label">Countdown</div>
-    <div class="big-num" id="countdown-val">—</div>
-    <div class="card-sub" id="countdown-sub">until AC turns off</div>
-  </div>
-
-  <!-- Manual override -->
-  <div class="card">
-    <div class="section-label">Manual override</div>
-    <div class="override-row">
-      <button class="override-btn btn-on"  onclick="publish('airsense/ac/command','ON')">Turn ON</button>
-      <button class="override-btn btn-off" onclick="publish('airsense/ac/command','OFF')">Turn OFF</button>
+  <!-- Connection -->
+  <div class="conn-bar">
+    <div class="conn-left">
+      <div class="conn-dot" id="conn-dot"></div>
+      <div class="conn-label"><span id="conn-text">Disconnected</span></div>
     </div>
+    <button class="conn-btn" id="conn-btn" onclick="toggleConnect()">Connect</button>
   </div>
 
-  <!-- Settings -->
-  <div class="card">
-    <div class="section-label">Settings</div>
+  <!-- Log -->
+  <div class="log-panel">
+    <div class="log-title">Activity log</div>
+    <div class="log-line system" id="log">Waiting for connection...</div>
+  </div>
 
-    <div class="field-label">AC brand</div>
-    <button class="selector" onclick="toggleBrands()">
-      <span id="brand-label">Daikin</span>
-      <span id="brand-arrow">▼</span>
+  <!-- ON / OFF -->
+  <div class="control-row">
+    <button class="ctrl-btn on" onclick="sendMessage('ON')">
+      <span class="ctrl-icon">⚡</span>
+      <span class="ctrl-label">Turn ON</span>
+      <span class="ctrl-sub">Send ON to ESP32</span>
     </button>
-    <div class="brand-list" id="brand-list"></div>
+    <button class="ctrl-btn off" onclick="sendMessage('OFF')">
+      <span class="ctrl-icon">○</span>
+      <span class="ctrl-label">Turn OFF</span>
+      <span class="ctrl-sub">Send OFF to ESP32</span>
+    </button>
+  </div>
 
-    <div class="field-label">Delay timer — <span id="timer-label">5 min</span></div>
-    <div class="timer-grid" id="timer-grid"></div>
-
-    <div class="field-label">When room is empty</div>
-    <div class="toggle">
-      <button class="toggle-btn active" id="btn-off-action" onclick="setAction('OFF')">Turn off</button>
-      <button class="toggle-btn"        id="btn-eco-action" onclick="setAction('ECO')">Eco mode</button>
+  <!-- Custom message -->
+  <div class="card">
+    <div class="card-title">Custom message</div>
+    <div class="input-row">
+      <input class="msg-input" id="msg-input" placeholder="Type anything..." onkeydown="if(event.key==='Enter') sendCustom()"/>
+      <button class="send-btn" onclick="sendCustom()">Send →</button>
     </div>
-
-    <div id="temp-section">
-      <div class="field-label">Eco temperature — <span id="temp-label">26</span> °C</div>
-      <div class="temp-grid" id="temp-grid"></div>
+    <div class="quick-grid">
+      <div class="quick-pill" onclick="sendMessage('ECO')">ECO</div>
+      <div class="quick-pill" onclick="sendMessage('TEMP:24')">TEMP:24</div>
+      <div class="quick-pill" onclick="sendMessage('TEMP:26')">TEMP:26</div>
+      <div class="quick-pill" onclick="sendMessage('STATUS')">STATUS</div>
+      <div class="quick-pill" onclick="sendMessage('RESET')">RESET</div>
     </div>
+  </div>
 
-    <div class="preview" id="preview"></div>
-
-    <button class="save-btn" onclick="saveSettings()">Save settings</button>
+  <!-- OLED preview -->
+  <div class="card">
+    <div class="card-title">OLED display preview</div>
+    <div class="oled-preview">
+      <div class="oled-label">128×64 OLED</div>
+      <div class="oled-text" id="oled-text">AirSense ready<span class="oled-cursor"></span></div>
+    </div>
   </div>
 
 </div>
 
-<div class="toast" id="toast">Settings saved</div>
-
 <script>
-// ─── CREDENTIALS ─────────────────────────────────────────────
-const BROKER_HOST = '5153e4b6809949dea356766ed8a948f9.s1.eu.hivemq.cloud';
-const BROKER_PORT = 8884;
-const MQTT_USER   = 'Eaint';
-const MQTT_PASS   = 'Eaint6677';
-// ─────────────────────────────────────────────────────────────
+// ── UUIDs — must match your ESP32 exactly ──────────────────────
+const SERVICE_UUID  = 'abcd0000-0000-1000-8000-00805f9b0131';
+const WRITE_UUID    = 'abcd0001-0000-1000-8000-00805f9b0131';
+const NOTIFY_UUID   = 'abcd0002-0000-1000-8000-00805f9b0131';
+// ──────────────────────────────────────────────────────────────
 
-const BRANDS  = ['Daikin','Mitsubishi','MitsubishiHeavy','Panasonic','LG','Samsung','Toshiba','Fujitsu','Sharp','Hitachi'];
-const TIMERS  = [30,60,120,180,300,600,900,1200,1800];
-const TEMPS   = Array.from({length:15},(_,i)=>i+16);
+let bleDevice    = null;
+let writeChar    = null;
+let notifyChar   = null;
+let isConnected  = false;
 
-let selectedBrand  = 'Daikin';
-let selectedTimer  = 300;
-let selectedAction = 'OFF';
-let selectedTemp   = 26;
-let mqttClient     = null;
-
-function fmtTimer(s) {
-  return s < 60 ? s + ' sec' : Math.round(s/60) + ' min';
+// Check Web Bluetooth support
+if (!navigator.bluetooth) {
+  document.getElementById('warning').style.display = 'block';
 }
 
-// ─── Build brand list ────────────────────────────────────────
-const brandList = document.getElementById('brand-list');
-BRANDS.forEach(b => {
-  const el = document.createElement('div');
-  el.className = 'brand-item' + (b === selectedBrand ? ' active' : '');
-  el.textContent = b;
-  el.onclick = () => {
-    selectedBrand = b;
-    document.getElementById('brand-label').textContent = b;
-    document.querySelectorAll('.brand-item').forEach(x => x.classList.remove('active'));
-    el.classList.add('active');
-    toggleBrands();
-    updatePreview();
-  };
-  brandList.appendChild(el);
-});
-
-function toggleBrands() {
-  brandList.classList.toggle('open');
-  document.getElementById('brand-arrow').textContent = brandList.classList.contains('open') ? '▲' : '▼';
-}
-
-// ─── Build timer grid ────────────────────────────────────────
-const timerGrid = document.getElementById('timer-grid');
-TIMERS.forEach(v => {
-  const el = document.createElement('div');
-  el.className = 'timer-pip' + (v === selectedTimer ? ' active' : '');
-  el.textContent = fmtTimer(v);
-  el.onclick = () => {
-    selectedTimer = v;
-    document.getElementById('timer-label').textContent = fmtTimer(v);
-    document.querySelectorAll('.timer-pip').forEach(x => x.classList.remove('active'));
-    el.classList.add('active');
-    updatePreview();
-  };
-  timerGrid.appendChild(el);
-});
-
-// ─── Build temp grid ─────────────────────────────────────────
-const tempGrid = document.getElementById('temp-grid');
-TEMPS.forEach(t => {
-  const el = document.createElement('div');
-  el.className = 'temp-btn' + (t === selectedTemp ? ' active' : '');
-  el.textContent = t;
-  el.onclick = () => {
-    selectedTemp = t;
-    document.getElementById('temp-label').textContent = t;
-    document.querySelectorAll('.temp-btn').forEach(x => x.classList.remove('active'));
-    el.classList.add('active');
-    updatePreview();
-  };
-  tempGrid.appendChild(el);
-});
-
-// ─── Action toggle ───────────────────────────────────────────
-function setAction(a) {
-  selectedAction = a;
-  document.getElementById('btn-off-action').classList.toggle('active', a === 'OFF');
-  document.getElementById('btn-eco-action').classList.toggle('active', a === 'ECO');
-  document.getElementById('temp-section').style.display = a === 'ECO' ? 'block' : 'none';
-  updatePreview();
-}
-
-// ─── Preview ─────────────────────────────────────────────────
-function updatePreview() {
-  const p = document.getElementById('preview');
-  const t = fmtTimer(selectedTimer);
-  if (selectedAction === 'ECO') {
-    p.innerHTML = `If empty for <b>${t}</b> → set <b>${selectedBrand}</b> to <b>${selectedTemp} °C</b>`;
-  } else {
-    p.innerHTML = `If empty for <b>${t}</b> → turn <b>${selectedBrand}</b> off`;
-  }
-}
-updatePreview();
-
-// ─── MQTT ────────────────────────────────────────────────────
-function connectMQTT() {
-  const clientId = 'airsense-web-' + Math.random().toString(16).substr(2,8);
-  mqttClient = new Paho.MQTT.Client(BROKER_HOST, BROKER_PORT, '/mqtt', clientId);
-
-  mqttClient.onConnectionLost = () => setConnected(false);
-
-  mqttClient.onMessageArrived = (msg) => {
-    const topic = msg.destinationName;
-    const val   = msg.payloadString;
-    if (topic === 'airsense/presence')  updatePresence(val);
-    if (topic === 'airsense/ac/command') updateAC(val);
-    if (topic === 'airsense/countdown') updateCountdown(parseInt(val));
-  };
-
-  mqttClient.connect({
-    useSSL:   true,
-    userName: MQTT_USER,
-    password: MQTT_PASS,
-    onSuccess: () => {
-      setConnected(true);
-      ['airsense/presence','airsense/ac/command','airsense/countdown'].forEach(t => mqttClient.subscribe(t));
-    },
-    onFailure: () => setConnected(false),
-  });
+function log(msg, type = 'system') {
+  const el = document.getElementById('log');
+  const time = new Date().toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  el.textContent = `[${time}] ${msg}`;
+  el.className = `log-line ${type}`;
 }
 
 function setConnected(yes) {
-  const badge = document.getElementById('conn-badge');
-  const dot   = document.getElementById('conn-dot');
-  const text  = document.getElementById('conn-text');
-  badge.style.background = yes ? '#E1F5EE' : '#FCEBEB';
-  dot.style.background   = yes ? '#1D9E75' : '#E24B4A';
-  text.style.color       = yes ? '#0F6E56' : '#E24B4A';
-  text.textContent       = yes ? 'Connected' : 'Offline';
+  isConnected = yes;
+  const dot  = document.getElementById('conn-dot');
+  const text = document.getElementById('conn-text');
+  const btn  = document.getElementById('conn-btn');
+  dot.className  = 'conn-dot' + (yes ? ' connected' : '');
+  text.textContent = yes ? `Connected · ${bleDevice?.name || 'ESP32'}` : 'Disconnected';
+  btn.textContent  = yes ? 'Disconnect' : 'Connect';
+  btn.className    = yes ? 'conn-btn disconnect' : 'conn-btn';
 }
 
-function updatePresence(val) {
-  const el = document.getElementById('presence-val');
-  el.textContent = val === 'occupied' ? 'Occupied' : val === 'empty' ? 'Empty' : '—';
-  el.style.color = val === 'occupied' ? '#1D9E75' : val === 'empty' ? '#BA7517' : '#ABABAB';
-}
+async function toggleConnect() {
+  if (isConnected) {
+    bleDevice?.gatt?.disconnect();
+    return;
+  }
+  try {
+    log('Scanning for AirSense...', 'system');
+    document.getElementById('conn-dot').className = 'conn-dot connecting';
+bleDevice = await navigator.bluetooth.requestDevice({
+  acceptAllDevices: true,
+  optionalServices: [SERVICE_UUID]
+});
 
-function updateAC(val) {
-  const el = document.getElementById('ac-val');
-  el.textContent = val || '—';
-  el.style.color = val.startsWith('ON') ? '#1D9E75' : val === 'OFF' ? '#E24B4A' : val.startsWith('ECO') ? '#378ADD' : '#ABABAB';
-}
+    bleDevice.addEventListener('gattserverdisconnected', onDisconnect);
 
-function updateCountdown(sec) {
-  const card = document.getElementById('countdown-card');
-  if (sec > 0) {
-    card.style.display = 'block';
-    document.getElementById('countdown-val').textContent = fmtTimer(sec);
-    document.getElementById('countdown-sub').textContent = 'until AC turns ' + selectedAction.toLowerCase();
-  } else {
-    card.style.display = 'none';
+    log('Connecting...', 'system');
+    const server  = await bleDevice.gatt.connect();
+    const service = await server.getPrimaryService(SERVICE_UUID);
+
+    writeChar  = await service.getCharacteristic(WRITE_UUID);
+    notifyChar = await service.getCharacteristic(NOTIFY_UUID);
+
+    // Subscribe to notifications from ESP32
+    await notifyChar.startNotifications();
+    notifyChar.addEventListener('characteristicvaluechanged', onNotify);
+
+    setConnected(true);
+    log('Connected to AirSense ✓', 'incoming');
+    updateOLED('Connected!');
+  } catch (err) {
+    log(`Error: ${err.message}`, 'error');
+    document.getElementById('conn-dot').className = 'conn-dot';
   }
 }
 
-function publish(topic, message) {
-  if (mqttClient && mqttClient.isConnected()) {
-    const msg = new Paho.MQTT.Message(String(message));
-    msg.destinationName = topic;
-    msg.retained = true;
-    mqttClient.send(msg);
-  } else {
-    alert('Not connected to broker. Check your WiFi.');
+function onDisconnect() {
+  setConnected(false);
+  writeChar = null;
+  notifyChar = null;
+  log('Device disconnected', 'error');
+  updateOLED('Disconnected');
+}
+
+function onNotify(event) {
+  const val = new TextDecoder().decode(event.target.value);
+  log(`← ESP32: ${val}`, 'incoming');
+  updateOLED(`ESP32:\n${val}`);
+}
+
+async function sendMessage(msg) {
+  if (!isConnected || !writeChar) {
+    log('Not connected!', 'error');
+    return;
+  }
+  try {
+    const encoded = new TextEncoder().encode(msg);
+    await writeChar.writeValue(encoded);
+    log(`→ Sent: ${msg}`, 'outgoing');
+    updateOLED(msg);
+  } catch (err) {
+    log(`Send error: ${err.message}`, 'error');
   }
 }
 
-function saveSettings() {
-  publish('airsense/set/timer',  selectedTimer);
-  publish('airsense/set/brand',  selectedBrand);
-  publish('airsense/set/action', selectedAction);
-  publish('airsense/set/temp',   selectedTemp);
-  const toast = document.getElementById('toast');
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 2000);
+function sendCustom() {
+  const input = document.getElementById('msg-input');
+  const val = input.value.trim();
+  if (val) {
+    sendMessage(val);
+    input.value = '';
+  }
 }
 
-connectMQTT();
+function updateOLED(text) {
+  document.getElementById('oled-text').innerHTML =
+    text.replace(/\n/g, '<br>') + '<span class="oled-cursor"></span>';
+}
 </script>
 </body>
 </html>
