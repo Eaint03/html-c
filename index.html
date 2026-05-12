@@ -33,7 +33,6 @@
 
   .app { width: 100%; max-width: 420px; }
 
-  /* Header */
   .header { margin-bottom: 28px; }
   .header h1 {
     font-family: 'Syne', sans-serif;
@@ -46,7 +45,6 @@
   }
   .header p { font-size: 12px; color: var(--muted); margin-top: 4px; letter-spacing: 0.5px; }
 
-  /* Connection status */
   .conn-bar {
     display: flex; align-items: center; justify-content: space-between;
     background: var(--surface); border: 1px solid var(--border);
@@ -72,7 +70,6 @@
   .conn-btn:hover { border-color: var(--green); color: var(--green); }
   .conn-btn.disconnect:hover { border-color: var(--red); color: var(--red); }
 
-  /* Log panel */
   .log-panel {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 12px; padding: 14px 16px; margin-bottom: 14px;
@@ -89,7 +86,6 @@
   .log-line.system   { color: var(--muted); border-color: var(--muted); }
   .log-line.error    { color: var(--red);  border-color: var(--red); }
 
-  /* Big control buttons */
   .control-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
   .ctrl-btn {
     border: 1px solid var(--border); border-radius: 14px;
@@ -111,7 +107,6 @@
   .ctrl-btn.on  .ctrl-label { color: var(--green); }
   .ctrl-btn.off .ctrl-label { color: var(--red); }
 
-  /* Custom message */
   .card {
     background: var(--surface); border: 1px solid var(--border);
     border-radius: 12px; padding: 16px; margin-bottom: 14px;
@@ -134,7 +129,6 @@
   }
   .send-btn:hover { background: var(--blue); color: #000; }
 
-  /* Quick commands */
   .quick-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
   .quick-pill {
     padding: 6px 12px; border-radius: 20px; font-size: 11px;
@@ -144,7 +138,6 @@
   }
   .quick-pill:hover { border-color: var(--blue); color: var(--blue); }
 
-  /* OLED preview */
   .oled-preview {
     background: #000; border: 2px solid #333;
     border-radius: 8px; padding: 16px; margin-top: 12px;
@@ -166,7 +159,6 @@
     animation: blink 1s infinite;
   }
 
-  /* No BLE warning */
   .warning {
     background: rgba(255,79,79,0.08); border: 1px solid rgba(255,79,79,0.3);
     border-radius: 12px; padding: 14px 16px; margin-bottom: 14px;
@@ -183,13 +175,11 @@
     <p>BLE Controller · ESP32</p>
   </div>
 
-  <!-- No BLE warning -->
   <div class="warning" id="warning">
     <b>⚠ Web Bluetooth not supported</b><br>
-    Please open this page in <b>Google Chrome</b> on a laptop or Android device. Safari and Firefox do not support Web Bluetooth.
+    Please open this page in <b>Google Chrome</b> on a laptop or Android. Safari and Firefox do not support Web Bluetooth.
   </div>
 
-  <!-- Connection -->
   <div class="conn-bar">
     <div class="conn-left">
       <div class="conn-dot" id="conn-dot"></div>
@@ -198,13 +188,11 @@
     <button class="conn-btn" id="conn-btn" onclick="toggleConnect()">Connect</button>
   </div>
 
-  <!-- Log -->
   <div class="log-panel">
     <div class="log-title">Activity log</div>
     <div class="log-line system" id="log">Waiting for connection...</div>
   </div>
 
-  <!-- ON / OFF -->
   <div class="control-row">
     <button class="ctrl-btn on" onclick="sendMessage('ON')">
       <span class="ctrl-icon">⚡</span>
@@ -218,7 +206,6 @@
     </button>
   </div>
 
-  <!-- Custom message -->
   <div class="card">
     <div class="card-title">Custom message</div>
     <div class="input-row">
@@ -234,7 +221,6 @@
     </div>
   </div>
 
-  <!-- OLED preview -->
   <div class="card">
     <div class="card-title">OLED display preview</div>
     <div class="oled-preview">
@@ -246,18 +232,17 @@
 </div>
 
 <script>
-// ── UUIDs — must match your ESP32 exactly ──────────────────────
-const SERVICE_UUID  = 'abcd0000-0000-1000-8000-00805f9b0131';
-const WRITE_UUID    = 'abcd0001-0000-1000-8000-00805f9b0131';
-const NOTIFY_UUID   = 'abcd0002-0000-1000-8000-00805f9b0131';
-// ──────────────────────────────────────────────────────────────
+// ── UUIDs — must match ESP32 exactly ──────────────────────────
+const SERVICE_UUID = 'abcd0000-0000-1000-8000-00805f9b0131';
+const WRITE_UUID   = 'abcd0001-0000-1000-8000-00805f9b0131';
+const NOTIFY_UUID  = 'abcd0002-0000-1000-8000-00805f9b0131';
+// ─────────────────────────────────────────────────────────────
 
-let bleDevice    = null;
-let writeChar    = null;
-let notifyChar   = null;
-let isConnected  = false;
+let bleDevice   = null;
+let writeChar   = null;
+let notifyChar  = null;
+let isConnected = false;
 
-// Check Web Bluetooth support
 if (!navigator.bluetooth) {
   document.getElementById('warning').style.display = 'block';
 }
@@ -274,8 +259,8 @@ function setConnected(yes) {
   const dot  = document.getElementById('conn-dot');
   const text = document.getElementById('conn-text');
   const btn  = document.getElementById('conn-btn');
-  dot.className  = 'conn-dot' + (yes ? ' connected' : '');
-  text.textContent = yes ? `Connected · ${bleDevice?.name || 'ESP32'}` : 'Disconnected';
+  dot.className    = 'conn-dot' + (yes ? ' connected' : '');
+  text.textContent = yes ? `Connected · ${bleDevice?.name || 'AirSense'}` : 'Disconnected';
   btn.textContent  = yes ? 'Disconnect' : 'Connect';
   btn.className    = yes ? 'conn-btn disconnect' : 'conn-btn';
 }
@@ -288,7 +273,9 @@ async function toggleConnect() {
   try {
     log('Scanning for AirSense...', 'system');
     document.getElementById('conn-dot').className = 'conn-dot connecting';
-bleDevice = await navigator.bluetooth.requestDevice({
+
+    // ✅ Scan by SERVICE UUID — more reliable than name filter
+  bleDevice = await navigator.bluetooth.requestDevice({
   acceptAllDevices: true,
   optionalServices: [SERVICE_UUID]
 });
@@ -302,7 +289,6 @@ bleDevice = await navigator.bluetooth.requestDevice({
     writeChar  = await service.getCharacteristic(WRITE_UUID);
     notifyChar = await service.getCharacteristic(NOTIFY_UUID);
 
-    // Subscribe to notifications from ESP32
     await notifyChar.startNotifications();
     notifyChar.addEventListener('characteristicvaluechanged', onNotify);
 
@@ -317,7 +303,7 @@ bleDevice = await navigator.bluetooth.requestDevice({
 
 function onDisconnect() {
   setConnected(false);
-  writeChar = null;
+  writeChar  = null;
   notifyChar = null;
   log('Device disconnected', 'error');
   updateOLED('Disconnected');
@@ -325,8 +311,10 @@ function onDisconnect() {
 
 function onNotify(event) {
   const val = new TextDecoder().decode(event.target.value);
+  // ignore heartbeat pings in the log
+  if (val === 'ping') return;
   log(`← ESP32: ${val}`, 'incoming');
-  updateOLED(`ESP32:\n${val}`);
+  updateOLED(`ESP32: ${val}`);
 }
 
 async function sendMessage(msg) {
@@ -335,8 +323,7 @@ async function sendMessage(msg) {
     return;
   }
   try {
-    const encoded = new TextEncoder().encode(msg);
-    await writeChar.writeValue(encoded);
+    await writeChar.writeValue(new TextEncoder().encode(msg));
     log(`→ Sent: ${msg}`, 'outgoing');
     updateOLED(msg);
   } catch (err) {
@@ -347,15 +334,12 @@ async function sendMessage(msg) {
 function sendCustom() {
   const input = document.getElementById('msg-input');
   const val = input.value.trim();
-  if (val) {
-    sendMessage(val);
-    input.value = '';
-  }
+  if (val) { sendMessage(val); input.value = ''; }
 }
 
 function updateOLED(text) {
   document.getElementById('oled-text').innerHTML =
-    text.replace(/\n/g, '<br>') + '<span class="oled-cursor"></span>';
+    text + '<span class="oled-cursor"></span>';
 }
 </script>
 </body>
