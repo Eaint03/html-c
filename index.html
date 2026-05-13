@@ -1,353 +1,126 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>AirSense</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet"/>
-<style>
-  :root {
-    --bg: #0E0F11;
-    --surface: #16181C;
-    --border: rgba(255,255,255,0.07);
-    --green: #00E5A0;
-    --green-dim: rgba(0,229,160,0.12);
-    --red: #FF4F4F;
-    --red-dim: rgba(255,79,79,0.12);
-    --blue: #4FA3FF;
-    --blue-dim: rgba(79,163,255,0.12);
-    --yellow: #FFD700;
-    --yellow-dim: rgba(255,215,0,0.12);
-    --orange: #FFB347;
-    --muted: #5A5E6B;
-    --text: #E8EAF0;
-    --subtext: #8B8F9E;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: var(--bg); color: var(--text);
-    font-family: 'DM Mono', monospace;
-    min-height: 100vh; display: flex;
-    justify-content: center; padding: 32px 16px 60px;
-  }
-  .app { width: 100%; max-width: 420px; }
-
-  .header { margin-bottom: 28px; }
-  .header h1 {
-    font-family: 'Syne', sans-serif; font-size: 32px;
-    font-weight: 800; letter-spacing: -1px;
-    background: linear-gradient(135deg, var(--green), var(--blue));
-    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  }
-  .header p { font-size: 12px; color: var(--muted); margin-top: 4px; }
-
-  .conn-bar {
-    display: flex; align-items: center; justify-content: space-between;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 14px 16px; margin-bottom: 10px;
-  }
-  .conn-left { display: flex; align-items: center; gap: 10px; }
-  .conn-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); transition: background 0.3s; }
-  .conn-dot.connected { background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 2s infinite; }
-  .conn-dot.connecting { background: var(--blue); animation: blink 0.8s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-  .conn-label { font-size: 13px; color: var(--subtext); }
-  .conn-label span { color: var(--text); font-weight: 500; }
-  .conn-btn {
-    background: none; border: 1px solid var(--border); color: var(--text);
-    font-family: 'DM Mono', monospace; font-size: 11px; padding: 6px 12px;
-    border-radius: 6px; cursor: pointer; transition: all 0.2s;
-  }
-  .conn-btn:hover { border-color: var(--green); color: var(--green); }
-  .conn-btn.disconnect:hover { border-color: var(--red); color: var(--red); }
-
-  .scan-methods {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px;
-  }
-  .scan-btn {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; padding: 12px; cursor: pointer;
-    font-family: 'DM Mono', monospace; text-align: left; transition: all 0.2s;
-  }
-  .scan-btn:hover { border-color: var(--blue); }
-  .scan-btn .s-icon { font-size: 18px; display: block; margin-bottom: 6px; }
-  .scan-btn .s-label { font-size: 12px; color: var(--text); display: block; font-weight: 500; }
-  .scan-btn .s-sub { font-size: 10px; color: var(--muted); display: block; margin-top: 2px; }
-  .scan-btn.recommended { border-color: var(--green); background: var(--green-dim); }
-  .scan-btn.recommended .s-label { color: var(--green); }
-
-  .log-panel {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; min-height: 60px;
-  }
-  .log-title { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
-  .log-line { font-size: 12px; line-height: 1.8; border-left: 2px solid var(--border); padding-left: 10px; }
-  .log-line.incoming { color: var(--green); border-color: var(--green); }
-  .log-line.outgoing { color: var(--blue); border-color: var(--blue); }
-  .log-line.system   { color: var(--muted); border-color: var(--muted); }
-  .log-line.error    { color: var(--red);   border-color: var(--red); }
-
-  /* LED indicator */
-  .led-indicator {
-    display: flex; align-items: center; justify-content: center;
-    gap: 12px; background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 20px; margin-bottom: 14px;
-  }
-  .led-bulb {
-    width: 40px; height: 40px; border-radius: 50%;
-    background: var(--muted); transition: all 0.3s;
-    box-shadow: none;
-  }
-  .led-bulb.on {
-    background: var(--yellow);
-    box-shadow: 0 0 20px var(--yellow), 0 0 40px rgba(255,215,0,0.3);
-  }
-  .led-status { font-size: 14px; color: var(--subtext); }
-  .led-status span { color: var(--text); font-weight: 500; }
-
-  /* Control buttons */
-  .control-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px; }
-  .ctrl-btn {
-    border: 1px solid var(--border); border-radius: 14px;
-    padding: 18px 10px; cursor: pointer; background: var(--surface);
-    transition: all 0.2s; text-align: center; font-family: 'DM Mono', monospace;
-    position: relative; overflow: hidden;
-  }
-  .ctrl-btn::before { content: ''; position: absolute; inset: 0; opacity: 0; transition: opacity 0.2s; }
-  .ctrl-btn.on::before    { background: var(--green-dim); }
-  .ctrl-btn.off::before   { background: var(--red-dim); }
-  .ctrl-btn.blink::before { background: var(--yellow-dim); }
-  .ctrl-btn:hover::before { opacity: 1; }
-  .ctrl-btn:active { transform: scale(0.97); }
-  .ctrl-icon  { font-size: 22px; margin-bottom: 8px; display: block; }
-  .ctrl-label { font-size: 13px; font-weight: 500; display: block; }
-  .ctrl-btn.on    .ctrl-label { color: var(--green); }
-  .ctrl-btn.off   .ctrl-label { color: var(--red); }
-  .ctrl-btn.blink .ctrl-label { color: var(--yellow); }
-
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
-  .card-title { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 12px; }
-  .input-row { display: flex; gap: 8px; }
-  .msg-input {
-    flex: 1; background: var(--bg); border: 1px solid var(--border);
-    border-radius: 8px; padding: 11px 14px; color: var(--text);
-    font-family: 'DM Mono', monospace; font-size: 13px; outline: none; transition: border-color 0.2s;
-  }
-  .msg-input:focus { border-color: var(--blue); }
-  .msg-input::placeholder { color: var(--muted); }
-  .send-btn {
-    background: var(--blue-dim); border: 1px solid var(--blue); color: var(--blue);
-    font-family: 'DM Mono', monospace; font-size: 12px; padding: 11px 16px;
-    border-radius: 8px; cursor: pointer; transition: all 0.2s; white-space: nowrap;
-  }
-  .send-btn:hover { background: var(--blue); color: #000; }
-  .quick-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-  .quick-pill {
-    padding: 6px 12px; border-radius: 20px; font-size: 11px;
-    border: 1px solid var(--border); color: var(--subtext);
-    cursor: pointer; background: var(--bg); font-family: 'DM Mono', monospace; transition: all 0.2s;
-  }
-  .quick-pill:hover { border-color: var(--blue); color: var(--blue); }
-
-  .warning { background: rgba(255,79,79,0.08); border: 1px solid rgba(255,79,79,0.3); border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; font-size: 12px; color: var(--red); line-height: 1.6; display: none; }
-</style>
+  <meta charset="UTF-8">
+  <title>ESP32 BLE Control</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; background: #1a1a2e; color: #eee; }
+    h1 { color: #00d4ff; }
+    #statusBadge { display: inline-block; padding: 8px 20px; border-radius: 20px; font-weight: bold; margin: 15px 0; }
+    .disconnected-badge { background: #ff4444; color: white; }
+    .connected-badge { background: #00c853; color: white; }
+    .btn { padding: 12px 28px; margin: 8px; font-size: 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    #btnConnect { background: #00d4ff; color: #000; }
+    #btnDisconnect { background: #ff4444; color: #fff; }
+    #dataBox { background: #0f3460; border-radius: 10px; padding: 15px; margin: 20px 0; }
+    #dataBox h3 { color: #00d4ff; }
+    #receivedData { font-size: 18px; color: #00ff88; margin-top: 8px; }
+    #log { background: #0a0a1a; border: 1px solid #333; border-radius: 10px; padding: 15px; height: 200px; overflow-y: auto; font-family: monospace; font-size: 13px; }
+    .log-info { color: #00d4ff; }
+    .log-recv { color: #00ff88; }
+    .log-send { color: #ff9800; }
+    .log-error { color: #ff4444; }
+    .log-ok { color: #00c853; }
+  </style>
 </head>
 <body>
-<div class="app">
+  <h1>🔵 ESP32 BLE Control</h1>
+  <div id="statusBadge" class="disconnected-badge">● Disconnected</div>
+  <br>
+  <button class="btn" id="btnConnect" onclick="connectBLE()">Connect to ESP32</button>
+  <button class="btn" id="btnDisconnect" onclick="disconnectBLE()" disabled>Disconnect</button>
+  <br>
+  <button class="btn" id="btnLedOn" onclick="sendData('LED_ON')" disabled style="background:#00c853;color:#fff">💡 LED ON</button>
+  <button class="btn" id="btnLedOff" onclick="sendData('LED_OFF')" disabled style="background:#555;color:#fff">🌑 LED OFF</button>
 
-  <div class="header">
-    <h1>AirSense</h1>
-    <p>BLE Controller · ESP32</p>
+  <div id="dataBox">
+    <h3>📩 Data from ESP32:</h3>
+    <div id="receivedData">— waiting —</div>
   </div>
 
-  <div class="warning" id="warning">
-    ⚠ <b>Web Bluetooth not supported.</b> Please use Google Chrome on laptop or Android.
-  </div>
-
-  <div class="conn-bar">
-    <div class="conn-left">
-      <div class="conn-dot" id="conn-dot"></div>
-      <div class="conn-label"><span id="conn-text">Disconnected</span></div>
-    </div>
-    <button class="conn-btn" id="conn-btn" onclick="connectUUID()">Connect</button>
-  </div>
-
-  <div class="scan-methods">
-    <button class="scan-btn recommended" onclick="connectUUID()">
-      <span class="s-icon">🎯</span>
-      <span class="s-label">Scan by UUID</span>
-      <span class="s-sub">Recommended</span>
-    </button>
-    <button class="scan-btn" onclick="connectByName()">
-      <span class="s-icon">🔤</span>
-      <span class="s-label">Scan by Name</span>
-      <span class="s-sub">Filter "AirSense"</span>
-    </button>
-    <button class="scan-btn" onclick="connectAll()">
-      <span class="s-icon">📡</span>
-      <span class="s-label">Scan All</span>
-      <span class="s-sub">Shows everything</span>
-    </button>
-    <button class="scan-btn" onclick="connectPrefix()">
-      <span class="s-icon">🔍</span>
-      <span class="s-label">Scan ESP prefix</span>
-      <span class="s-sub">Starts with "ESP"</span>
-    </button>
-  </div>
-
-  <div class="log-panel">
-    <div class="log-title">Activity log</div>
-    <div class="log-line system" id="log">Pick a scan method above...</div>
-  </div>
-
-  <!-- LED indicator -->
-  <div class="led-indicator">
-    <div class="led-bulb" id="led-bulb"></div>
-    <div class="led-status">ESP32 LED: <span id="led-text">OFF</span></div>
-  </div>
-
-  <!-- Controls -->
-  <div class="control-row">
-    <button class="ctrl-btn on" onclick="sendMessage('ON')">
-      <span class="ctrl-icon">💡</span>
-      <span class="ctrl-label">ON</span>
-    </button>
-    <button class="ctrl-btn off" onclick="sendMessage('OFF')">
-      <span class="ctrl-icon">○</span>
-      <span class="ctrl-label">OFF</span>
-    </button>
-    <button class="ctrl-btn blink" onclick="sendMessage('BLINK')">
-      <span class="ctrl-icon">✨</span>
-      <span class="ctrl-label">BLINK</span>
-    </button>
-  </div>
-
-  <!-- Custom message -->
-  <div class="card">
-    <div class="card-title">Custom message</div>
-    <div class="input-row">
-      <input class="msg-input" id="msg-input" placeholder="Type anything..." onkeydown="if(event.key==='Enter') sendCustom()"/>
-      <button class="send-btn" onclick="sendCustom()">Send →</button>
-    </div>
-    <div class="quick-grid">
-      <div class="quick-pill" onclick="sendMessage('STATUS')">STATUS</div>
-      <div class="quick-pill" onclick="sendMessage('RESET')">RESET</div>
-    </div>
-  </div>
-
-</div>
+  <h3>📋 Log</h3>
+  <div id="log"></div>
 
 <script>
-const SERVICE_UUID = 'abcd0000-0000-1000-8000-00805f9b0131';
-const WRITE_UUID   = 'abcd0001-0000-1000-8000-00805f9b0131';
-const NOTIFY_UUID  = 'abcd0002-0000-1000-8000-00805f9b0131';
+  const SERVICE_UUID        = '12345678-1234-1234-1234-123456789abc';
+  const CHARACTERISTIC_UUID = 'abcdefab-1234-1234-1234-abcdefabcdef';
 
-let bleDevice   = null;
-let writeChar   = null;
-let notifyChar  = null;
-let isConnected = false;
+  let bleDevice = null;
+  let bleChar   = null;
 
-if (!navigator.bluetooth) {
-  document.getElementById('warning').style.display = 'block';
-}
-
-function log(msg, type = 'system') {
-  const el = document.getElementById('log');
-  const time = new Date().toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  el.textContent = `[${time}] ${msg}`;
-  el.className = `log-line ${type}`;
-}
-
-function setConnected(yes) {
-  isConnected = yes;
-  document.getElementById('conn-dot').className = 'conn-dot' + (yes ? ' connected' : '');
-  document.getElementById('conn-text').textContent = yes ? `Connected · ${bleDevice?.name || 'AirSense'}` : 'Disconnected';
-  document.getElementById('conn-btn').textContent  = yes ? 'Disconnect' : 'Connect';
-  document.getElementById('conn-btn').className    = yes ? 'conn-btn disconnect' : 'conn-btn';
-}
-
-function setLED(on) {
-  document.getElementById('led-bulb').className = 'led-bulb' + (on ? ' on' : '');
-  document.getElementById('led-text').textContent = on ? 'ON' : 'OFF';
-}
-
-async function connectUUID() {
-  if (isConnected) { bleDevice?.gatt?.disconnect(); return; }
-  await doConnect({ filters: [{ services: [SERVICE_UUID] }] }, 'Scanning by UUID...');
-}
-async function connectByName() {
-  if (isConnected) { bleDevice?.gatt?.disconnect(); return; }
-  await doConnect({ filters: [{ name: 'AirSense' }], optionalServices: [SERVICE_UUID] }, 'Scanning by name...');
-}
-async function connectAll() {
-  if (isConnected) { bleDevice?.gatt?.disconnect(); return; }
-  await doConnect({ acceptAllDevices: true, optionalServices: [SERVICE_UUID] }, 'Showing all devices...');
-}
-async function connectPrefix() {
-  if (isConnected) { bleDevice?.gatt?.disconnect(); return; }
-  await doConnect({ filters: [{ namePrefix: 'ESP' }], optionalServices: [SERVICE_UUID] }, 'Scanning ESP prefix...');
-}
-
-async function doConnect(options, scanMsg) {
-  try {
-    log(scanMsg, 'system');
-    document.getElementById('conn-dot').className = 'conn-dot connecting';
-    bleDevice = await navigator.bluetooth.requestDevice(options);
-    bleDevice.addEventListener('gattserverdisconnected', onDisconnect);
-    log(`Found: ${bleDevice.name || 'unknown'} — connecting...`, 'system');
-    const server  = await bleDevice.gatt.connect();
-    const service = await server.getPrimaryService(SERVICE_UUID);
-    writeChar     = await service.getCharacteristic(WRITE_UUID);
-    notifyChar    = await service.getCharacteristic(NOTIFY_UUID);
-    await notifyChar.startNotifications();
-    notifyChar.addEventListener('characteristicvaluechanged', onNotify);
-    setConnected(true);
-    log(`Connected to ${bleDevice.name || 'AirSense'} ✓`, 'incoming');
-  } catch (err) {
-    log(`Error: ${err.message}`, 'error');
-    document.getElementById('conn-dot').className = 'conn-dot';
+  function log(msg, type = 'info') {
+    const logDiv = document.getElementById('log');
+    const time = new Date().toLocaleTimeString();
+    logDiv.innerHTML += `<span class="log-${type}">[${time}] ${msg}</span><br>`;
+    logDiv.scrollTop = logDiv.scrollHeight;
   }
-}
 
-function onDisconnect() {
-  setConnected(false);
-  writeChar = null; notifyChar = null;
-  setLED(false);
-  log('Device disconnected', 'error');
-}
-
-function onNotify(event) {
-  const val = new TextDecoder().decode(event.target.value);
-  if (val === 'ping') return;
-  log(`← ESP32: ${val}`, 'incoming');
-}
-
-async function sendMessage(msg) {
-  if (!isConnected || !writeChar) { log('Not connected!', 'error'); return; }
-  try {
-    await writeChar.writeValueWithoutResponse(new TextEncoder().encode(msg));
-    log(`→ Sent: ${msg}`, 'outgoing');
-    if (msg === 'ON')    setLED(true);
-    if (msg === 'OFF')   setLED(false);
-    if (msg === 'BLINK') {
-      // animate LED on screen too
-      let i = 0;
-      const t = setInterval(() => {
-        setLED(i % 2 === 0);
-        if (++i >= 10) { clearInterval(t); setLED(false); }
-      }, 200);
+  function setStatus(state) {
+    const badge = document.getElementById('statusBadge');
+    const btns = ['btnLedOn','btnLedOff'];
+    if (state === 'connected') {
+      badge.textContent = '● Connected ✅';
+      badge.className = 'connected-badge';
+      document.getElementById('btnConnect').disabled = true;
+      document.getElementById('btnDisconnect').disabled = false;
+      btns.forEach(id => document.getElementById(id).disabled = false);
+    } else {
+      badge.textContent = '● Disconnected';
+      badge.className = 'disconnected-badge';
+      document.getElementById('btnConnect').disabled = false;
+      document.getElementById('btnDisconnect').disabled = true;
+      btns.forEach(id => document.getElementById(id).disabled = true);
     }
-  } catch (err) {
-    log(`Send error: ${err.message}`, 'error');
   }
-}
 
-function sendCustom() {
-  const input = document.getElementById('msg-input');
-  const val = input.value.trim();
-  if (val) { sendMessage(val); input.value = ''; }
-}
+  async function connectBLE() {
+    if (!navigator.bluetooth) {
+      log('Web Bluetooth not supported! Use Chrome or Edge.', 'error');
+      return;
+    }
+    try {
+      log('Scanning for ESP32_MyBoard...', 'info');
+      bleDevice = await navigator.bluetooth.requestDevice({
+        filters: [{ name: 'ESP32_MyBoard' }],
+        optionalServices: [SERVICE_UUID]
+      });
+      bleDevice.addEventListener('gattserverdisconnected', () => {
+        setStatus('disconnected');
+        log('ESP32 disconnected!', 'error');
+      });
+      const server  = await bleDevice.gatt.connect();
+      const service = await server.getPrimaryService(SERVICE_UUID);
+      bleChar        = await service.getCharacteristic(CHARACTERISTIC_UUID);
+      await bleChar.startNotifications();
+      bleChar.addEventListener('characteristicvaluechanged', (e) => {
+        const value = new TextDecoder().decode(e.target.value);
+        document.getElementById('receivedData').textContent = value;
+        log('Received: ' + value, 'recv');
+      });
+      setStatus('connected');
+      log('Connected to ESP32_MyBoard!', 'ok');
+    } catch(err) {
+      setStatus('disconnected');
+      log('Error: ' + err.message, 'error');
+    }
+  }
+
+  async function sendData(message) {
+    if (!bleChar) { log('Not connected!', 'error'); return; }
+    try {
+      await bleChar.writeValue(new TextEncoder().encode(message));
+      log('Sent: ' + message, 'send');
+    } catch(err) {
+      log('Send failed: ' + err.message, 'error');
+    }
+  }
+
+  function disconnectBLE() {
+    if (bleDevice && bleDevice.gatt.connected) bleDevice.gatt.disconnect();
+    setStatus('disconnected');
+    log('Disconnected.', 'info');
+  }
 </script>
 </body>
 </html>
