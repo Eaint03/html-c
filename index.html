@@ -3,44 +3,102 @@
 <head>
   <meta charset="UTF-8">
   <title>ESP32 BLE Control</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
   <style>
-    body { font-family: Arial, sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; background: #1a1a2e; color: #eee; }
-    h1 { color: #00d4ff; }
-    #statusBadge { display: inline-block; padding: 8px 20px; border-radius: 20px; font-weight: bold; margin: 15px 0; }
-    .disconnected-badge { background: #ff4444; color: white; }
-    .connected-badge { background: #00c853; color: white; }
-    .btn { padding: 12px 28px; margin: 8px; font-size: 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
-    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    #btnConnect { background: #00d4ff; color: #000; }
-    #btnDisconnect { background: #ff4444; color: #fff; }
-    #dataBox { background: #0f3460; border-radius: 10px; padding: 15px; margin: 20px 0; }
-    #dataBox h3 { color: #00d4ff; }
-    #receivedData { font-size: 18px; color: #00ff88; margin-top: 8px; }
-    #log { background: #0a0a1a; border: 1px solid #333; border-radius: 10px; padding: 15px; height: 200px; overflow-y: auto; font-family: monospace; font-size: 13px; }
-    .log-info { color: #00d4ff; }
-    .log-recv { color: #00ff88; }
-    .log-send { color: #ff9800; }
-    .log-error { color: #ff4444; }
-    .log-ok { color: #00c853; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f5f5f0; min-height: 100vh; padding: 1.5rem; }
+    .page { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+    .card { background: #ffffff; border: 1px solid #e5e5e0; border-radius: 12px; padding: 1.25rem; }
+    .header { display: flex; align-items: center; justify-content: space-between; padding: 0.25rem 0 0.75rem; }
+    .header-title { font-size: 18px; font-weight: 500; color: #1a1a1a; }
+    .header-sub { font-size: 13px; color: #888; margin-top: 2px; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; }
+    .badge-connected { background: #d4edda; color: #1a7a3c; }
+    .badge-disconnected { background: #fde8e8; color: #c0392b; }
+    .badge-connecting { background: #fff3cd; color: #856404; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+    .btn-row { display: flex; gap: 8px; align-items: center; }
+    .btn-primary { background: #1a1a1a; color: #fff; border: none; border-radius: 8px; padding: 9px 20px; font-size: 14px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-primary:hover { background: #333; }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-outline { background: transparent; color: #1a1a1a; border: 1px solid #ccc; border-radius: 8px; padding: 9px 20px; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    .btn-outline:hover { background: #f5f5f0; }
+    .btn-outline:disabled { opacity: 0.4; cursor: not-allowed; }
+    .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .metric { background: #f5f5f0; border-radius: 8px; padding: 1rem; }
+    .metric-label { font-size: 12px; color: #888; margin-bottom: 4px; }
+    .metric-value { font-size: 22px; font-weight: 500; color: #1a1a1a; }
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; background: #fff; border: 1px solid #e5e5e0; border-radius: 12px; }
+    .toggle-info p { font-size: 14px; font-weight: 500; color: #1a1a1a; }
+    .toggle-info span { font-size: 12px; color: #888; }
+    .toggle { position: relative; width: 44px; height: 24px; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; inset: 0; background: #ccc; border-radius: 12px; cursor: pointer; transition: background 0.2s; }
+    .slider:before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: white; border-radius: 50%; transition: transform 0.2s; }
+    input:checked + .slider { background: #1a1a1a; }
+    input:checked + .slider:before { transform: translateX(20px); }
+    input:disabled + .slider { opacity: 0.4; cursor: not-allowed; }
+    .log-wrap { max-height: 180px; overflow-y: auto; }
+    .log-line { font-size: 12px; font-family: monospace; padding: 4px 0; border-bottom: 1px solid #f0f0f0; display: flex; gap: 8px; }
+    .log-time { color: #aaa; min-width: 75px; }
+    .log-recv { color: #1a7a3c; }
+    .log-send { color: #1a5fa0; }
+    .log-sys  { color: #888; }
+    .log-err  { color: #c0392b; }
+    .section-label { font-size: 12px; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
   </style>
 </head>
 <body>
-  <h1>🔵 ESP32 BLE Control</h1>
-  <div id="statusBadge" class="disconnected-badge">● Disconnected</div>
-  <br>
-  <button class="btn" id="btnConnect" onclick="connectBLE()">Connect to ESP32</button>
-  <button class="btn" id="btnDisconnect" onclick="disconnectBLE()" disabled>Disconnect</button>
-  <br>
-  <button class="btn" id="btnLedOn" onclick="sendData('LED_ON')" disabled style="background:#00c853;color:#fff">💡 LED ON</button>
-  <button class="btn" id="btnLedOff" onclick="sendData('LED_OFF')" disabled style="background:#555;color:#fff">🌑 LED OFF</button>
+<div class="page">
 
-  <div id="dataBox">
-    <h3>📩 Data from ESP32:</h3>
-    <div id="receivedData">— waiting —</div>
+  <div class="header">
+    <div>
+      <p class="header-title">ESP32 control</p>
+      <p class="header-sub">Bluetooth Low Energy</p>
+    </div>
+    <div id="badge" class="badge badge-disconnected">
+      <span class="dot"></span>
+      <span id="badgeText">Disconnected</span>
+    </div>
   </div>
 
-  <h3>📋 Log</h3>
-  <div id="log"></div>
+  <div class="card btn-row">
+    <button class="btn-primary" id="btnConnect" onclick="connectBLE()">
+      <i class="ti ti-bluetooth"></i> Connect
+    </button>
+    <button class="btn-outline" id="btnDisconnect" onclick="disconnectBLE()" disabled>
+      <i class="ti ti-bluetooth-off"></i> Disconnect
+    </button>
+  </div>
+
+  <div class="metrics">
+    <div class="metric">
+      <p class="metric-label">Uptime (s)</p>
+      <p class="metric-value" id="metricUptime">—</p>
+    </div>
+    <div class="metric">
+      <p class="metric-label">Status</p>
+      <p class="metric-value" id="metricStatus" style="font-size:15px; padding-top:4px; color:#888;">Waiting...</p>
+    </div>
+  </div>
+
+  <div class="toggle-row">
+    <div class="toggle-info">
+      <p>LED D1</p>
+      <span>GPIO 12</span>
+    </div>
+    <label class="toggle">
+      <input type="checkbox" id="ledD1" disabled onchange="toggleLED('D1', this.checked)">
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="card">
+    <p class="section-label">Activity log</p>
+    <div class="log-wrap" id="log"></div>
+  </div>
+
+</div>
 
 <script>
   const SERVICE_UUID        = '12345678-1234-1234-1234-123456789abc';
@@ -49,77 +107,101 @@
   let bleDevice = null;
   let bleChar   = null;
 
-  function log(msg, type = 'info') {
-    const logDiv = document.getElementById('log');
+  function log(msg, type = 'sys') {
+    const wrap = document.getElementById('log');
     const time = new Date().toLocaleTimeString();
-    logDiv.innerHTML += `<span class="log-${type}">[${time}] ${msg}</span><br>`;
-    logDiv.scrollTop = logDiv.scrollHeight;
+    wrap.innerHTML += `<div class="log-line"><span class="log-time">${time}</span><span class="log-${type}">${msg}</span></div>`;
+    wrap.scrollTop = wrap.scrollHeight;
   }
 
   function setStatus(state) {
-    const badge = document.getElementById('statusBadge');
-    const btns = ['btnLedOn','btnLedOff'];
-    if (state === 'connected') {
-      badge.textContent = '● Connected ✅';
-      badge.className = 'connected-badge';
-      document.getElementById('btnConnect').disabled = true;
-      document.getElementById('btnDisconnect').disabled = false;
-      btns.forEach(id => document.getElementById(id).disabled = false);
-    } else {
-      badge.textContent = '● Disconnected';
-      badge.className = 'disconnected-badge';
-      document.getElementById('btnConnect').disabled = false;
-      document.getElementById('btnDisconnect').disabled = true;
-      btns.forEach(id => document.getElementById(id).disabled = true);
+    const badge = document.getElementById('badge');
+    const badgeText = document.getElementById('badgeText');
+    const connected = state === 'connected';
+    const connecting = state === 'connecting';
+
+    badge.className = 'badge ' + (connected ? 'badge-connected' : connecting ? 'badge-connecting' : 'badge-disconnected');
+    badgeText.textContent = connected ? 'Connected' : connecting ? 'Connecting...' : 'Disconnected';
+
+    document.getElementById('btnConnect').disabled = connected || connecting;
+    document.getElementById('btnDisconnect').disabled = !connected;
+    document.getElementById('ledD1').disabled = !connected;
+
+    if (!connected) {
+      document.getElementById('metricUptime').textContent = '—';
+      document.getElementById('metricStatus').textContent = 'Waiting...';
+      document.getElementById('metricStatus').style.color = '#888';
     }
   }
 
   async function connectBLE() {
     if (!navigator.bluetooth) {
-      log('Web Bluetooth not supported! Use Chrome or Edge.', 'error');
+      log('Web Bluetooth not supported. Use Chrome or Edge.', 'err');
       return;
     }
     try {
-      log('Scanning for ESP32_MyBoard...', 'info');
+      setStatus('connecting');
+      log('Scanning for ESP32_MyBoard...', 'sys');
+
       bleDevice = await navigator.bluetooth.requestDevice({
         filters: [{ name: 'ESP32_MyBoard' }],
         optionalServices: [SERVICE_UUID]
       });
+
       bleDevice.addEventListener('gattserverdisconnected', () => {
         setStatus('disconnected');
-        log('ESP32 disconnected!', 'error');
+        log('ESP32 disconnected.', 'err');
       });
+
       const server  = await bleDevice.gatt.connect();
       const service = await server.getPrimaryService(SERVICE_UUID);
       bleChar        = await service.getCharacteristic(CHARACTERISTIC_UUID);
+
       await bleChar.startNotifications();
-      bleChar.addEventListener('characteristicvaluechanged', (e) => {
-        const value = new TextDecoder().decode(e.target.value);
-        document.getElementById('receivedData').textContent = value;
-        log('Received: ' + value, 'recv');
-      });
+      bleChar.addEventListener('characteristicvaluechanged', onDataReceived);
+
       setStatus('connected');
-      log('Connected to ESP32_MyBoard!', 'ok');
+      log('Connected to ESP32_MyBoard', 'recv');
+
     } catch(err) {
       setStatus('disconnected');
-      log('Error: ' + err.message, 'error');
+      log('Error: ' + err.message, 'err');
     }
   }
 
-  async function sendData(message) {
-    if (!bleChar) { log('Not connected!', 'error'); return; }
+  function onDataReceived(e) {
+    const raw = new TextDecoder().decode(e.target.value);
+    log(raw, 'recv');
     try {
-      await bleChar.writeValue(new TextEncoder().encode(message));
-      log('Sent: ' + message, 'send');
+      const json = JSON.parse(raw);
+      if (json.uptime !== undefined) {
+        document.getElementById('metricUptime').textContent = json.uptime;
+      }
+      if (json.status) {
+        document.getElementById('metricStatus').textContent = json.status;
+        document.getElementById('metricStatus').style.color = '#1a7a3c';
+      }
+    } catch(e) {}
+  }
+
+  async function sendData(msg) {
+    if (!bleChar) return;
+    try {
+      await bleChar.writeValue(new TextEncoder().encode(msg));
+      log('Sent: ' + msg, 'send');
     } catch(err) {
-      log('Send failed: ' + err.message, 'error');
+      log('Send failed: ' + err.message, 'err');
     }
+  }
+
+  function toggleLED(name, on) {
+    sendData(on ? 'LED_ON' : 'LED_OFF');
   }
 
   function disconnectBLE() {
     if (bleDevice && bleDevice.gatt.connected) bleDevice.gatt.disconnect();
     setStatus('disconnected');
-    log('Disconnected.', 'info');
+    log('Disconnected.', 'sys');
   }
 </script>
 </body>
