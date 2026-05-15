@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Aircon — Settings</title>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f5f5f0; min-height: 100vh; padding: 20px; }
+    .page { max-width: 400px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+    .header { padding: 8px 0 4px; }
+    .header h1 { font-size: 18px; font-weight: 500; color: #1a1a1a; }
+    .header p { font-size: 12px; color: #888; margin-top: 2px; }
+    .card { background: #fff; border-radius: 12px; border: 1px solid #e5e5e0; padding: 16px; }
+    .section-title { font-size: 11px; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
+    .setting-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
+    .setting-info p { font-size: 13px; font-weight: 500; color: #1a1a1a; }
+    .setting-info span { font-size: 11px; color: #888; }
+    .setting-value { font-size: 13px; color: #888; }
+    .divider { height: 1px; background: #f0f0f0; margin: 2px 0; }
+    .edit-row { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; }
+    .edit-row label { font-size: 12px; font-weight: 500; color: #1a1a1a; }
+    .edit-row select, .edit-row input { width: 100%; border: 1px solid #e5e5e0; border-radius: 8px; padding: 9px 12px; font-size: 13px; outline: none; background: #fff; color: #1a1a1a; }
+    .edit-row select:focus, .edit-row input:focus { border-color: #1a1a1a; }
+    .timer-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 6px; }
+    .option-btn { border: 1px solid #e5e5e0; border-radius: 8px; padding: 8px; background: #fff; font-size: 12px; color: #1a1a1a; text-align: center; cursor: pointer; }
+    .option-btn.selected { border-color: #1a1a1a; border-width: 2px; background: #f5f5f0; font-weight: 500; }
+    .custom-wrap { display: flex; align-items: center; gap: 8px; border: 1px solid #e5e5e0; border-radius: 8px; padding: 8px 12px; }
+    .custom-wrap input { border: none; outline: none; font-size: 13px; width: 60px; }
+    .custom-wrap span { font-size: 13px; color: #888; }
+    .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .mode-btn { border: 1px solid #e5e5e0; border-radius: 8px; padding: 12px 10px; background: #fff; font-size: 12px; color: #1a1a1a; text-align: center; cursor: pointer; }
+    .mode-btn.selected { border-color: #1a1a1a; border-width: 2px; background: #f5f5f0; font-weight: 500; }
+    .degree-wrap { display: none; margin-top: 10px; }
+    .degree-wrap.show { display: block; }
+    .degree-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+    .degree-row input { border: 1px solid #e5e5e0; border-radius: 8px; padding: 8px 12px; font-size: 14px; width: 80px; outline: none; text-align: center; }
+    .degree-row span { font-size: 13px; color: #888; }
+    .btn-primary { background: #1a1a1a; color: #fff; border: none; border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 500; width: 100%; cursor: pointer; margin-top: 4px; }
+    .btn-primary:hover { background: #333; }
+    .btn-danger { background: #fff; color: #c0392b; border: 1px solid #c0392b; border-radius: 10px; padding: 12px; font-size: 14px; width: 100%; cursor: pointer; }
+    .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; display: none; z-index: 999; }
+    .toast.show { display: block; }
+    .nav { background: #fff; border-top: 1px solid #e5e5e0; display: flex; justify-content: space-around; padding: 10px 0 16px; position: fixed; bottom: 0; left: 0; right: 0; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; color: #888; cursor: pointer; text-decoration: none; }
+    .nav-item.active { color: #1a1a1a; }
+    .nav-icon { font-size: 20px; }
+    .bottom-space { height: 70px; }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: center; justify-content: center; }
+    .modal-overlay.show { display: flex; }
+    .modal { background: #fff; border-radius: 14px; padding: 24px; width: 90%; max-width: 320px; }
+    .modal h3 { font-size: 16px; font-weight: 500; color: #1a1a1a; margin-bottom: 6px; }
+    .modal p { font-size: 12px; color: #888; margin-bottom: 16px; }
+    .modal input { width: 100%; border: 1px solid #e5e5e0; border-radius: 8px; padding: 10px 12px; font-size: 14px; outline: none; margin-bottom: 12px; }
+    .modal input:focus { border-color: #1a1a1a; }
+    .modal-btns { display: flex; gap: 8px; }
+    .modal-btns button { flex: 1; padding: 10px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+    .btn-cancel { background: #f5f5f0; color: #1a1a1a; border: 1px solid #e5e5e0; }
+    .btn-confirm { background: #1a1a1a; color: #fff; border: none; font-weight: 500; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <div class="header">
+    <h1>Settings</h1>
+    <p>Device configuration</p>
+  </div>
+
+  <!-- Device Info -->
+  <div class="card">
+    <p class="section-title">Device</p>
+    <div class="setting-row">
+      <div class="setting-info"><p>Brand</p></div>
+      <span class="setting-value" id="infoBrand">—</span>
+    </div>
+    <div class="divider"></div>
+    <div class="setting-row">
+      <div class="setting-info"><p>Timer</p></div>
+      <span class="setting-value" id="infoTimer">—</span>
+    </div>
+    <div class="divider"></div>
+    <div class="setting-row">
+      <div class="setting-info"><p>Mode</p></div>
+      <span class="setting-value" id="infoMode">—</span>
+    </div>
+    <div class="divider"></div>
+    <div class="setting-row" id="infoTempRow" style="display:none;">
+      <div class="setting-info"><p>Target temp</p></div>
+      <span class="setting-value" id="infoTemp">—</span>
+    </div>
+  </div>
+
+  <!-- Edit Settings -->
+  <div class="card">
+    <p class="section-title">Edit preferences</p>
+
+    <div class="edit-row">
+      <label>Aircon brand</label>
+      <select id="brandSelect" onchange="onBrandChange(this.value)">
+        <option value="Daikin">Daikin</option>
+        <option value="Panasonic">Panasonic</option>
+        <option value="Mitsubishi">Mitsubishi</option>
+        <option value="LG">LG</option>
+        <option value="Samsung">Samsung</option>
+        <option value="Midea">Midea</option>
+        <option value="Carrier">Carrier</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="edit-row">
+      <label>Auto-off delay</label>
+      <div class="timer-grid">
+        <div class="option-btn" onclick="selectTimer(this, 5)">5 min</div>
+        <div class="option-btn" onclick="selectTimer(this, 10)">10 min</div>
+        <div class="option-btn" onclick="selectTimer(this, 15)">15 min</div>
+        <div class="option-btn" onclick="selectTimer(this, 20)">20 min</div>
+        <div class="option-btn" onclick="selectTimer(this, 30)">30 min</div>
+        <div class="option-btn" onclick="selectTimer(this, 60)">60 min</div>
+      </div>
+      <div class="custom-wrap">
+        <input type="number" id="customTimer" min="1" max="240" placeholder="Custom" oninput="onCustomTimer(this)">
+        <span>minutes</span>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="edit-row">
+      <label>Mode</label>
+      <div class="mode-grid">
+        <div class="mode-btn" onclick="selectMode(this, 'off')">Turn off</div>
+        <div class="mode-btn" onclick="selectMode(this, 'drop')">Drop degrees</div>
+      </div>
+      <div class="degree-wrap" id="degreeWrap">
+        <label style="font-size:12px; color:#888;">Drop to which temperature?</label>
+        <div class="degree-row">
+          <input type="number" id="targetDegree" min="16" max="30" placeholder="e.g. 26">
+          <span>°C</span>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-primary" onclick="saveSettings()">Save changes</button>
+  </div>
+
+  <!-- Danger Zone -->
+  <div class="card">
+    <p class="section-title">Danger zone</p>
+    <button class="btn-danger" onclick="resetSetup()">Reset to first setup</button>
+  </div>
+
+  <div class="bottom-space"></div>
+</div>
+
+<!-- Nav -->
+<nav class="nav">
+  <a class="nav-item" href="dashboard.html">
+    <span class="nav-icon">⌂</span>
+    <span>Home</span>
+  </a>
+  <a class="nav-item active" href="settings.html">
+    <span class="nav-icon">⚙</span>
+    <span>Settings</span>
+  </a>
+</nav>
+
+<div class="toast" id="toast">Settings saved!</div>
+
+<!-- Other Brand Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h3>Enter brand name</h3>
+    <p>Type your aircon brand below</p>
+    <input type="text" id="brandInput" placeholder="e.g. Toshiba, Hitachi...">
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-confirm" onclick="confirmBrand()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCRK_ATJ9QVAJvOHnsFDE216udnKIdDp-Y",
+    authDomain: "smart-aircon-b978c.firebaseapp.com",
+    databaseURL: "https://smart-aircon-b978c-default-rtdb.firebaseio.com",
+    projectId: "smart-aircon-b978c",
+    storageBucket: "smart-aircon-b978c.firebasestorage.app",
+    messagingSenderId: "733250370463",
+    appId: "1:733250370463:web:e918690b76ba00a79fdbaa"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  let selectedTimer = null;
+  let selectedMode  = null;
+  let selectedBrand = null;
+  let customBrandName = null;
+
+  // ── Load current settings ──
+  db.ref('settings').once('value').then(snap => {
+    const s = snap.val() || {};
+
+    // Info display
+    document.getElementById('infoBrand').textContent = s.brand || '—';
+    document.getElementById('infoTimer').textContent = s.timer ? s.timer + ' minutes' : '—';
+    document.getElementById('infoMode').textContent = s.mode === 'off' ? 'Turn off' : s.mode === 'drop' ? 'Drop degrees' : '—';
+    if (s.mode === 'drop' && s.targetDegree) {
+      document.getElementById('infoTempRow').style.display = 'flex';
+      document.getElementById('infoTemp').textContent = s.targetDegree + '°C';
+    }
+
+    // Pre-select brand
+    selectedBrand = s.brand;
+    const brandSelect = document.getElementById('brandSelect');
+    const brands = ['Daikin','Panasonic','Mitsubishi','LG','Samsung','Midea','Carrier'];
+    if (brands.includes(s.brand)) {
+      brandSelect.value = s.brand;
+    } else if (s.brand) {
+      const opt = document.createElement('option');
+      opt.value = s.brand;
+      opt.textContent = s.brand;
+      brandSelect.appendChild(opt);
+      brandSelect.value = s.brand;
+      customBrandName = s.brand;
+    }
+
+    // Pre-select timer
+    selectedTimer = s.timer;
+    document.querySelectorAll('.timer-grid .option-btn').forEach(btn => {
+      if (parseInt(btn.textContent) === s.timer) btn.classList.add('selected');
+    });
+    const presets = [5,10,15,20,30,60];
+    if (s.timer && !presets.includes(s.timer)) {
+      document.getElementById('customTimer').value = s.timer;
+    }
+
+    // Pre-select mode
+    selectedMode = s.mode;
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      if ((btn.textContent.trim() === 'Turn off' && s.mode === 'off') ||
+          (btn.textContent.trim() === 'Drop degrees' && s.mode === 'drop')) {
+        btn.classList.add('selected');
+      }
+    });
+    if (s.mode === 'drop') {
+      document.getElementById('degreeWrap').classList.add('show');
+      if (s.targetDegree) document.getElementById('targetDegree').value = s.targetDegree;
+    }
+  });
+
+  // ── Brand ──
+  function onBrandChange(val) {
+    if (val === 'Other') {
+      document.getElementById('brandInput').value = customBrandName || '';
+      document.getElementById('modalOverlay').classList.add('show');
+      setTimeout(() => document.getElementById('brandInput').focus(), 100);
+    } else {
+      selectedBrand = val;
+    }
+  }
+
+  function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('show');
+    if (!customBrandName) {
+      document.getElementById('brandSelect').value = selectedBrand || 'Daikin';
+    }
+  }
+
+  function confirmBrand() {
+    const val = document.getElementById('brandInput').value.trim();
+    if (!val) return;
+    customBrandName = val;
+    selectedBrand = val;
+    const select = document.getElementById('brandSelect');
+    let opt = select.querySelector('option[data-custom]');
+    if (!opt) {
+      opt = document.createElement('option');
+      opt.setAttribute('data-custom', '1');
+      select.appendChild(opt);
+    }
+    opt.value = val;
+    opt.textContent = val;
+    select.value = val;
+    closeModal();
+  }
+
+  // ── Timer ──
+  function selectTimer(el, mins) {
+    document.querySelectorAll('.timer-grid .option-btn').forEach(b => b.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedTimer = mins;
+    document.getElementById('customTimer').value = '';
+  }
+
+  function onCustomTimer(input) {
+    document.querySelectorAll('.timer-grid .option-btn').forEach(b => b.classList.remove('selected'));
+    const val = parseInt(input.value);
+    selectedTimer = (val > 0 && val <= 240) ? val : null;
+  }
+
+  // ── Mode ──
+  function selectMode(el, mode) {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedMode = mode;
+    document.getElementById('degreeWrap').classList.toggle('show', mode === 'drop');
+  }
+
+  // ── Save ──
+  function saveSettings() {
+    if (!selectedBrand || !selectedTimer || !selectedMode) {
+      alert('Please fill in all fields!');
+      return;
+    }
+    const data = {
+      brand: selectedBrand,
+      timer: selectedTimer,
+      mode: selectedMode,
+      setupDone: true
+    };
+    const deg = parseInt(document.getElementById('targetDegree').value);
+    if (selectedMode === 'drop' && deg) data.targetDegree = deg;
+
+    db.ref('settings').set(data).then(() => {
+      document.getElementById('infoBrand').textContent = selectedBrand;
+      document.getElementById('infoTimer').textContent = selectedTimer + ' minutes';
+      document.getElementById('infoMode').textContent = selectedMode === 'off' ? 'Turn off' : 'Drop degrees';
+      showToast('Settings saved!');
+    }).catch(err => alert('Error: ' + err.message));
+  }
+
+  // ── Reset ──
+  function resetSetup() {
+    if (confirm('Reset all settings and go back to first setup?')) {
+      db.ref('settings').remove().then(() => {
+        window.location.href = 'index.html';
+      });
+    }
+  }
+
+  // ── Toast ──
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+</script>
+</body>
+</html>
