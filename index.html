@@ -2,205 +2,343 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>ESP32 BLE Control</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Aircon — Setup</title>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; background: #f5f5f0; min-height: 100vh; padding: 1.5rem; }
-    .page { max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
-    .card { background: #ffffff; border: 1px solid #e5e5e0; border-radius: 12px; padding: 1.25rem; }
-    .header { display: flex; align-items: center; justify-content: space-between; padding: 0.25rem 0 0.75rem; }
-    .header-title { font-size: 18px; font-weight: 500; color: #1a1a1a; }
-    .header-sub { font-size: 13px; color: #888; margin-top: 2px; }
-    .badge { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; }
-    .badge-connected { background: #d4edda; color: #1a7a3c; }
-    .badge-disconnected { background: #fde8e8; color: #c0392b; }
-    .badge-connecting { background: #fff3cd; color: #856404; }
-    .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
-    .btn-row { display: flex; gap: 8px; align-items: center; }
-    .btn-primary { background: #1a1a1a; color: #fff; border: none; border-radius: 8px; padding: 9px 20px; font-size: 14px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+    body { font-family: Arial, sans-serif; background: #f5f5f0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .container { background: #fff; border-radius: 16px; border: 1px solid #e5e5e0; padding: 24px; width: 100%; max-width: 400px; }
+    h1 { font-size: 20px; font-weight: 500; color: #1a1a1a; }
+    .sub { font-size: 13px; color: #888; margin-top: 4px; margin-bottom: 20px; }
+    .step-dots { display: flex; gap: 6px; margin-bottom: 20px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; }
+    .dot.active { background: #1a1a1a; }
+    .section-label { font-size: 12px; font-weight: 500; color: #1a1a1a; margin-bottom: 6px; }
+    .section-sub { font-size: 11px; color: #888; margin-bottom: 10px; }
+    .text-input { width: 100%; border: 1px solid #e5e5e0; border-radius: 8px; padding: 10px 12px; font-size: 13px; outline: none; color: #1a1a1a; margin-bottom: 16px; }
+    .text-input:focus { border-color: #1a1a1a; }
+    .brand-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+    .option-btn { border: 1px solid #e5e5e0; border-radius: 8px; padding: 10px; background: #fff; font-size: 13px; color: #1a1a1a; text-align: center; cursor: pointer; transition: all 0.15s; }
+    .option-btn:hover { background: #f5f5f0; }
+    .option-btn.selected { border-color: #1a1a1a; border-width: 2px; background: #f5f5f0; font-weight: 500; }
+    .timer-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    .custom-input-wrap { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; border: 1px solid #e5e5e0; border-radius: 8px; padding: 8px 12px; background: #fff; }
+    .custom-input-wrap input { border: none; outline: none; font-size: 13px; width: 60px; color: #1a1a1a; }
+    .custom-input-wrap span { font-size: 13px; color: #888; }
+    .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+    .mode-btn { border: 1px solid #e5e5e0; border-radius: 8px; padding: 14px 10px; background: #fff; font-size: 12px; color: #1a1a1a; text-align: center; cursor: pointer; transition: all 0.15s; }
+    .mode-btn:hover { background: #f5f5f0; }
+    .mode-btn.selected { border-color: #1a1a1a; border-width: 2px; background: #f5f5f0; font-weight: 500; }
+    .degree-wrap { display: none; margin-bottom: 16px; }
+    .degree-wrap.show { display: block; }
+    .degree-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+    .degree-row input { border: 1px solid #e5e5e0; border-radius: 8px; padding: 8px 12px; font-size: 14px; width: 80px; outline: none; text-align: center; }
+    .degree-row input:focus { border-color: #1a1a1a; }
+    .degree-row span { font-size: 13px; color: #888; }
+    .divider { height: 1px; background: #f0f0f0; margin: 16px 0; }
+    .btn-primary { background: #1a1a1a; color: #fff; border: none; border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 500; width: 100%; cursor: pointer; margin-top: 8px; }
     .btn-primary:hover { background: #333; }
     .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-outline { background: transparent; color: #1a1a1a; border: 1px solid #ccc; border-radius: 8px; padding: 9px 20px; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
-    .btn-outline:hover { background: #f5f5f0; }
-    .btn-outline:disabled { opacity: 0.4; cursor: not-allowed; }
-    .metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .metric { background: #f5f5f0; border-radius: 8px; padding: 1rem; }
-    .metric-label { font-size: 12px; color: #888; margin-bottom: 4px; }
-    .metric-value { font-size: 22px; font-weight: 500; color: #1a1a1a; }
-    .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; background: #fff; border: 1px solid #e5e5e0; border-radius: 12px; }
-    .toggle-info p { font-size: 14px; font-weight: 500; color: #1a1a1a; }
-    .toggle-info span { font-size: 12px; color: #888; }
-    .toggle { position: relative; width: 44px; height: 24px; }
-    .toggle input { opacity: 0; width: 0; height: 0; }
-    .slider { position: absolute; inset: 0; background: #ccc; border-radius: 12px; cursor: pointer; transition: background 0.2s; }
-    .slider:before { content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: white; border-radius: 50%; transition: transform 0.2s; }
-    input:checked + .slider { background: #1a1a1a; }
-    input:checked + .slider:before { transform: translateX(20px); }
-    input:disabled + .slider { opacity: 0.4; cursor: not-allowed; }
-    .log-wrap { max-height: 180px; overflow-y: auto; }
-    .log-line { font-size: 12px; font-family: monospace; padding: 4px 0; border-bottom: 1px solid #f0f0f0; display: flex; gap: 8px; }
-    .log-time { color: #aaa; min-width: 75px; }
-    .log-recv { color: #1a7a3c; }
-    .log-send { color: #1a5fa0; }
-    .log-sys  { color: #888; }
-    .log-err  { color: #c0392b; }
-    .section-label { font-size: 12px; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+    .btn-outline { background: transparent; color: #1a1a1a; border: 1px solid #ccc; border-radius: 10px; padding: 12px; font-size: 14px; width: 100%; cursor: pointer; margin-top: 8px; }
+    .step { display: none; }
+    .step.active { display: block; }
+    .confirm-box { background: #f5f5f0; border-radius: 10px; padding: 16px; margin-bottom: 20px; }
+    .confirm-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+    .confirm-row:last-child { margin-bottom: 0; }
+    .confirm-label { font-size: 13px; color: #888; }
+    .confirm-value { font-size: 13px; font-weight: 500; color: #1a1a1a; }
+    .success { text-align: center; padding: 20px 0; }
+    .success-check { width: 56px; height: 56px; border-radius: 50%; background: #d4edda; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+    .success-check svg { width: 28px; height: 28px; stroke: #1a7a3c; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: center; justify-content: center; }
+    .modal-overlay.show { display: flex; }
+    .modal { background: #fff; border-radius: 14px; padding: 24px; width: 90%; max-width: 320px; }
+    .modal h3 { font-size: 16px; font-weight: 500; color: #1a1a1a; margin-bottom: 6px; }
+    .modal p { font-size: 12px; color: #888; margin-bottom: 16px; }
+    .modal input { width: 100%; border: 1px solid #e5e5e0; border-radius: 8px; padding: 10px 12px; font-size: 14px; outline: none; margin-bottom: 12px; }
+    .modal input:focus { border-color: #1a1a1a; }
+    .modal-btns { display: flex; gap: 8px; }
+    .modal-btns button { flex: 1; padding: 10px; border-radius: 8px; font-size: 13px; cursor: pointer; }
+    .btn-cancel { background: #f5f5f0; color: #1a1a1a; border: 1px solid #e5e5e0; }
+    .btn-confirm { background: #1a1a1a; color: #fff; border: none; font-weight: 500; }
   </style>
 </head>
 <body>
-<div class="page">
+<div class="container">
 
-  <div class="header">
-    <div>
-      <p class="header-title">ESP32 control</p>
-      <p class="header-sub">Bluetooth Low Energy</p>
+  <!-- Step 1: Room + Brand -->
+  <div class="step active" id="step1">
+    <div class="step-dots">
+      <div class="dot active"></div>
+      <div class="dot"></div>
+      <div class="dot"></div>
     </div>
-    <div id="badge" class="badge badge-disconnected">
-      <span class="dot"></span>
-      <span id="badgeText">Disconnected</span>
+    <h1>First setup</h1>
+    <p class="sub">Tell us about your room and aircon</p>
+
+    <div class="section-label">Room name</div>
+    <input type="text" class="text-input" id="roomNameInput"
+      placeholder="e.g. Bedroom, Office..."
+      oninput="checkStep1()">
+
+    <div class="section-label">Aircon brand</div>
+    <div class="brand-grid">
+      <div class="option-btn" onclick="selectBrand(this, 'Daikin')">Daikin</div>
+      <div class="option-btn" onclick="selectBrand(this, 'Panasonic')">Panasonic</div>
+      <div class="option-btn" onclick="selectBrand(this, 'Mitsubishi')">Mitsubishi</div>
+      <div class="option-btn" onclick="selectBrand(this, 'LG')">LG</div>
+      <div class="option-btn" onclick="selectBrand(this, 'Samsung')">Samsung</div>
+      <div class="option-btn" onclick="selectBrand(this, 'Midea')">Midea</div>
+      <div class="option-btn" onclick="selectBrand(this, 'Carrier')">Carrier</div>
+      <div class="option-btn" onclick="selectBrand(this, 'Other')">Other</div>
     </div>
+    <button class="btn-primary" id="nextBtn1" onclick="goStep(2)" disabled>Next</button>
   </div>
 
-  <div class="card btn-row">
-    <button class="btn-primary" id="btnConnect" onclick="connectBLE()">
-      <i class="ti ti-bluetooth"></i> Connect
-    </button>
-    <button class="btn-outline" id="btnDisconnect" onclick="disconnectBLE()" disabled>
-      <i class="ti ti-bluetooth-off"></i> Disconnect
-    </button>
+  <!-- Step 2: Timer + Mode -->
+  <div class="step" id="step2">
+    <div class="step-dots">
+      <div class="dot"></div>
+      <div class="dot active"></div>
+      <div class="dot"></div>
+    </div>
+    <h1>Timer & mode</h1>
+    <p class="sub">How should the aircon behave?</p>
+
+    <div class="section-label">Auto-off delay</div>
+    <div class="section-sub">How long after room is empty?</div>
+    <div class="timer-grid">
+      <div class="option-btn" onclick="selectTimer(this, 5)">5 min</div>
+      <div class="option-btn" onclick="selectTimer(this, 10)">10 min</div>
+      <div class="option-btn" onclick="selectTimer(this, 15)">15 min</div>
+      <div class="option-btn" onclick="selectTimer(this, 20)">20 min</div>
+      <div class="option-btn" onclick="selectTimer(this, 30)">30 min</div>
+      <div class="option-btn" onclick="selectTimer(this, 60)">60 min</div>
+    </div>
+    <div class="custom-input-wrap">
+      <input type="number" id="customTimer" min="1" max="240"
+        placeholder="Custom" oninput="onCustomTimer(this)">
+      <span>minutes</span>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-label">Mode when triggered</div>
+    <div class="mode-grid">
+      <div class="mode-btn" onclick="selectMode(this, 'off')">Turn off</div>
+      <div class="mode-btn" onclick="selectMode(this, 'drop')">Drop degrees</div>
+    </div>
+
+    <div class="degree-wrap" id="degreeWrap">
+      <div class="section-sub">Drop to which temperature?</div>
+      <div class="degree-row">
+        <input type="number" id="targetDegree" min="16" max="30" placeholder="26"
+          oninput="checkStep2()">
+        <span>°C</span>
+      </div>
+    </div>
+
+    <button class="btn-primary" id="nextBtn2" onclick="goStep(3)" disabled>Next</button>
+    <button class="btn-outline" onclick="goStep(1)">Back</button>
   </div>
 
-  <div class="metrics">
-    <div class="metric">
-      <p class="metric-label">Uptime (s)</p>
-      <p class="metric-value" id="metricUptime">—</p>
+  <!-- Step 3: Confirm -->
+  <div class="step" id="step3">
+    <div class="step-dots">
+      <div class="dot"></div>
+      <div class="dot"></div>
+      <div class="dot active"></div>
     </div>
-    <div class="metric">
-      <p class="metric-label">Status</p>
-      <p class="metric-value" id="metricStatus" style="font-size:15px; padding-top:4px; color:#888;">Waiting...</p>
+    <h1>Confirm setup</h1>
+    <p class="sub">Everything looks right?</p>
+    <div class="confirm-box">
+      <div class="confirm-row">
+        <span class="confirm-label">Room</span>
+        <span class="confirm-value" id="confirmRoom">—</span>
+      </div>
+      <div class="confirm-row">
+        <span class="confirm-label">Brand</span>
+        <span class="confirm-value" id="confirmBrand">—</span>
+      </div>
+      <div class="confirm-row">
+        <span class="confirm-label">Timer</span>
+        <span class="confirm-value" id="confirmTimer">—</span>
+      </div>
+      <div class="confirm-row">
+        <span class="confirm-label">Mode</span>
+        <span class="confirm-value" id="confirmMode">—</span>
+      </div>
+      <div class="confirm-row" id="confirmDegreeRow" style="display:none;">
+        <span class="confirm-label">Target temp</span>
+        <span class="confirm-value" id="confirmDegree">—</span>
+      </div>
     </div>
+    <button class="btn-primary" onclick="saveSetup()">Save & continue</button>
+    <button class="btn-outline" onclick="goStep(2)">Back</button>
   </div>
 
-  <div class="toggle-row">
-    <div class="toggle-info">
-      <p>LED D1</p>
+  <!-- Done -->
+  <div class="step" id="stepDone">
+    <div class="success">
+      <div class="success-check">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
+      </div>
+      <h1>Setup complete!</h1>
+      <p class="sub" style="margin-top: 8px;">Your aircon controller is ready.</p>
+      <button class="btn-primary" onclick="window.location.href='dashboard.html'">Go to Dashboard</button>
     </div>
-    <label class="toggle">
-      <input type="checkbox" id="ledD1" disabled onchange="toggleLED('D1', this.checked)">
-      <span class="slider"></span>
-    </label>
-  </div>
-
-  <div class="card">
-    <p class="section-label">Activity log</p>
-    <div class="log-wrap" id="log"></div>
   </div>
 
 </div>
 
+<!-- Other Brand Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h3>Enter brand name</h3>
+    <p>Type your aircon brand below</p>
+    <input type="text" id="brandInput" placeholder="e.g. Toshiba, Hitachi...">
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-confirm" onclick="confirmBrand()">Confirm</button>
+    </div>
+  </div>
+</div>
+
 <script>
-  const SERVICE_UUID        = '12345678-1234-1234-1234-123456789abc';
-  const CHARACTERISTIC_UUID = 'abcdefab-1234-1234-1234-abcdefabcdef';
+  const firebaseConfig = {
+    apiKey: "AIzaSyCRK_ATJ9QVAJvOHnsFDE216udnKIdDp-Y",
+    authDomain: "smart-aircon-b978c.firebaseapp.com",
+    databaseURL: "https://smart-aircon-b978c-default-rtdb.firebaseio.com",
+    projectId: "smart-aircon-b978c",
+    storageBucket: "smart-aircon-b978c.firebasestorage.app",
+    messagingSenderId: "733250370463",
+    appId: "1:733250370463:web:e918690b76ba00a79fdbaa"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-  let bleDevice = null;
-  let bleChar   = null;
+  let selectedBrand  = null;
+  let selectedTimer  = null;
+  let selectedMode   = null;
+  let selectedDegree = null;
+  let selectedRoom   = null;
+  let otherBtn       = null;
 
-  function log(msg, type = 'sys') {
-    const wrap = document.getElementById('log');
-    const time = new Date().toLocaleTimeString();
-    wrap.innerHTML += `<div class="log-line"><span class="log-time">${time}</span><span class="log-${type}">${msg}</span></div>`;
-    wrap.scrollTop = wrap.scrollHeight;
+  // ── Step 1 ──
+  function checkStep1() {
+    const room = document.getElementById('roomNameInput').value.trim();
+    selectedRoom = room !== '' ? room : null;
+    document.getElementById('nextBtn1').disabled = !(selectedBrand && selectedRoom);
   }
 
-  function setStatus(state) {
-    const badge = document.getElementById('badge');
-    const badgeText = document.getElementById('badgeText');
-    const connected = state === 'connected';
-    const connecting = state === 'connecting';
-
-    badge.className = 'badge ' + (connected ? 'badge-connected' : connecting ? 'badge-connecting' : 'badge-disconnected');
-    badgeText.textContent = connected ? 'Connected' : connecting ? 'Connecting...' : 'Disconnected';
-
-    document.getElementById('btnConnect').disabled = connected || connecting;
-    document.getElementById('btnDisconnect').disabled = !connected;
-    document.getElementById('ledD1').disabled = !connected;
-
-    if (!connected) {
-      document.getElementById('metricUptime').textContent = '—';
-      document.getElementById('metricStatus').textContent = 'Waiting...';
-      document.getElementById('metricStatus').style.color = '#888';
+  function selectBrand(el, brand) {
+    document.querySelectorAll('#step1 .option-btn').forEach(b => b.classList.remove('selected'));
+    if (brand === 'Other') {
+      otherBtn = el;
+      document.getElementById('brandInput').value = '';
+      document.getElementById('modalOverlay').classList.add('show');
+      setTimeout(() => document.getElementById('brandInput').focus(), 100);
+    } else {
+      el.classList.add('selected');
+      selectedBrand = brand;
+      checkStep1();
     }
   }
 
-  async function connectBLE() {
-    if (!navigator.bluetooth) {
-      log('Web Bluetooth not supported. Use Chrome or Edge.', 'err');
-      return;
+  function closeModal() {
+    document.getElementById('modalOverlay').classList.remove('show');
+    otherBtn = null;
+  }
+
+  function confirmBrand() {
+    const val = document.getElementById('brandInput').value.trim();
+    if (!val) return;
+    otherBtn.classList.add('selected');
+    otherBtn.textContent = val;
+    selectedBrand = val;
+    checkStep1();
+    closeModal();
+  }
+
+  // ── Step 2 ──
+  function selectTimer(el, mins) {
+    document.querySelectorAll('#step2 .option-btn').forEach(b => b.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedTimer = mins;
+    document.getElementById('customTimer').value = '';
+    checkStep2();
+  }
+
+  function onCustomTimer(input) {
+    document.querySelectorAll('#step2 .option-btn').forEach(b => b.classList.remove('selected'));
+    const val = parseInt(input.value);
+    selectedTimer = (val > 0 && val <= 240) ? val : null;
+    checkStep2();
+  }
+
+  function selectMode(el, mode) {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('selected'));
+    el.classList.add('selected');
+    selectedMode = mode;
+    if (mode === 'drop') {
+      document.getElementById('degreeWrap').classList.add('show');
+    } else {
+      document.getElementById('degreeWrap').classList.remove('show');
+      selectedDegree = null;
     }
-    try {
-      setStatus('connecting');
-      log('Scanning for ESP32_MyBoard...', 'sys');
+    checkStep2();
+  }
 
-      bleDevice = await navigator.bluetooth.requestDevice({
-        filters: [{ name: 'ESP32_MyBoard' }],
-        optionalServices: [SERVICE_UUID]
-      });
-
-      bleDevice.addEventListener('gattserverdisconnected', () => {
-        setStatus('disconnected');
-        log('ESP32 disconnected.', 'err');
-      });
-
-      const server  = await bleDevice.gatt.connect();
-      const service = await server.getPrimaryService(SERVICE_UUID);
-      bleChar        = await service.getCharacteristic(CHARACTERISTIC_UUID);
-
-      await bleChar.startNotifications();
-      bleChar.addEventListener('characteristicvaluechanged', onDataReceived);
-
-      setStatus('connected');
-      log('Connected to ESP32_MyBoard', 'recv');
-
-    } catch(err) {
-      setStatus('disconnected');
-      log('Error: ' + err.message, 'err');
+  function checkStep2() {
+    const degreeOk = selectedMode === 'off' ||
+      (selectedMode === 'drop' &&
+       document.getElementById('targetDegree').value !== '');
+    document.getElementById('nextBtn2').disabled =
+      !(selectedTimer && selectedMode && degreeOk);
+    if (selectedMode === 'drop') {
+      selectedDegree = parseInt(document.getElementById('targetDegree').value) || null;
     }
   }
 
-  function onDataReceived(e) {
-    const raw = new TextDecoder().decode(e.target.value);
-    log(raw, 'recv');
-    try {
-      const json = JSON.parse(raw);
-      if (json.uptime !== undefined) {
-        document.getElementById('metricUptime').textContent = json.uptime;
+  // ── Steps ──
+  function goStep(n) {
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    if (n === 3) {
+      document.getElementById('confirmRoom').textContent  = selectedRoom;
+      document.getElementById('confirmBrand').textContent = selectedBrand;
+      document.getElementById('confirmTimer').textContent = selectedTimer + ' minutes';
+      document.getElementById('confirmMode').textContent  =
+        selectedMode === 'off' ? 'Turn off' : 'Drop degrees';
+      if (selectedMode === 'drop' && selectedDegree) {
+        document.getElementById('confirmDegreeRow').style.display = 'flex';
+        document.getElementById('confirmDegree').textContent = selectedDegree + '°C';
+      } else {
+        document.getElementById('confirmDegreeRow').style.display = 'none';
       }
-      if (json.status) {
-        document.getElementById('metricStatus').textContent = json.status;
-        document.getElementById('metricStatus').style.color = '#1a7a3c';
-      }
-    } catch(e) {}
-  }
-
-  async function sendData(msg) {
-    if (!bleChar) return;
-    try {
-      await bleChar.writeValue(new TextEncoder().encode(msg));
-      log('Sent: ' + msg, 'send');
-    } catch(err) {
-      log('Send failed: ' + err.message, 'err');
     }
+    document.getElementById('step' + n).classList.add('active');
   }
 
-  function toggleLED(name, on) {
-    sendData(on ? 'LED_ON' : 'LED_OFF');
-  }
-
-  function disconnectBLE() {
-    if (bleDevice && bleDevice.gatt.connected) bleDevice.gatt.disconnect();
-    setStatus('disconnected');
-    log('Disconnected.', 'sys');
+  // ── Save ──
+  function saveSetup() {
+    const data = {
+      room: selectedRoom,
+      brand: selectedBrand,
+      timer: selectedTimer,
+      mode: selectedMode,
+      setupDone: true
+    };
+    if (selectedMode === 'drop' && selectedDegree) {
+      data.targetDegree = selectedDegree;
+    }
+    db.ref('settings').set(data)
+      .then(() => {
+        document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+        document.getElementById('stepDone').classList.add('active');
+      })
+      .catch(err => alert('Error: ' + err.message));
   }
 </script>
 </body>
