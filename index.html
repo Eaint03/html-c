@@ -3,55 +3,51 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Smart Aircon — Setup</title>
+  <title>Smart Aircon — Settings</title>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: Arial, sans-serif; background: #f5f5f0; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-    .container { background: #fff; border-radius: 16px; border: 1px solid #e5e5e0; padding: 24px; width: 100%; max-width: 400px; }
-    h1 { font-size: 20px; font-weight: 500; color: #1a1a1a; }
-    .sub { font-size: 13px; color: #888; margin-top: 4px; margin-bottom: 20px; }
-    .step-dots { display: flex; gap: 6px; margin-bottom: 20px; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; }
-    .dot.active { background: #1a1a1a; }
-    .section-label { font-size: 12px; font-weight: 500; color: #1a1a1a; margin-bottom: 6px; }
-    .section-sub { font-size: 11px; color: #888; margin-bottom: 10px; }
-    .text-input { width: 100%; border: 1px solid #e5e5e0; border-radius: 8px; padding: 10px 12px; font-size: 13px; outline: none; color: #1a1a1a; margin-bottom: 16px; }
-    .text-input:focus { border-color: #1a1a1a; }
-    .brand-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
-    .option-btn { border: 1px solid #e5e5e0; border-radius: 8px; padding: 10px; background: #fff; font-size: 13px; color: #1a1a1a; text-align: center; cursor: pointer; transition: all 0.15s; }
-    .option-btn:hover { background: #f5f5f0; }
+    body { font-family: Arial, sans-serif; background: #f5f5f0; min-height: 100vh; padding: 20px; }
+    .page { max-width: 400px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+    .header { padding: 8px 0 4px; }
+    .header h1 { font-size: 18px; font-weight: 500; color: #1a1a1a; }
+    .header p { font-size: 12px; color: #888; margin-top: 2px; }
+    .card { background: #fff; border-radius: 12px; border: 1px solid #e5e5e0; padding: 16px; }
+    .section-title { font-size: 11px; font-weight: 500; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
+    .setting-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
+    .setting-info p { font-size: 13px; font-weight: 500; color: #1a1a1a; }
+    .setting-info span { font-size: 11px; color: #888; }
+    .setting-value { font-size: 13px; color: #888; }
+    .divider { height: 1px; background: #f0f0f0; margin: 2px 0; }
+    .edit-row { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; }
+    .edit-row label { font-size: 12px; font-weight: 500; color: #1a1a1a; }
+    .edit-row select, .edit-row input { width: 100%; border: 1px solid #e5e5e0; border-radius: 8px; padding: 9px 12px; font-size: 13px; outline: none; background: #fff; color: #1a1a1a; }
+    .edit-row select:focus, .edit-row input:focus { border-color: #1a1a1a; }
+    .timer-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 6px; }
+    .option-btn { border: 1px solid #e5e5e0; border-radius: 8px; padding: 8px; background: #fff; font-size: 12px; color: #1a1a1a; text-align: center; cursor: pointer; }
     .option-btn.selected { border-color: #1a1a1a; border-width: 2px; background: #f5f5f0; font-weight: 500; }
-    .timer-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px; }
-    .custom-input-wrap { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; border: 1px solid #e5e5e0; border-radius: 8px; padding: 8px 12px; background: #fff; }
-    .custom-input-wrap input { border: none; outline: none; font-size: 13px; width: 60px; color: #1a1a1a; }
-    .custom-input-wrap span { font-size: 13px; color: #888; }
-    .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
-    .mode-btn { border: 1px solid #e5e5e0; border-radius: 8px; padding: 14px 10px; background: #fff; font-size: 12px; color: #1a1a1a; text-align: center; cursor: pointer; transition: all 0.15s; }
-    .mode-btn:hover { background: #f5f5f0; }
+    .custom-wrap { display: flex; align-items: center; gap: 8px; border: 1px solid #e5e5e0; border-radius: 8px; padding: 8px 12px; }
+    .custom-wrap input { border: none; outline: none; font-size: 13px; width: 60px; }
+    .custom-wrap span { font-size: 13px; color: #888; }
+    .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .mode-btn { border: 1px solid #e5e5e0; border-radius: 8px; padding: 12px 10px; background: #fff; font-size: 12px; color: #1a1a1a; text-align: center; cursor: pointer; }
     .mode-btn.selected { border-color: #1a1a1a; border-width: 2px; background: #f5f5f0; font-weight: 500; }
-    .degree-wrap { display: none; margin-bottom: 16px; }
+    .degree-wrap { display: none; margin-top: 10px; }
     .degree-wrap.show { display: block; }
-    .degree-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+    .degree-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
     .degree-row input { border: 1px solid #e5e5e0; border-radius: 8px; padding: 8px 12px; font-size: 14px; width: 80px; outline: none; text-align: center; }
-    .degree-row input:focus { border-color: #1a1a1a; }
     .degree-row span { font-size: 13px; color: #888; }
-    .divider { height: 1px; background: #f0f0f0; margin: 16px 0; }
-    .btn-primary { background: #1a1a1a; color: #fff; border: none; border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 500; width: 100%; cursor: pointer; margin-top: 8px; }
+    .btn-primary { background: #1a1a1a; color: #fff; border: none; border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 500; width: 100%; cursor: pointer; margin-top: 4px; }
     .btn-primary:hover { background: #333; }
-    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-outline { background: transparent; color: #1a1a1a; border: 1px solid #ccc; border-radius: 10px; padding: 12px; font-size: 14px; width: 100%; cursor: pointer; margin-top: 8px; }
-    .step { display: none; }
-    .step.active { display: block; }
-    .confirm-box { background: #f5f5f0; border-radius: 10px; padding: 16px; margin-bottom: 20px; }
-    .confirm-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
-    .confirm-row:last-child { margin-bottom: 0; }
-    .confirm-label { font-size: 13px; color: #888; }
-    .confirm-value { font-size: 13px; font-weight: 500; color: #1a1a1a; }
-    .success { text-align: center; padding: 20px 0; }
-    .success-check { width: 56px; height: 56px; border-radius: 50%; background: #d4edda; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
-    .success-check svg { width: 28px; height: 28px; stroke: #1a7a3c; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+    .btn-danger { background: #fff; color: #c0392b; border: 1px solid #c0392b; border-radius: 10px; padding: 12px; font-size: 14px; width: 100%; cursor: pointer; }
+    .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: #1a1a1a; color: #fff; padding: 10px 20px; border-radius: 20px; font-size: 13px; display: none; z-index: 999; }
+    .toast.show { display: block; }
+    .nav { background: #fff; border-top: 1px solid #e5e5e0; display: flex; justify-content: space-around; padding: 10px 0 16px; position: fixed; bottom: 0; left: 0; right: 0; }
+    .nav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 11px; color: #888; cursor: pointer; text-decoration: none; }
+    .nav-item.active { color: #1a1a1a; }
+    .nav-icon { font-size: 20px; }
+    .bottom-space { height: 70px; }
     .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: center; justify-content: center; }
     .modal-overlay.show { display: flex; }
     .modal { background: #fff; border-radius: 14px; padding: 24px; width: 90%; max-width: 320px; }
@@ -66,132 +62,115 @@
   </style>
 </head>
 <body>
-<div class="container">
+<div class="page">
 
-  <!-- Step 1: Room + Brand -->
-  <div class="step active" id="step1">
-    <div class="step-dots">
-      <div class="dot active"></div>
-      <div class="dot"></div>
-      <div class="dot"></div>
-    </div>
-    <h1>First setup</h1>
-    <p class="sub">Tell us about your room and aircon</p>
-
-    <div class="section-label">Room name</div>
-    <input type="text" class="text-input" id="roomNameInput"
-      placeholder="e.g. Bedroom, Office..."
-      oninput="checkStep1()">
-
-    <div class="section-label">Aircon brand</div>
-    <div class="brand-grid">
-      <div class="option-btn" onclick="selectBrand(this, 'Daikin')">Daikin</div>
-      <div class="option-btn" onclick="selectBrand(this, 'Panasonic')">Panasonic</div>
-      <div class="option-btn" onclick="selectBrand(this, 'Mitsubishi')">Mitsubishi</div>
-      <div class="option-btn" onclick="selectBrand(this, 'LG')">LG</div>
-      <div class="option-btn" onclick="selectBrand(this, 'Samsung')">Samsung</div>
-      <div class="option-btn" onclick="selectBrand(this, 'Midea')">Midea</div>
-      <div class="option-btn" onclick="selectBrand(this, 'Carrier')">Carrier</div>
-      <div class="option-btn" onclick="selectBrand(this, 'Other')">Other</div>
-    </div>
-    <button class="btn-primary" id="nextBtn1" onclick="goStep(2)" disabled>Next</button>
+  <div class="header">
+    <h1>Settings</h1>
+    <p>Device configuration</p>
   </div>
 
-  <!-- Step 2: Timer + Mode -->
-  <div class="step" id="step2">
-    <div class="step-dots">
-      <div class="dot"></div>
-      <div class="dot active"></div>
-      <div class="dot"></div>
+  <!-- Device Info -->
+  <div class="card">
+    <p class="section-title">Device</p>
+    <div class="setting-row">
+      <div class="setting-info"><p>Brand</p></div>
+      <span class="setting-value" id="infoBrand">—</span>
     </div>
-    <h1>Timer & mode</h1>
-    <p class="sub">How should the aircon behave?</p>
+    <div class="divider"></div>
+    <div class="setting-row">
+      <div class="setting-info"><p>Timer</p></div>
+      <span class="setting-value" id="infoTimer">—</span>
+    </div>
+    <div class="divider"></div>
+    <div class="setting-row">
+      <div class="setting-info"><p>Mode</p></div>
+      <span class="setting-value" id="infoMode">—</span>
+    </div>
+    <div class="divider"></div>
+    <div class="setting-row" id="infoTempRow" style="display:none;">
+      <div class="setting-info"><p>Target temp</p></div>
+      <span class="setting-value" id="infoTemp">—</span>
+    </div>
+  </div>
 
-    <div class="section-label">Auto-off delay</div>
-    <div class="section-sub">How long after room is empty?</div>
-    <div class="timer-grid">
-      <div class="option-btn" onclick="selectTimer(this, 5)">5 min</div>
-      <div class="option-btn" onclick="selectTimer(this, 10)">10 min</div>
-      <div class="option-btn" onclick="selectTimer(this, 15)">15 min</div>
-      <div class="option-btn" onclick="selectTimer(this, 20)">20 min</div>
-      <div class="option-btn" onclick="selectTimer(this, 30)">30 min</div>
-      <div class="option-btn" onclick="selectTimer(this, 60)">60 min</div>
-    </div>
-    <div class="custom-input-wrap">
-      <input type="number" id="customTimer" min="1" max="240"
-        placeholder="Custom" oninput="onCustomTimer(this)">
-      <span>minutes</span>
+  <!-- Edit Settings -->
+  <div class="card">
+    <p class="section-title">Edit preferences</p>
+
+    <div class="edit-row">
+      <label>Aircon brand</label>
+      <select id="brandSelect" onchange="onBrandChange(this.value)">
+        <option value="Daikin">Daikin</option>
+        <option value="Panasonic">Panasonic</option>
+        <option value="Mitsubishi">Mitsubishi</option>
+        <option value="LG">LG</option>
+        <option value="Samsung">Samsung</option>
+        <option value="Midea">Midea</option>
+        <option value="Carrier">Carrier</option>
+        <option value="Other">Other</option>
+      </select>
     </div>
 
     <div class="divider"></div>
 
-    <div class="section-label">Mode when triggered</div>
-    <div class="mode-grid">
-      <div class="mode-btn" onclick="selectMode(this, 'off')">Turn off</div>
-      <div class="mode-btn" onclick="selectMode(this, 'drop')">Drop degrees</div>
-    </div>
-
-    <div class="degree-wrap" id="degreeWrap">
-      <div class="section-sub">Drop to which temperature?</div>
-      <div class="degree-row">
-        <input type="number" id="targetDegree" min="16" max="30" placeholder="26"
-          oninput="checkStep2()">
-        <span>°C</span>
+    <div class="edit-row">
+      <label>Auto-off delay</label>
+      <div class="timer-grid">
+        <div class="option-btn" onclick="selectTimer(this, 5)">5 min</div>
+        <div class="option-btn" onclick="selectTimer(this, 10)">10 min</div>
+        <div class="option-btn" onclick="selectTimer(this, 15)">15 min</div>
+        <div class="option-btn" onclick="selectTimer(this, 20)">20 min</div>
+        <div class="option-btn" onclick="selectTimer(this, 30)">30 min</div>
+        <div class="option-btn" onclick="selectTimer(this, 60)">60 min</div>
+      </div>
+      <div class="custom-wrap">
+        <input type="number" id="customTimer" min="1" max="240" placeholder="Custom" oninput="onCustomTimer(this)">
+        <span>minutes</span>
       </div>
     </div>
 
-    <button class="btn-primary" id="nextBtn2" onclick="goStep(3)" disabled>Next</button>
-    <button class="btn-outline" onclick="goStep(1)">Back</button>
+    <div class="divider"></div>
+
+    <div class="edit-row">
+      <label>Mode</label>
+      <div class="mode-grid">
+        <div class="mode-btn" onclick="selectMode(this, 'off')">Turn off</div>
+        <div class="mode-btn" onclick="selectMode(this, 'drop')">Drop degrees</div>
+      </div>
+      <div class="degree-wrap" id="degreeWrap">
+        <label style="font-size:12px; color:#888;">Drop to which temperature?</label>
+        <div class="degree-row">
+          <input type="number" id="targetDegree" min="16" max="30" placeholder="e.g. 26">
+          <span>°C</span>
+        </div>
+      </div>
+    </div>
+
+    <button class="btn-primary" onclick="saveSettings()">Save changes</button>
   </div>
 
-  <!-- Step 3: Confirm -->
-  <div class="step" id="step3">
-    <div class="step-dots">
-      <div class="dot"></div>
-      <div class="dot"></div>
-      <div class="dot active"></div>
-    </div>
-    <h1>Confirm setup</h1>
-    <p class="sub">Everything looks right?</p>
-    <div class="confirm-box">
-      <div class="confirm-row">
-        <span class="confirm-label">Room</span>
-        <span class="confirm-value" id="confirmRoom">—</span>
-      </div>
-      <div class="confirm-row">
-        <span class="confirm-label">Brand</span>
-        <span class="confirm-value" id="confirmBrand">—</span>
-      </div>
-      <div class="confirm-row">
-        <span class="confirm-label">Timer</span>
-        <span class="confirm-value" id="confirmTimer">—</span>
-      </div>
-      <div class="confirm-row">
-        <span class="confirm-label">Mode</span>
-        <span class="confirm-value" id="confirmMode">—</span>
-      </div>
-      <div class="confirm-row" id="confirmDegreeRow" style="display:none;">
-        <span class="confirm-label">Target temp</span>
-        <span class="confirm-value" id="confirmDegree">—</span>
-      </div>
-    </div>
-    <button class="btn-primary" onclick="saveSetup()">Save & continue</button>
-    <button class="btn-outline" onclick="goStep(2)">Back</button>
+  <!-- Danger Zone -->
+  <div class="card">
+    <p class="section-title">Danger zone</p>
+    <button class="btn-danger" onclick="resetSetup()">Reset to first setup</button>
   </div>
 
-  <!-- Done -->
-  <div class="step" id="stepDone">
-    <div class="success">
-      <div class="success-check">
-        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>
-      </div>
-      <h1>Setup complete!</h1>
-      <p class="sub" style="margin-top: 8px;">Your aircon controller is ready.</p>
-      <button class="btn-primary" onclick="window.location.href='dashboard.html'">Go to Dashboard</button>
-    </div>
-  </div>
-
+  <div class="bottom-space"></div>
 </div>
+
+<!-- Nav -->
+<nav class="nav">
+  <a class="nav-item" href="dashboard.html">
+    <span class="nav-icon">⌂</span>
+    <span>Home</span>
+  </a>
+  <a class="nav-item active" href="settings.html">
+    <span class="nav-icon">⚙</span>
+    <span>Settings</span>
+  </a>
+</nav>
+
+<div class="toast" id="toast">Settings saved!</div>
 
 <!-- Other Brand Modal -->
 <div class="modal-overlay" id="modalOverlay">
@@ -219,126 +198,159 @@
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  let selectedBrand  = null;
-  let selectedTimer  = null;
-  let selectedMode   = null;
-  let selectedDegree = null;
-  let selectedRoom   = null;
-  let otherBtn       = null;
+  let selectedTimer = null;
+  let selectedMode  = null;
+  let selectedBrand = null;
+  let customBrandName = null;
 
-  // ── Step 1 ──
-  function checkStep1() {
-    const room = document.getElementById('roomNameInput').value.trim();
-    selectedRoom = room !== '' ? room : null;
-    document.getElementById('nextBtn1').disabled = !(selectedBrand && selectedRoom);
-  }
+  // ── Load current settings ──
+  db.ref('settings').once('value').then(snap => {
+    const s = snap.val() || {};
 
-  function selectBrand(el, brand) {
-    document.querySelectorAll('#step1 .option-btn').forEach(b => b.classList.remove('selected'));
-    if (brand === 'Other') {
-      otherBtn = el;
-      document.getElementById('brandInput').value = '';
+    // Info display
+    document.getElementById('infoBrand').textContent = s.brand || '—';
+    document.getElementById('infoTimer').textContent = s.timer ? s.timer + ' minutes' : '—';
+    document.getElementById('infoMode').textContent = s.mode === 'off' ? 'Turn off' : s.mode === 'drop' ? 'Drop degrees' : '—';
+    if (s.mode === 'drop' && s.targetDegree) {
+      document.getElementById('infoTempRow').style.display = 'flex';
+      document.getElementById('infoTemp').textContent = s.targetDegree + '°C';
+    }
+
+    // Pre-select brand
+    selectedBrand = s.brand;
+    const brandSelect = document.getElementById('brandSelect');
+    const brands = ['Daikin','Panasonic','Mitsubishi','LG','Samsung','Midea','Carrier'];
+    if (brands.includes(s.brand)) {
+      brandSelect.value = s.brand;
+    } else if (s.brand) {
+      const opt = document.createElement('option');
+      opt.value = s.brand;
+      opt.textContent = s.brand;
+      brandSelect.appendChild(opt);
+      brandSelect.value = s.brand;
+      customBrandName = s.brand;
+    }
+
+    // Pre-select timer
+    selectedTimer = s.timer;
+    document.querySelectorAll('.timer-grid .option-btn').forEach(btn => {
+      if (parseInt(btn.textContent) === s.timer) btn.classList.add('selected');
+    });
+    const presets = [5,10,15,20,30,60];
+    if (s.timer && !presets.includes(s.timer)) {
+      document.getElementById('customTimer').value = s.timer;
+    }
+
+    // Pre-select mode
+    selectedMode = s.mode;
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      if ((btn.textContent.trim() === 'Turn off' && s.mode === 'off') ||
+          (btn.textContent.trim() === 'Drop degrees' && s.mode === 'drop')) {
+        btn.classList.add('selected');
+      }
+    });
+    if (s.mode === 'drop') {
+      document.getElementById('degreeWrap').classList.add('show');
+      if (s.targetDegree) document.getElementById('targetDegree').value = s.targetDegree;
+    }
+  });
+
+  // ── Brand ──
+  function onBrandChange(val) {
+    if (val === 'Other') {
+      document.getElementById('brandInput').value = customBrandName || '';
       document.getElementById('modalOverlay').classList.add('show');
       setTimeout(() => document.getElementById('brandInput').focus(), 100);
     } else {
-      el.classList.add('selected');
-      selectedBrand = brand;
-      checkStep1();
+      selectedBrand = val;
     }
   }
 
   function closeModal() {
     document.getElementById('modalOverlay').classList.remove('show');
-    otherBtn = null;
+    if (!customBrandName) {
+      document.getElementById('brandSelect').value = selectedBrand || 'Daikin';
+    }
   }
 
   function confirmBrand() {
     const val = document.getElementById('brandInput').value.trim();
     if (!val) return;
-    otherBtn.classList.add('selected');
-    otherBtn.textContent = val;
+    customBrandName = val;
     selectedBrand = val;
-    checkStep1();
+    const select = document.getElementById('brandSelect');
+    let opt = select.querySelector('option[data-custom]');
+    if (!opt) {
+      opt = document.createElement('option');
+      opt.setAttribute('data-custom', '1');
+      select.appendChild(opt);
+    }
+    opt.value = val;
+    opt.textContent = val;
+    select.value = val;
     closeModal();
   }
 
-  // ── Step 2 ──
+  // ── Timer ──
   function selectTimer(el, mins) {
-    document.querySelectorAll('#step2 .option-btn').forEach(b => b.classList.remove('selected'));
+    document.querySelectorAll('.timer-grid .option-btn').forEach(b => b.classList.remove('selected'));
     el.classList.add('selected');
     selectedTimer = mins;
     document.getElementById('customTimer').value = '';
-    checkStep2();
   }
 
   function onCustomTimer(input) {
-    document.querySelectorAll('#step2 .option-btn').forEach(b => b.classList.remove('selected'));
+    document.querySelectorAll('.timer-grid .option-btn').forEach(b => b.classList.remove('selected'));
     const val = parseInt(input.value);
     selectedTimer = (val > 0 && val <= 240) ? val : null;
-    checkStep2();
   }
 
+  // ── Mode ──
   function selectMode(el, mode) {
     document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('selected'));
     el.classList.add('selected');
     selectedMode = mode;
-    if (mode === 'drop') {
-      document.getElementById('degreeWrap').classList.add('show');
-    } else {
-      document.getElementById('degreeWrap').classList.remove('show');
-      selectedDegree = null;
-    }
-    checkStep2();
-  }
-
-  function checkStep2() {
-    const degreeOk = selectedMode === 'off' ||
-      (selectedMode === 'drop' &&
-       document.getElementById('targetDegree').value !== '');
-    document.getElementById('nextBtn2').disabled =
-      !(selectedTimer && selectedMode && degreeOk);
-    if (selectedMode === 'drop') {
-      selectedDegree = parseInt(document.getElementById('targetDegree').value) || null;
-    }
-  }
-
-  // ── Steps ──
-  function goStep(n) {
-    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
-    if (n === 3) {
-      document.getElementById('confirmRoom').textContent  = selectedRoom;
-      document.getElementById('confirmBrand').textContent = selectedBrand;
-      document.getElementById('confirmTimer').textContent = selectedTimer + ' minutes';
-      document.getElementById('confirmMode').textContent  =
-        selectedMode === 'off' ? 'Turn off' : 'Drop degrees';
-      if (selectedMode === 'drop' && selectedDegree) {
-        document.getElementById('confirmDegreeRow').style.display = 'flex';
-        document.getElementById('confirmDegree').textContent = selectedDegree + '°C';
-      } else {
-        document.getElementById('confirmDegreeRow').style.display = 'none';
-      }
-    }
-    document.getElementById('step' + n).classList.add('active');
+    document.getElementById('degreeWrap').classList.toggle('show', mode === 'drop');
   }
 
   // ── Save ──
-  function saveSetup() {
+  function saveSettings() {
+    if (!selectedBrand || !selectedTimer || !selectedMode) {
+      alert('Please fill in all fields!');
+      return;
+    }
     const data = {
-      room: selectedRoom,
       brand: selectedBrand,
       timer: selectedTimer,
       mode: selectedMode,
       setupDone: true
     };
-    if (selectedMode === 'drop' && selectedDegree) {
-      data.targetDegree = selectedDegree;
+    const deg = parseInt(document.getElementById('targetDegree').value);
+    if (selectedMode === 'drop' && deg) data.targetDegree = deg;
+
+    db.ref('settings').set(data).then(() => {
+      document.getElementById('infoBrand').textContent = selectedBrand;
+      document.getElementById('infoTimer').textContent = selectedTimer + ' minutes';
+      document.getElementById('infoMode').textContent = selectedMode === 'off' ? 'Turn off' : 'Drop degrees';
+      showToast('Settings saved!');
+    }).catch(err => alert('Error: ' + err.message));
+  }
+
+  // ── Reset ──
+  function resetSetup() {
+    if (confirm('Reset all settings and go back to first setup?')) {
+      db.ref('settings').remove().then(() => {
+        window.location.href = 'index.html';
+      });
     }
-    db.ref('settings').set(data)
-      .then(() => {
-        document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
-        document.getElementById('stepDone').classList.add('active');
-      })
-      .catch(err => alert('Error: ' + err.message));
+  }
+
+  // ── Toast ──
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
   }
 </script>
 </body>
